@@ -22,8 +22,16 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.ofcoder.klein.spi</groupId>
-            <artifactId>klein-spi</artifactId>
+            <groupId>com.ofcoder.klein.consensus.paxos</groupId>
+            <artifactId>klein-consensus-paxos</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.storage.jvm</groupId>
+            <artifactId>klein-storage-jvm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.rpc.netty</groupId>
+            <artifactId>klein-rpc-netty</artifactId>
         </dependency>
     </dependencies>
 

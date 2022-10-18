@@ -24,6 +24,13 @@
     </properties>
 
     <dependencies>
-
+        <dependency>
+            <groupId>com.ofcoder.klein.spi</groupId>
+            <artifactId>klein-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.common</groupId>
+            <artifactId>klein-common</artifactId>
+        </dependency>
     </dependencies>
 </project>

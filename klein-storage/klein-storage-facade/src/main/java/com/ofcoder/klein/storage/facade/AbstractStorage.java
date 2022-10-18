@@ -1,4 +1,4 @@
-package com.ofcoder.klein.storage.api;
+package com.ofcoder.klein.storage.facade;
 
 /**
  * @author: 释慧利

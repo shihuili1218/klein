@@ -1,25 +1,62 @@
 package com.ofcoder.klein;
 
-import com.google.errorprone.annotations.CompatibleWith;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import java.io.Serializable;
-import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ofcoder.klein.common.exception.StartupException;
+import com.ofcoder.klein.consensus.facade.ConsensusEngine;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.core.cache.KleinCacheImpl;
+import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.core.lock.KleinLock;
+import com.ofcoder.klein.core.lock.KleinLockImpl;
+import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
- * @author: 释慧利
+ * @author far.liu
  */
-public interface Klein {
+public class Klein {
+    private static final Logger LOG = LoggerFactory.getLogger(Klein.class);
+    private static volatile AtomicBoolean started = new AtomicBoolean(false);
+    private KleinCache cache;
+    private KleinLock lock;
 
-    <D extends Serializable> boolean put(String key, D data);
+    private void startup() {
+        if (started.get()) {
+            throw new StartupException("klein engine has started.");
+        }
+        if (!started.compareAndSet(false, true)) {
+            LOG.warn("klein engine is starting.");
+            return;
+        }
+        LOG.debug("starting klein...");
+        KleinProp prop = KleinProp.loadIfPresent();
+        ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
+        RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
+        StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
 
-    <D extends Serializable> boolean put(String key, D data, Long ttl, TimeUnit unit);
+        this.cache = new KleinCacheImpl();
+        this.lock = new KleinLockImpl();
+    }
 
-    <D extends Serializable> boolean putIfPresent(String key, D data);
+    public KleinCache getCache() {
+        return cache;
+    }
 
-    <D extends Serializable> D get(String key);
+    public KleinLock getLock() {
+        return lock;
+    }
 
-    void invalidate(String key);
+    private Klein() {
+        startup();
 
-    void invalidateAll();
+    }
+
+    private static class KleinHolder {
+        private static final Klein INSTANCE = new Klein();
+    }
 
 }
