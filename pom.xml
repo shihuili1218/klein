@@ -17,6 +17,7 @@
         <module>klein-core</module>
         <module>klein-storage</module>
         <module>klein-spi</module>
+        <module>klein-common</module>
     </modules>
 
     <properties>
@@ -32,6 +33,7 @@
         <log4j.version>2.17.1</log4j.version>
 
         <netty.version>3.10.6.Final</netty.version>
+        <hessian.version>4.0.62</hessian.version>
     </properties>
 
     <dependencyManagement>
@@ -72,9 +74,31 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.ofcoder.klein.consensus.facade</groupId>
+                <artifactId>klein-consensus-facade</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ofcoder.klein.consensus.paxos</groupId>
+                <artifactId>klein-consensus-paxos</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ofcoder.klein.common</groupId>
+                <artifactId>klein-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+
+            <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty</artifactId>
                 <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.caucho</groupId>
+                <artifactId>hessian</artifactId>
+                <version>${hessian.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

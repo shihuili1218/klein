@@ -6,6 +6,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="klein-common" />
         <module name="klein-rpc-facade" />
         <module name="klein-consensus-paxos" />
         <module name="klein-rpc-netty" />

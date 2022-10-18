@@ -20,6 +20,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.ofcoder.klein.rpc.facade</groupId>
+            <artifactId>klein-rpc-facade</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
         </dependency>
