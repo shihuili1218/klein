@@ -16,12 +16,55 @@
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <os.maven.plugin.version>1.5.0.Final</os.maven.plugin.version>
+        <protobuf.plugin.version>0.5.1</protobuf.plugin.version>
+        <protobuf.version>3.21.7</protobuf.version>
     </properties>
+
+    <build>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>${os.maven.plugin.version}</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <version>${protobuf.plugin.version}</version>
+                <configuration>
+                    <pluginId>klein-rpc</pluginId>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+                    <protoSourceRoot>${project.basedir}/src/main/resources</protoSourceRoot>
+                    <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
+                    <clearOutputDirectory>false</clearOutputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+
+    </build>
 
     <dependencies>
         <dependency>
             <groupId>com.caucho</groupId>
             <artifactId>hessian</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+
     </dependencies>
 </project>
