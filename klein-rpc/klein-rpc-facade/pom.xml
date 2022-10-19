@@ -19,6 +19,7 @@
         <os.maven.plugin.version>1.5.0.Final</os.maven.plugin.version>
         <protobuf.plugin.version>0.5.1</protobuf.plugin.version>
         <protobuf.version>3.21.7</protobuf.version>
+        <io.grpc.version>1.17.0</io.grpc.version>
     </properties>
 
     <build>
@@ -65,6 +66,21 @@
             <artifactId>protobuf-java</artifactId>
             <version>${protobuf.version}</version>
         </dependency>
-
+        <!-- grpc  -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>${io.grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>${io.grpc.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>${io.grpc.version}</version>
+        </dependency>
     </dependencies>
 </project>
