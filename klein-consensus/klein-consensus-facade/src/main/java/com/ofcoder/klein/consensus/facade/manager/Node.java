@@ -1,9 +1,6 @@
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.manager;
 
 import java.util.Objects;
-
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 /**
  * @author: 释慧利

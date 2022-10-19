@@ -4,8 +4,9 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
-import com.ofcoder.klein.consensus.facade.Consensus;
-import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.consensus.facade.manager.Consensus;
+import com.ofcoder.klein.consensus.facade.manager.Result;
+import com.ofcoder.klein.consensus.facade.manager.SM;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -14,14 +15,14 @@ import com.ofcoder.klein.storage.facade.Storage;
 /**
  * @author: 释慧利
  */
-public class KleinCacheImpl implements KleinCache {
+public class KleinCacheImpl implements KleinCache, SM {
     protected Consensus consensus;
     protected Storage storage;
 
     public KleinCacheImpl() {
         KleinProp kleinProp = KleinProp.loadIfPresent();
-        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
-        this.storage = ExtensionLoader.getExtensionLoader(Storage.class).getJoin(kleinProp.getStorage());
+//        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
+//        this.storage = ExtensionLoader.getExtensionLoader(Storage.class).getJoin(kleinProp.getStorage());
     }
 
     @Override
@@ -98,5 +99,15 @@ public class KleinCacheImpl implements KleinCache {
         Message message = new Message();
         message.setOp(Message.INVALIDATEALL);
         Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+    }
+
+    @Override
+    public void apply(ByteBuffer data) {
+
+    }
+
+    @Override
+    public void makeImage() {
+
     }
 }

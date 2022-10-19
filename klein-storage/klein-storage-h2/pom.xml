@@ -9,8 +9,8 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ofcoder.klein.storage.jvm</groupId>
-    <artifactId>klein-storage-jvm</artifactId>
+    <groupId>com.ofcoder.klein.storage.h2</groupId>
+    <artifactId>klein-storage-h2</artifactId>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -20,8 +20,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.ofcoder.klein.storage.api</groupId>
             <artifactId>klein-storage-facade</artifactId>
         </dependency>
     </dependencies>
+
 </project>

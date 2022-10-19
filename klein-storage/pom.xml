@@ -14,7 +14,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>klein-storage-facade</module>
-        <module>klein-storage-jvm</module>
+        <module>klein-storage-h2</module>
     </modules>
 
     <properties>
@@ -28,6 +28,10 @@
         <dependency>
             <groupId>com.ofcoder.klein.spi</groupId>
             <artifactId>klein-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.common</groupId>
+            <artifactId>klein-common</artifactId>
         </dependency>
     </dependencies>
 

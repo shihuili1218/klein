@@ -1,0 +1,1 @@
+paxos=com.ofcoder.klein.consensus.paxos.PaxosEngine
