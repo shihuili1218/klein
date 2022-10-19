@@ -6,7 +6,7 @@ import java.util.Set;
 /**
  * @author far.liu
  */
-public class MemberConfiguration {
+public class MemberManager {
 
     private static int version;
     private static volatile Set<Node> members = new HashSet<>();
