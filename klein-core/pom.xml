@@ -12,7 +12,7 @@
     <groupId>com.ofcoder.klein.core</groupId>
     <artifactId>klein-core</artifactId>
 
-    <name>${project.groupId}:${project.artifactId}</name>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -26,12 +26,12 @@
             <artifactId>klein-consensus-paxos</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ofcoder.klein.storage.jvm</groupId>
-            <artifactId>klein-storage-jvm</artifactId>
+            <groupId>com.ofcoder.klein.rpc.grpc</groupId>
+            <artifactId>klein-rpc-grpc</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ofcoder.klein.rpc.netty</groupId>
-            <artifactId>klein-rpc-netty</artifactId>
+            <groupId>com.ofcoder.klein.storage.h2</groupId>
+            <artifactId>klein-storage-h2</artifactId>
         </dependency>
     </dependencies>
 

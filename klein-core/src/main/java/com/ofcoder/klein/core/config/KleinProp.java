@@ -8,15 +8,15 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * klein:
  * storage: jvm
  * consensus: paxos
- * rpc: netty
+ * rpc: grpc
  * max-size:
  *
  * @author: 释慧利
  */
 public class KleinProp {
-    private String storage = "jvm";
+    private String storage = "h2";
     private String consensus = "paxos";
-    private String rpc = "netty";
+    private String rpc = "grpc";
     private ConsensusProp consensusProp;
     private StorageProp storageProp;
     private RpcProp rpcProp;

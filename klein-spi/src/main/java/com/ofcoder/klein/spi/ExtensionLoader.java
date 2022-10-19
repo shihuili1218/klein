@@ -48,7 +48,7 @@ public final class ExtensionLoader<T> {
     
     private static final Logger LOG = LoggerFactory.getLogger(ExtensionLoader.class);
     
-    private static final String SHENYU_DIRECTORY = "META-INF/shenyu/";
+    private static final String SHENYU_DIRECTORY = "META-INF/services/";
     
     private static final Map<Class<?>, ExtensionLoader<?>> LOADERS = new ConcurrentHashMap<>();
     

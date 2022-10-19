@@ -1,10 +1,5 @@
 package com.ofcoder.klein;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
 import com.ofcoder.klein.core.cache.KleinCache;
@@ -14,6 +9,10 @@ import com.ofcoder.klein.core.lock.KleinLock;
 import com.ofcoder.klein.core.lock.KleinLockImpl;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author far.liu
@@ -34,6 +33,7 @@ public class Klein {
         }
         LOG.debug("starting klein...");
         KleinProp prop = KleinProp.loadIfPresent();
+
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
         StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
@@ -52,7 +52,10 @@ public class Klein {
 
     private Klein() {
         startup();
+    }
 
+    public static Klein getInstance() {
+        return KleinHolder.INSTANCE;
     }
 
     private static class KleinHolder {

@@ -1,11 +1,9 @@
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import com.ofcoder.klein.consensus.facade.Node;
+import com.ofcoder.klein.consensus.facade.manager.Node;
 
 /**
  * @author: 释慧利

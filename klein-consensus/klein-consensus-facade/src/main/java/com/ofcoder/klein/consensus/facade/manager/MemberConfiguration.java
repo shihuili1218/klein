@@ -1,4 +1,4 @@
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.manager;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -6,7 +6,7 @@ import java.util.Set;
 /**
  * @author far.liu
  */
-public class NodeConfiguration {
+public class MemberConfiguration {
 
     private static int version;
     private static volatile Set<Node> members = new HashSet<>();

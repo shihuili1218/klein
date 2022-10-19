@@ -13,7 +13,7 @@
     <artifactId>klein-rpc</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>klein-rpc-netty</module>
+        <module>klein-rpc-grpc</module>
         <module>klein-rpc-facade</module>
     </modules>
 
@@ -27,6 +27,10 @@
         <dependency>
             <groupId>com.ofcoder.klein.common</groupId>
             <artifactId>klein-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.spi</groupId>
+            <artifactId>klein-spi</artifactId>
         </dependency>
     </dependencies>
 </project>
