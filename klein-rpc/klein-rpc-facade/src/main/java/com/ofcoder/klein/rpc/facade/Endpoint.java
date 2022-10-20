@@ -47,6 +47,6 @@ public class Endpoint {
 
     @Override
     public String toString() {
-        return "Node: " + ip + ":" + port;
+        return "endpoint: " + ip + ":" + port;
     }
 }
