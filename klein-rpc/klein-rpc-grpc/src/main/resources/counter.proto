@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package klein;
 
-option java_package = "com.ofcoder.klein.rpc.facade.proto";
+option java_package = "com.ofcoder.klein.rpc.grpc.proto";
 option java_outer_classname = "HelloProto";
 
 option java_multiple_files = false;
