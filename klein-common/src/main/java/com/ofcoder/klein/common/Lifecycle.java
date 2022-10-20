@@ -5,7 +5,7 @@ package com.ofcoder.klein.common;
  */
 public interface Lifecycle<O> {
 
-    void init(O op);
+    void init(final O op);
 
     void shutdown();
 }

@@ -1,46 +1,45 @@
 package com.ofcoder.klein.rpc.grpc;
 
-import com.google.protobuf.DescriptorProtos;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.DynamicMessage;
-import com.google.protobuf.Message;
-import com.ofcoder.klein.common.util.Requires;
-import com.ofcoder.klein.common.util.ThreadExecutor;
-import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.InvokeCallback;
-import com.ofcoder.klein.rpc.facade.Transmitter;
-import com.ofcoder.klein.rpc.facade.config.RpcProp;
-import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
-import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
-import com.ofcoder.klein.rpc.facade.exception.RpcException;
-import com.ofcoder.klein.rpc.grpc.proto.ProtobufParser;
-import io.grpc.CallOptions;
-import io.grpc.Channel;
-import io.grpc.ConnectivityState;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
-import io.grpc.MethodDescriptor;
-import io.grpc.protobuf.ProtoUtils;
-import io.grpc.stub.ClientCalls;
-import io.grpc.stub.StreamObserver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.protobuf.DynamicMessage;
+import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.InvokeCallback;
+import com.ofcoder.klein.rpc.facade.InvokeParam;
+import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.rpc.facade.config.RpcProp;
+import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
+import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
+import com.ofcoder.klein.rpc.facade.exception.RpcException;
+import com.ofcoder.klein.spi.Join;
+
+import io.grpc.CallOptions;
+import io.grpc.Channel;
+import io.grpc.ConnectivityState;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+import io.grpc.MethodDescriptor;
+import io.grpc.stub.ClientCalls;
+import io.grpc.stub.StreamObserver;
+
 /**
  * @author: 释慧利
  */
-public class GrpcTransmitter implements Transmitter {
-    private static final Logger LOG = LoggerFactory.getLogger(GrpcTransmitter.class);
+@Join
+public class GrpcClient implements RpcClient {
+    private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
     private final RpcProp prop;
 
-    public GrpcTransmitter(final RpcProp prop) {
+    public GrpcClient(final RpcProp prop) {
         this.prop = prop;
     }
 
@@ -91,7 +90,7 @@ public class GrpcTransmitter implements Transmitter {
     }
 
     @Override
-    public void closeAll(Endpoint endpoint) {
+    public void closeAll() {
         if (channels.isEmpty()) {
             return;
         }
@@ -99,12 +98,12 @@ public class GrpcTransmitter implements Transmitter {
     }
 
     @Override
-    public void sendRequest(Endpoint target, Object request, InvokeCallback callback, long timeoutMs) {
+    public void sendRequest(Endpoint target, InvokeParam request, InvokeCallback callback, long timeoutMs) {
         invokeAsync(target, request, callback, timeoutMs);
     }
 
     @Override
-    public Object sendRequestSync(Endpoint target, Object request, long timeoutMs) {
+    public Object sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs) {
         final CompletableFuture<Object> future = new CompletableFuture<>();
 
         invokeAsync(target, request, (result, err) -> {
@@ -143,10 +142,7 @@ public class GrpcTransmitter implements Transmitter {
         }
     }
 
-    public void invokeAsync(final Endpoint endpoint, final Object request, final InvokeCallback callback, final long timeoutMs) {
-        Requires.requireNonNull(endpoint, "endpoint");
-        Requires.requireNonNull(request, "request");
-
+    public void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
             ThreadExecutor.submit(() -> {
@@ -155,14 +151,24 @@ public class GrpcTransmitter implements Transmitter {
             return;
         }
 
-        final MethodDescriptor<Message, Message> method = getCallMethod(request);
-        final CallOptions callOpts = CallOptions.DEFAULT.withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
 
-        // fixme switch for MethodDescriptor.MethodType
-        ClientCalls.asyncUnaryCall(ch.newCall(method, callOpts), (Message) request, new StreamObserver<Message>() {
+        final DynamicMessage request = MessageHelper.buildJsonMessage(invokeParam.getData());
+        final DynamicMessage response = MessageHelper.buildJsonMessage();
+        final CallOptions callOpts = CallOptions.DEFAULT.withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
+        final MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = MessageHelper.createJsonMarshallerMethodDescriptor(invokeParam.getService(),
+                invokeParam.getMethod(),
+                MethodDescriptor.MethodType.UNARY,
+                request,
+                response);
+
+        ClientCalls.asyncUnaryCall(ch.newCall(methodDescriptor, callOpts), request, new StreamObserver<DynamicMessage>() {
 
             @Override
-            public void onNext(final Message value) {
+            public void onNext(final DynamicMessage value) {
+
+                String respData = MessageHelper.getDataFromDynamicMessage(value);
+                LOG.info(respData);
+
                 ThreadExecutor.submit(() -> callback.complete(value, null));
             }
 
@@ -178,49 +184,13 @@ public class GrpcTransmitter implements Transmitter {
         });
     }
 
-
-
-    private DynamicMessage getCallMethod2(final String request) {
-        Descriptors.Descriptor jsonDescriptor = buildJsonMarshallerDescriptor();
-        DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
-        jsonDynamicMessage.setField(jsonDescriptor.findFieldByName("data"), request);
-        return jsonDynamicMessage.build();
+    @Override
+    public void init(RpcProp op) {
+        // do nothing.
     }
 
-    private Descriptors.Descriptor buildJsonMarshallerDescriptor() {
-        // build Descriptor Proto
-        DescriptorProtos.DescriptorProto.Builder jsonMarshaller = DescriptorProtos.DescriptorProto.newBuilder();
-        jsonMarshaller.setName("JsonMessage");
-        jsonMarshaller.addFieldBuilder()
-                .setName("data")
-                .setNumber(1)
-                .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_STRING);
-
-        // build File Descriptor Proto
-        DescriptorProtos.FileDescriptorProto.Builder fileDescriptorProtoBuilder = DescriptorProtos.FileDescriptorProto.newBuilder();
-        fileDescriptorProtoBuilder.addMessageType(jsonMarshaller);
-
-        DescriptorProtos.FileDescriptorProto fileDescriptorProto = fileDescriptorProtoBuilder.build();
-        try {
-            Descriptors.FileDescriptor fileDescriptor = Descriptors.FileDescriptor
-                    .buildFrom(fileDescriptorProto, new Descriptors.FileDescriptor[0]);
-            return fileDescriptor.findMessageTypeByName("JsonMessage");
-        } catch (Descriptors.DescriptorValidationException e) {
-            LOG.error("dynamic build JsonMarshaller descriptor is fail: {}", e.getMessage());
-            throw new RuntimeException("dynamic build JsonMarshaller descriptor is fail", e);
-        }
+    @Override
+    public void shutdown() {
+        closeAll();
     }
-    private MethodDescriptor<Message, Message> getCallMethod(final Object request) {
-        final String interest = request.getClass().getName();
-        ProtobufParser.Whole whole = ProtobufParser.get(interest);
-
-        return MethodDescriptor //
-                .<Message, Message>newBuilder() //
-                .setType(MethodDescriptor.MethodType.UNARY) //
-                .setFullMethodName(MethodDescriptor.generateFullMethodName(interest, ProtobufParser.FIXED_METHOD_NAME)) //
-                .setRequestMarshaller(ProtoUtils.marshaller(whole.getReq())) //
-                .setResponseMarshaller(ProtoUtils.marshaller(whole.getRes())) //
-                .build();
-    }
-
 }
