@@ -3,7 +3,6 @@ package com.ofcoder.klein.rpc.grpc;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,19 +34,19 @@ public class GrpcServer implements RpcServer {
 
     @Override
     public void registerProcessor(RpcProcessor processor) {
-        final MethodDescriptor<DynamicMessage, DynamicMessage> method = MessageHelper.createJsonMarshallerMethodDescriptor(
+        final MethodDescriptor<DynamicMessage, DynamicMessage> method = MessageHelper.createMarshallerMethodDescriptor(
                 processor.service(),
                 processor.method(),
                 MethodDescriptor.MethodType.UNARY,
-                MessageHelper.buildJsonMessage(),
-                MessageHelper.buildJsonMessage("default msg"));
+                MessageHelper.buildMessage(),
+                MessageHelper.buildMessage("default msg"));
 
         final ServerCallHandler<DynamicMessage, DynamicMessage> handler = ServerCalls.asyncUnaryCall(
                 (request, responseObserver) -> {
                     final SocketAddress remoteAddress = RemoteAddressInterceptor.getRemoteAddress();
                     String msg = MessageHelper.getDataFromDynamicMessage(request);
                     ThreadExecutor.submit(() -> processor.handleRequest(msg, msg1 -> {
-                        final DynamicMessage res = MessageHelper.buildJsonMessage(msg1);
+                        final DynamicMessage res = MessageHelper.buildMessage(msg1);
                         responseObserver.onNext(res);
                         responseObserver.onCompleted();
                     }));

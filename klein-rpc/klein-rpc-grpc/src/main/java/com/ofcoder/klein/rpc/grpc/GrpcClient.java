@@ -147,10 +147,10 @@ public class GrpcClient implements RpcClient {
             return;
         }
 
-        final DynamicMessage request = MessageHelper.buildJsonMessage(invokeParam.getData());
-        final DynamicMessage response = MessageHelper.buildJsonMessage();
+        final DynamicMessage request = MessageHelper.buildMessage(invokeParam.getData());
+        final DynamicMessage response = MessageHelper.buildMessage();
         final CallOptions callOpts = CallOptions.DEFAULT.withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
-        final MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = MessageHelper.createJsonMarshallerMethodDescriptor(invokeParam.getService(),
+        final MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = MessageHelper.createMarshallerMethodDescriptor(invokeParam.getService(),
                 invokeParam.getMethod(),
                 MethodDescriptor.MethodType.UNARY,
                 request,

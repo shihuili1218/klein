@@ -13,4 +13,8 @@ public interface StorageEngine extends Lifecycle<StorageProp> {
     static void startup(String rpc, StorageProp prop) {
 
     }
+
+    public static void shutdown0() {
+
+    }
 }
