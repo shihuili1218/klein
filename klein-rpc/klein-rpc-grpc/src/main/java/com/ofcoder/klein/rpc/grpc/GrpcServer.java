@@ -2,6 +2,7 @@ package com.ofcoder.klein.rpc.grpc;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,12 +40,12 @@ public class GrpcServer implements RpcServer {
                 processor.method(),
                 MethodDescriptor.MethodType.UNARY,
                 MessageHelper.buildMessage(),
-                MessageHelper.buildMessage("default msg"));
+                MessageHelper.buildMessage(ByteBuffer.wrap(new byte[0])));
 
         final ServerCallHandler<DynamicMessage, DynamicMessage> handler = ServerCalls.asyncUnaryCall(
                 (request, responseObserver) -> {
                     final SocketAddress remoteAddress = RemoteAddressInterceptor.getRemoteAddress();
-                    String msg = MessageHelper.getDataFromDynamicMessage(request);
+                    ByteBuffer msg = MessageHelper.getDataFromDynamicMessage(request);
                     ThreadExecutor.submit(() -> processor.handleRequest(msg, msg1 -> {
                         final DynamicMessage res = MessageHelper.buildMessage(msg1);
                         responseObserver.onNext(res);
