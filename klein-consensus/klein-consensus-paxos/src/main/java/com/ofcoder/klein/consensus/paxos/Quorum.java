@@ -3,7 +3,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.ofcoder.klein.consensus.facade.manager.Node;
+import com.ofcoder.klein.consensus.facade.Node;
 
 /**
  * @author: 释慧利

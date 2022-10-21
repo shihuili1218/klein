@@ -90,7 +90,7 @@ public class GrpcClient implements RpcClient {
         if (channels.isEmpty()) {
             return;
         }
-        channels.keySet().forEach(this::checkConnection);
+        channels.keySet().forEach(this::closeConnection);
     }
 
     @Override

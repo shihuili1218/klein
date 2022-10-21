@@ -1,4 +1,4 @@
-package com.ofcoder.klein.consensus.facade.manager;
+package com.ofcoder.klein.consensus.facade;
 
 /**
  * @author: 释慧利

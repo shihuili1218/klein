@@ -4,12 +4,11 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
-import com.ofcoder.klein.consensus.facade.manager.Consensus;
-import com.ofcoder.klein.consensus.facade.manager.Result;
-import com.ofcoder.klein.consensus.facade.manager.SM;
+import com.ofcoder.klein.consensus.facade.Consensus;
+import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
-import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Storage;
 
 /**
