@@ -1,6 +1,7 @@
 package com.ofcoder.klein.rpc.grpc;
 
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -27,7 +29,7 @@ public class MessageHelper {
         jsonMarshaller.addFieldBuilder()
                 .setName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME)
                 .setNumber(1)
-                .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_STRING);
+                .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_BYTES);
 
         // build File Descriptor Proto
         DescriptorProtos.FileDescriptorProto.Builder fileDescriptorProtoBuilder = DescriptorProtos.FileDescriptorProto.newBuilder();
@@ -44,10 +46,10 @@ public class MessageHelper {
         }
     }
 
-    public static DynamicMessage buildMessage(final String request) {
+    public static DynamicMessage buildMessage(final ByteBuffer request) {
         Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
-        jsonDynamicMessage.setField(jsonDescriptor.findFieldByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME), request);
+        jsonDynamicMessage.setField(jsonDescriptor.findFieldByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME), request.array());
         return jsonDynamicMessage.build();
     }
 
@@ -57,6 +59,25 @@ public class MessageHelper {
         return jsonDynamicMessage.build();
     }
 
+    /**
+     * get data from DynamicMessage.
+     *
+     * @param message message
+     * @return data
+     */
+    public static ByteBuffer getDataFromDynamicMessage(final DynamicMessage message) {
+        for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : message.getAllFields().entrySet()) {
+            Descriptors.FieldDescriptor key = entry.getKey();
+            Object value = entry.getValue();
+
+            String fullName = key.getFullName();
+            String jsonMessageFullName = GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME + "." + GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME;
+            if (jsonMessageFullName.equals(fullName)) {
+                return ByteBuffer.wrap(((ByteString) value).toByteArray()) ;
+            }
+        }
+        return ByteBuffer.wrap(new byte[0]);
+    }
 
     public static MethodDescriptor<DynamicMessage, DynamicMessage> createMarshallerMethodDescriptor(final String serviceName,
                                                                                                     final String methodName,
@@ -102,23 +123,5 @@ public class MessageHelper {
         }
     }
 
-    /**
-     * get data from DynamicMessage.
-     *
-     * @param message message
-     * @return data
-     */
-    public static String getDataFromDynamicMessage(final DynamicMessage message) {
-        for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : message.getAllFields().entrySet()) {
-            Descriptors.FieldDescriptor key = entry.getKey();
-            Object value = entry.getValue();
 
-            String fullName = key.getFullName();
-            String jsonMessageFullName = GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME + "." + GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME;
-            if (jsonMessageFullName.equals(fullName)) {
-                return (String) value;
-            }
-        }
-        return "";
-    }
 }

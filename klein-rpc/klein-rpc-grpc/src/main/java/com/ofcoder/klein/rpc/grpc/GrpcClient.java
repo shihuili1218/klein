@@ -1,5 +1,6 @@
 package com.ofcoder.klein.rpc.grpc;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -160,7 +161,7 @@ public class GrpcClient implements RpcClient {
 
             @Override
             public void onNext(final DynamicMessage value) {
-                String respData = MessageHelper.getDataFromDynamicMessage(value);
+                ByteBuffer respData = MessageHelper.getDataFromDynamicMessage(value);
                 ThreadExecutor.submit(() -> callback.complete(respData, null));
             }
 

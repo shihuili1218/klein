@@ -1,5 +1,6 @@
 package com.ofcoder.klein.rpc.facade;
 
+import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /**
@@ -8,7 +9,7 @@ import java.util.Objects;
 public class InvokeParam {
     private String service;
     private String method;
-    private String data;
+    private ByteBuffer data;
 
     public String getService() {
         return service;
@@ -26,11 +27,11 @@ public class InvokeParam {
         this.method = method;
     }
 
-    public String getData() {
+    public ByteBuffer getData() {
         return data;
     }
 
-    public void setData(String data) {
+    public void setData(ByteBuffer data) {
         this.data = data;
     }
 

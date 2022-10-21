@@ -5,6 +5,7 @@ import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
+import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.rpc.grpc.ext.HelloProcessor;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import org.junit.After;
@@ -13,6 +14,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -44,7 +46,7 @@ public class GrpcClientTest {
     @Test
     public void testSendRequest() {
         InvokeParam param = new InvokeParam();
-        param.setData("I'm Klein");
+        param.setData(ByteBuffer.wrap(Hessian2Util.serialize("I'm Klein")));
         param.setService(processor.service());
         param.setMethod(processor.method());
         CountDownLatch latch = new CountDownLatch(1);
@@ -52,7 +54,7 @@ public class GrpcClientTest {
             if (err != null) {
                 LOG.error(err.getMessage(), err);
             }
-            LOG.info("receive server message: {}", result);
+            LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
             latch.countDown();
         }, 5000);
 
