@@ -23,11 +23,6 @@ package com.ofcoder.klein.rpc.grpc;
 public class GrpcConstants {
 
     /**
-     * grpc json service.
-     */
-    public static final String GRPC_JSON_SERVICE = "JSON";
-
-    /**
      * json descriptor proto name.
      */
     public static final String JSON_DESCRIPTOR_PROTO_NAME = "JsonMessage";
