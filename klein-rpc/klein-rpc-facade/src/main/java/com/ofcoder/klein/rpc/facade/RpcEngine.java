@@ -1,11 +1,10 @@
 package com.ofcoder.klein.rpc.facade;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.util.Requires;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author far.liu
@@ -23,7 +22,10 @@ public class RpcEngine {
         server.init(prop);
         client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin(rpc);
         client.init(prop);
+    }
 
+    public static void registerProcessor(final RpcProcessor processor) {
+        server.registerProcessor(processor);
     }
 
     public static void shutdown() {

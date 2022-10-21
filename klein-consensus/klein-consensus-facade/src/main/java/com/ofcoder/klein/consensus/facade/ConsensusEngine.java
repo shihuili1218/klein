@@ -1,27 +1,34 @@
 package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.SPI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * @author far.liu
  */
 @SPI
-public interface ConsensusEngine extends Lifecycle<ConsensusProp> {
-    Logger LOG = LoggerFactory.getLogger(ConsensusEngine.class);
+public class ConsensusEngine {
+    private static final Logger LOG = LoggerFactory.getLogger(ConsensusEngine.class);
+    private static Consensus consensus;
 
-    static void startup(String consensus, ConsensusProp prop) {
-
+    public static void startup(String algorithm, ConsensusProp prop) {
         LOG.debug("start consensus engine");
-        ConsensusEngine bootstrap = ExtensionLoader.getExtensionLoader(ConsensusEngine.class).getJoin(consensus);
-        bootstrap.init(prop);
+
+        consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(algorithm);
+        consensus.init(prop);
+    }
+
+    public static void loadSM(SM sm) {
+        consensus.loadSM(sm);
+    }
+
+    public static void shutdown() {
+        if (consensus != null) {
+            consensus.shutdown();
+        }
     }
 
 }
