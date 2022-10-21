@@ -7,9 +7,12 @@ package com.ofcoder.klein.rpc.facade;
  */
 public interface RpcProcessor {
 
-    String service();
+    default String service() {
+        return this.getClass().getName();
+    }
+
     String method();
 
-    void handleRequest(final String request);
+    void handleRequest(final String request, final RpcContext context);
 
 }

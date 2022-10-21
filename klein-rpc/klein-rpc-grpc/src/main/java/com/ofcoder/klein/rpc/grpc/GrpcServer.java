@@ -3,6 +3,7 @@ package com.ofcoder.klein.rpc.grpc;
 import java.io.IOException;
 import java.net.SocketAddress;
 
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,8 @@ public class GrpcServer implements RpcServer {
 
     @Override
     public void registerProcessor(RpcProcessor processor) {
-        final MethodDescriptor<DynamicMessage, DynamicMessage> method = MessageHelper.createJsonMarshallerMethodDescriptor(processor.service(),
+        final MethodDescriptor<DynamicMessage, DynamicMessage> method = MessageHelper.createJsonMarshallerMethodDescriptor(
+                processor.service(),
                 processor.method(),
                 MethodDescriptor.MethodType.UNARY,
                 MessageHelper.buildJsonMessage(),
@@ -44,15 +46,18 @@ public class GrpcServer implements RpcServer {
                 (request, responseObserver) -> {
                     final SocketAddress remoteAddress = RemoteAddressInterceptor.getRemoteAddress();
                     String msg = MessageHelper.getDataFromDynamicMessage(request);
-                    LOG.info("收到客户端消息, {}, {}", remoteAddress, msg);
-                    ThreadExecutor.submit(() -> processor.handleRequest(msg));
+                    ThreadExecutor.submit(() -> processor.handleRequest(msg, msg1 -> {
+                        final DynamicMessage res = MessageHelper.buildJsonMessage(msg1);
+                        responseObserver.onNext(res);
+                        responseObserver.onCompleted();
+                    }));
                 });
 
         final ServerServiceDefinition serviceDef = ServerServiceDefinition //
-                .builder(processor.method()) //
+                .builder(processor.service()) //
                 .addMethod(method, handler) //
                 .build();
-        this.handlerRegistry.addService(ServerInterceptors.intercept(serviceDef));
+        this.handlerRegistry.addService(ServerInterceptors.intercept(serviceDef, new RemoteAddressInterceptor()));
     }
 
     @Override

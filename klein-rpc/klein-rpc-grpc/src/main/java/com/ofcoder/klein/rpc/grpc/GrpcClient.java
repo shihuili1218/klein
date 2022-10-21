@@ -37,11 +37,7 @@ import io.grpc.stub.StreamObserver;
 public class GrpcClient implements RpcClient {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
-    private final RpcProp prop;
-
-    public GrpcClient(final RpcProp prop) {
-        this.prop = prop;
-    }
+    private RpcProp prop;
 
     @Override
     public void createConnection(final Endpoint endpoint) {
@@ -151,7 +147,6 @@ public class GrpcClient implements RpcClient {
             return;
         }
 
-
         final DynamicMessage request = MessageHelper.buildJsonMessage(invokeParam.getData());
         final DynamicMessage response = MessageHelper.buildJsonMessage();
         final CallOptions callOpts = CallOptions.DEFAULT.withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
@@ -165,11 +160,8 @@ public class GrpcClient implements RpcClient {
 
             @Override
             public void onNext(final DynamicMessage value) {
-
                 String respData = MessageHelper.getDataFromDynamicMessage(value);
-                LOG.info(respData);
-
-                ThreadExecutor.submit(() -> callback.complete(value, null));
+                ThreadExecutor.submit(() -> callback.complete(respData, null));
             }
 
             @Override
@@ -185,8 +177,8 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public void init(RpcProp op) {
-        // do nothing.
+    public void init(final RpcProp op) {
+        this.prop = op;
     }
 
     @Override

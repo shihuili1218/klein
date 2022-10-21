@@ -1,19 +1,17 @@
 package com.ofcoder.klein.rpc.grpc;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Maps;
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.ExtensionRegistryLite;
-
 import io.grpc.MethodDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
 
 /**
  * @author far.liu
@@ -65,15 +63,15 @@ public class MessageHelper {
                                                                                                         final MethodDescriptor.MethodType methodType,
                                                                                                         final DynamicMessage request,
                                                                                                         final DynamicMessage response) {
-        MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = METHOD_DESCRIPTOR_CACHE.get(serviceName + GrpcConstants.GRPC_JSON_SERVICE + methodName);
+        MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = METHOD_DESCRIPTOR_CACHE.get(serviceName + methodName);
         if (methodDescriptor == null) {
             methodDescriptor = MethodDescriptor.<DynamicMessage, DynamicMessage>newBuilder()
                     .setType(methodType)
-                    .setFullMethodName(MethodDescriptor.generateFullMethodName(serviceName + GrpcConstants.GRPC_JSON_SERVICE, methodName))
+                    .setFullMethodName(MethodDescriptor.generateFullMethodName(serviceName, methodName))
                     .setRequestMarshaller(new DynamicMessageMarshaller(request.getDescriptorForType()))
                     .setResponseMarshaller(new DynamicMessageMarshaller(response.getDescriptorForType()))
                     .build();
-            METHOD_DESCRIPTOR_CACHE.put(serviceName + GrpcConstants.GRPC_JSON_SERVICE + methodName, methodDescriptor);
+            METHOD_DESCRIPTOR_CACHE.put(serviceName + methodName, methodDescriptor);
 
         }
         return methodDescriptor;
