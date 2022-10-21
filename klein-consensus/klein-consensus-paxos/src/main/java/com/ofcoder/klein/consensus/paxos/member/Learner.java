@@ -14,48 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;
+package com.ofcoder.klein.consensus.paxos.member;
 
-import java.nio.ByteBuffer;
+import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 
 /**
  * @author: 释慧利
  */
-public class Proposal {
-    private long proposalNo;
-    private ByteBuffer data = ByteBuffer.wrap(new byte[0]);
-    private PaxosQuorum quorum;
+public class Learner  implements Lifecycle<ConsensusProp> {
+    @Override
+    public void init(ConsensusProp op) {
 
-    public long getProposalNo() {
-        return proposalNo;
-    }
-
-    public void setProposalNo(long proposalNo) {
-        this.proposalNo = proposalNo;
-    }
-
-    public ByteBuffer getData() {
-        return data;
-    }
-
-    public void setData(ByteBuffer data) {
-        this.data = data;
-    }
-
-    public PaxosQuorum getQuorum() {
-        return quorum;
-    }
-
-    public void setQuorum(PaxosQuorum quorum) {
-        this.quorum = quorum;
     }
 
     @Override
-    public String toString() {
-        return "Proposal{" +
-                "proposalNo=" + proposalNo +
-                ", data=" + data +
-                ", quorum=" + quorum +
-                '}';
+    public void shutdown() {
+
     }
 }

@@ -20,7 +20,7 @@ public class MessageHelper {
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
     private static final Map<String, MethodDescriptor<DynamicMessage, DynamicMessage>> METHOD_DESCRIPTOR_CACHE = Maps.newConcurrentMap();
 
-    public static Descriptors.Descriptor buildJsonMarshallerDescriptor() {
+    public static Descriptors.Descriptor buildMarshallerDescriptor() {
         // build Descriptor Proto
         DescriptorProtos.DescriptorProto.Builder jsonMarshaller = DescriptorProtos.DescriptorProto.newBuilder();
         jsonMarshaller.setName(GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME);
@@ -44,25 +44,25 @@ public class MessageHelper {
         }
     }
 
-    public static DynamicMessage buildJsonMessage(final String request) {
-        Descriptors.Descriptor jsonDescriptor = buildJsonMarshallerDescriptor();
+    public static DynamicMessage buildMessage(final String request) {
+        Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
         jsonDynamicMessage.setField(jsonDescriptor.findFieldByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME), request);
         return jsonDynamicMessage.build();
     }
 
-    public static DynamicMessage buildJsonMessage() {
-        Descriptors.Descriptor jsonDescriptor = buildJsonMarshallerDescriptor();
+    public static DynamicMessage buildMessage() {
+        Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
         return jsonDynamicMessage.build();
     }
 
 
-    public static MethodDescriptor<DynamicMessage, DynamicMessage> createJsonMarshallerMethodDescriptor(final String serviceName,
-                                                                                                        final String methodName,
-                                                                                                        final MethodDescriptor.MethodType methodType,
-                                                                                                        final DynamicMessage request,
-                                                                                                        final DynamicMessage response) {
+    public static MethodDescriptor<DynamicMessage, DynamicMessage> createMarshallerMethodDescriptor(final String serviceName,
+                                                                                                    final String methodName,
+                                                                                                    final MethodDescriptor.MethodType methodType,
+                                                                                                    final DynamicMessage request,
+                                                                                                    final DynamicMessage response) {
         MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = METHOD_DESCRIPTOR_CACHE.get(serviceName + methodName);
         if (methodDescriptor == null) {
             methodDescriptor = MethodDescriptor.<DynamicMessage, DynamicMessage>newBuilder()

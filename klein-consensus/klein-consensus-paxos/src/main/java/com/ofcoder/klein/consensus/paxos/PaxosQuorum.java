@@ -16,46 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.nio.ByteBuffer;
+import com.ofcoder.klein.consensus.facade.Node;
+import com.ofcoder.klein.consensus.facade.Quorum;
+
+import java.util.Set;
 
 /**
  * @author: 释慧利
  */
-public class Proposal {
-    private long proposalNo;
-    private ByteBuffer data = ByteBuffer.wrap(new byte[0]);
-    private PaxosQuorum quorum;
+public class PaxosQuorum extends Quorum {
 
-    public long getProposalNo() {
-        return proposalNo;
-    }
-
-    public void setProposalNo(long proposalNo) {
-        this.proposalNo = proposalNo;
-    }
-
-    public ByteBuffer getData() {
-        return data;
-    }
-
-    public void setData(ByteBuffer data) {
-        this.data = data;
-    }
-
-    public PaxosQuorum getQuorum() {
-        return quorum;
-    }
-
-    public void setQuorum(PaxosQuorum quorum) {
-        this.quorum = quorum;
-    }
-
-    @Override
-    public String toString() {
-        return "Proposal{" +
-                "proposalNo=" + proposalNo +
-                ", data=" + data +
-                ", quorum=" + quorum +
-                '}';
+    public PaxosQuorum(Set<Node> allMembers) {
+        super(allMembers);
     }
 }
