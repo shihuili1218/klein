@@ -16,17 +16,18 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.Set;
+
 import com.ofcoder.klein.consensus.facade.Node;
 import com.ofcoder.klein.consensus.facade.Quorum;
-
-import java.util.Set;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author: 释慧利
  */
 public class PaxosQuorum extends Quorum {
 
-    public PaxosQuorum(Set<Node> allMembers) {
+    public PaxosQuorum(Set<Endpoint> allMembers) {
         super(allMembers);
     }
 }

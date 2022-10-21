@@ -16,22 +16,23 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author: 释慧利
  */
-public class AcceptProcessor implements RpcProcessor {
+public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     @Override
     public String method() {
-        return "accept";
+        return AcceptReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(ByteBuffer request, RpcContext context) {
+    public void handleRequest(AcceptReq request, RpcContext context) {
 
     }
+
+
 }

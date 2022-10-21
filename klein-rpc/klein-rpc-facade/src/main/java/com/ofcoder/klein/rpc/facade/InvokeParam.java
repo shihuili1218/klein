@@ -56,4 +56,40 @@ public class InvokeParam {
                 ", data='" + data + '\'' +
                 '}';
     }
+
+    public static final class Builder {
+        private String service;
+        private String method;
+        private ByteBuffer data;
+
+        private Builder() {
+        }
+
+        public static Builder anInvokeParam() {
+            return new Builder();
+        }
+
+        public Builder service(String service) {
+            this.service = service;
+            return this;
+        }
+
+        public Builder method(String method) {
+            this.method = method;
+            return this;
+        }
+
+        public Builder data(ByteBuffer data) {
+            this.data = data;
+            return this;
+        }
+
+        public InvokeParam build() {
+            InvokeParam invokeParam = new InvokeParam();
+            invokeParam.setService(service);
+            invokeParam.setMethod(method);
+            invokeParam.setData(data);
+            return invokeParam;
+        }
+    }
 }

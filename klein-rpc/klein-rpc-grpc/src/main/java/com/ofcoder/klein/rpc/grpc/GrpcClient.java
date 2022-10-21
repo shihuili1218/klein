@@ -95,7 +95,7 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public void sendRequest(Endpoint target, InvokeParam request, InvokeCallback callback, long timeoutMs) {
+    public void sendRequestAsync(Endpoint target, InvokeParam request, InvokeCallback callback, long timeoutMs) {
         invokeAsync(target, request, callback, timeoutMs);
     }
 
@@ -103,11 +103,15 @@ public class GrpcClient implements RpcClient {
     public Object sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs) {
         final CompletableFuture<Object> future = new CompletableFuture<>();
 
-        invokeAsync(target, request, (result, err) -> {
-            if (err == null) {
-                future.complete(result);
-            } else {
+        invokeAsync(target, request, new InvokeCallback() {
+            @Override
+            public void error(Throwable err) {
                 future.completeExceptionally(err);
+            }
+
+            @Override
+            public void complete(ByteBuffer result) {
+                future.complete(result);
             }
         }, timeoutMs);
 
@@ -143,7 +147,7 @@ public class GrpcClient implements RpcClient {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
             ThreadExecutor.submit(() -> {
-                callback.complete(null, new ConnectionException(String.format("connection not available, %s", endpoint)));
+                callback.error(new ConnectionException(String.format("connection not available, %s", endpoint)));
             });
             return;
         }
@@ -162,12 +166,12 @@ public class GrpcClient implements RpcClient {
             @Override
             public void onNext(final DynamicMessage value) {
                 ByteBuffer respData = MessageHelper.getDataFromDynamicMessage(value);
-                ThreadExecutor.submit(() -> callback.complete(respData, null));
+                ThreadExecutor.submit(() -> callback.complete(respData));
             }
 
             @Override
             public void onError(final Throwable throwable) {
-                ThreadExecutor.submit(() -> callback.complete(null, throwable));
+                ThreadExecutor.submit(() -> callback.error(throwable));
             }
 
             @Override

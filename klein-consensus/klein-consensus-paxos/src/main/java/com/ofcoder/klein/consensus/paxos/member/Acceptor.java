@@ -18,11 +18,19 @@ package com.ofcoder.klein.consensus.paxos.member;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * @author far.liu
  */
 public class Acceptor  implements Lifecycle<ConsensusProp> {
+    private final PaxosNode self;
+
+    public Acceptor(PaxosNode self) {
+        this.self = self;
+    }
     @Override
     public void init(ConsensusProp op) {
 
@@ -32,4 +40,10 @@ public class Acceptor  implements Lifecycle<ConsensusProp> {
     public void shutdown() {
 
     }
+
+
+    public void handlePrepareRequest(PrepareReq req, RpcContext context){
+
+    }
+
 }

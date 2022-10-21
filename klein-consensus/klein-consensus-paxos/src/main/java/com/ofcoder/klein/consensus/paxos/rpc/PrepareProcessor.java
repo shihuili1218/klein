@@ -16,22 +16,26 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
-import java.nio.ByteBuffer;
-
-/**
+/**   958
+ * 1018     479  560
  * @author: 释慧利
  */
-public class PrepareProcessor implements RpcProcessor {
+public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     @Override
     public String method() {
-        return "prepare";
+        return PrepareReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(ByteBuffer request, RpcContext context) {
+    public void handleRequest(PrepareReq request, RpcContext context) {
 
+        /** 判断proposalNo
+         *      判断当前index是否已经达成共识
+         */
     }
+
 }

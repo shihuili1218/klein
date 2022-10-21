@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.google.protobuf.DynamicMessage;
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
@@ -46,10 +47,19 @@ public class GrpcServer implements RpcServer {
                 (request, responseObserver) -> {
                     final SocketAddress remoteAddress = RemoteAddressInterceptor.getRemoteAddress();
                     ByteBuffer msg = MessageHelper.getDataFromDynamicMessage(request);
-                    ThreadExecutor.submit(() -> processor.handleRequest(msg, msg1 -> {
-                        final DynamicMessage res = MessageHelper.buildMessage(msg1);
-                        responseObserver.onNext(res);
-                        responseObserver.onCompleted();
+                    ThreadExecutor.submit(() -> processor.handleRequest(msg, new RpcContext() {
+                        @Override
+                        public void response(ByteBuffer msg) {
+                            final DynamicMessage res = MessageHelper.buildMessage(msg);
+                            responseObserver.onNext(res);
+                            responseObserver.onCompleted();
+                        }
+
+                        @Override
+                        public String getRemoteAddress() {
+                            // Rely on GRPC's capabilities, not magic (netty channel)
+                            return remoteAddress != null ? remoteAddress.toString() : null;
+                        }
                     }));
                 });
 
