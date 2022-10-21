@@ -14,7 +14,7 @@ import com.ofcoder.klein.rpc.facade.exception.SerializationException;
  */
 public class Hessian2Util {
 
-    public static <T> byte[] serialize(T javaBean) {
+    public static <T> byte[] serialize(final T javaBean) {
         Hessian2Output ho = null;
         ByteArrayOutputStream baos = null;
 
@@ -40,7 +40,6 @@ public class Hessian2Util {
 
     @SuppressWarnings("unchecked")
     public static <T> T deserialize(byte[] serializeData)  {
-        T javaBean = null;
         Hessian2Input hi = null;
         ByteArrayInputStream bais = null;
 

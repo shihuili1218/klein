@@ -18,11 +18,18 @@ package com.ofcoder.klein.consensus.paxos.member;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.PaxosNode;
 
 /**
  * @author: 释慧利
  */
-public class Learner  implements Lifecycle<ConsensusProp> {
+public class Learner implements Lifecycle<ConsensusProp> {
+    private final PaxosNode self;
+
+    public Learner(PaxosNode self) {
+        this.self = self;
+    }
+
     @Override
     public void init(ConsensusProp op) {
 

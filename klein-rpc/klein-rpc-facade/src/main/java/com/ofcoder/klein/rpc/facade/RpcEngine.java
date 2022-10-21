@@ -28,6 +28,11 @@ public class RpcEngine {
         server.registerProcessor(processor);
     }
 
+    // fixme use spi for get client?
+    public static RpcClient getClient() {
+        return client;
+    }
+
     public static void shutdown() {
         if (server != null) {
             server.shutdown();

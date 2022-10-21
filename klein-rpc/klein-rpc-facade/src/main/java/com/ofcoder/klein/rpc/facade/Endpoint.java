@@ -1,19 +1,26 @@
 package com.ofcoder.klein.rpc.facade;
 
-import org.apache.commons.lang3.StringUtils;
-
 import java.util.Objects;
 
 /**
  * @author: 释慧利
  */
 public class Endpoint {
+    private String id;
     private String ip;
     private int port;
 
     public Endpoint(String ip, int port) {
         this.ip = ip;
         this.port = port;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getIp() {
@@ -47,6 +54,6 @@ public class Endpoint {
 
     @Override
     public String toString() {
-        return "endpoint: " + ip + ":" + port;
+        return "id: " + id + ", endpoint: " + ip + ":" + port;
     }
 }

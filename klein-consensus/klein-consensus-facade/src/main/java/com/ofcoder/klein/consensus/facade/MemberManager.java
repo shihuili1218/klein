@@ -1,12 +1,12 @@
 package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.util.RpcUtil;
-import org.apache.commons.collections4.CollectionUtils;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.collections4.CollectionUtils;
+
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author far.liu
@@ -23,18 +23,24 @@ public class MemberManager {
         return members;
     }
 
-    public static void register(Endpoint node) {
+    public static void writeOn(Endpoint node) {
         if (members.add(node)) {
             version++;
         }
     }
 
-    public static void register(List<String> nodes) {
+    public static void writeOn(List<Endpoint> nodes) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
-        for (String node : nodes) {
-            register(RpcUtil.parseEndpoint(node));
+        if (members.addAll(nodes)) {
+            version++;
+        }
+    }
+
+    public static void writeOff(Endpoint node){
+        if (members.remove(node)) {
+            version++;
         }
     }
 }

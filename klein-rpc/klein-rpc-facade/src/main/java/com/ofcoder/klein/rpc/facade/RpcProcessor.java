@@ -9,8 +9,10 @@ import java.nio.ByteBuffer;
  */
 public interface RpcProcessor {
 
+    String KLEIN = "klein";
+
     default String service() {
-        return this.getClass().getName();
+        return KLEIN;
     }
 
     String method();

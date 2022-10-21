@@ -16,23 +16,23 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author: 释慧利
  */
-public class ConfirmProcessor implements RpcProcessor {
+public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
 
     @Override
     public String method() {
-        return "confirm";
+        return ConfirmReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(ByteBuffer request, RpcContext context) {
+    public void handleRequest(ConfirmReq request, RpcContext context) {
 
     }
+
 }

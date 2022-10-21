@@ -20,7 +20,7 @@ public interface RpcClient extends Lifecycle<RpcProp> {
 
     void closeAll();
 
-    void sendRequest(final Endpoint target, final InvokeParam request, InvokeCallback callback, long timeoutMs);
+    void sendRequestAsync(final Endpoint target, final InvokeParam request, InvokeCallback callback, long timeoutMs);
 
     Object sendRequestSync(final Endpoint target, final InvokeParam request, long timeoutMs);
 

@@ -14,23 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.rpc;
+package com.ofcoder.klein.consensus.facade;
+
+import java.nio.ByteBuffer;
 
 import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 
-import java.nio.ByteBuffer;
-
 /**
  * @author: 释慧利
  */
-public abstract class AbstractRpcProcessor implements RpcProcessor {
+public abstract class AbstractRpcProcessor<REQ> implements RpcProcessor {
 
-    abstract void handleRequest0(ByteBuffer request, RpcContext context);
+    public abstract void handleRequest(REQ request, RpcContext context);
 
     @Override
     public void handleRequest(ByteBuffer request, RpcContext context) {
-        Object deserialize = Hessian2Util.deserialize(request.array());
+        REQ deserialize = Hessian2Util.deserialize(request.array());
+        handleRequest(deserialize, context);
     }
 }

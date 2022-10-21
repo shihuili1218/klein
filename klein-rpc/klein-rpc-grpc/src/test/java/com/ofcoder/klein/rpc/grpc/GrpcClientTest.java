@@ -1,6 +1,7 @@
 package com.ofcoder.klein.rpc.grpc;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcServer;
@@ -50,12 +51,18 @@ public class GrpcClientTest {
         param.setService(processor.service());
         param.setMethod(processor.method());
         CountDownLatch latch = new CountDownLatch(1);
-        rpcClient.sendRequest(new Endpoint("127.0.0.1", 1218), param, (result, err) -> {
-            if (err != null) {
+        rpcClient.sendRequestAsync(new Endpoint("127.0.0.1", 1218), param, new InvokeCallback() {
+            @Override
+            public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
+                latch.countDown();
             }
-            LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
-            latch.countDown();
+
+            @Override
+            public void complete(ByteBuffer result) {
+                LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
+                latch.countDown();
+            }
         }, 5000);
 
         try {

@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.nio.ByteBuffer;
+
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -30,8 +32,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.Join;
 
-import java.nio.ByteBuffer;
-
 /**
  * @author far.liu
  */
@@ -45,7 +45,7 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public Result propose(ByteBuffer data) {
-        return null;
+        return proposer.propose(data);
     }
 
     @Override
@@ -60,14 +60,41 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void init(ConsensusProp op) {
-        this.prop = op;
-        MemberManager.register(op.getMembers());
-
+        prop = op;
+        MemberManager.writeOn(op.getMembers());
         registerProcessor();
-
+        loadNode();
+        initProposer();
+        initAcceptor();
+        initLearner();
     }
 
-    private void registerProcessor(){
+    private void initLearner() {
+        this.learner = new Learner(this.self);
+        this.learner.init(prop);
+    }
+
+    private void initAcceptor() {
+        this.acceptor = new Acceptor(this.self);
+        this.acceptor.init(prop);
+    }
+
+    private void initProposer() {
+        this.proposer = new Proposer(this.self);
+        this.proposer.init(prop);
+    }
+
+    private void loadNode() {
+        // fixme reload from storage.
+        this.self = PaxosNode.Builder.aPaxosNode()
+                .id(prop.getId())
+                .nextIndex(0)
+                .lastConfirmProposalNo(0)
+                .nextProposalNo(0)
+                .build();
+    }
+
+    private void registerProcessor() {
         RpcEngine.registerProcessor(new PrepareProcessor());
         RpcEngine.registerProcessor(new AcceptProcessor());
         RpcEngine.registerProcessor(new ConfirmProcessor());
