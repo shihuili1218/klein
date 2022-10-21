@@ -14,30 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.member;
+package com.ofcoder.klein.consensus.paxos.rpc;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 import java.nio.ByteBuffer;
 
 /**
- * @author far.liu
+ * @author: 释慧利
  */
-public class Proposer implements Lifecycle<ConsensusProp> {
+public class AcceptProcessor implements RpcProcessor {
     @Override
-    public void init(ConsensusProp op) {
-
+    public String method() {
+        return "accept";
     }
 
     @Override
-    public void shutdown() {
+    public void handleRequest(ByteBuffer request, RpcContext context) {
 
-    }
-
-    private Result propose(final ByteBuffer data) {
-
-        return null;
     }
 }

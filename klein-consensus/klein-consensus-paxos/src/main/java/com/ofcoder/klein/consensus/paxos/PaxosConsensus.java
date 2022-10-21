@@ -17,12 +17,17 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
+import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.member.Acceptor;
 import com.ofcoder.klein.consensus.paxos.member.Learner;
 import com.ofcoder.klein.consensus.paxos.member.Proposer;
+import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.Join;
 
 import java.nio.ByteBuffer;
@@ -36,6 +41,7 @@ public class PaxosConsensus implements Consensus {
     private Proposer proposer;
     private Acceptor acceptor;
     private Learner learner;
+    private ConsensusProp prop;
 
     @Override
     public Result propose(ByteBuffer data) {
@@ -54,8 +60,19 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void init(ConsensusProp op) {
+        this.prop = op;
+        MemberManager.register(op.getMembers());
+
+        registerProcessor();
 
     }
+
+    private void registerProcessor(){
+        RpcEngine.registerProcessor(new PrepareProcessor());
+        RpcEngine.registerProcessor(new AcceptProcessor());
+        RpcEngine.registerProcessor(new ConfirmProcessor());
+    }
+
 
     @Override
     public void shutdown() {

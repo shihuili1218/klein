@@ -17,5 +17,11 @@
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.ofcoder.klein.rpc.facade</groupId>
+            <artifactId>klein-rpc-facade</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>
