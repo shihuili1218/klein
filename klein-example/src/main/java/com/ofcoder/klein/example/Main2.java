@@ -14,36 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.member;
-
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
-import com.ofcoder.klein.rpc.facade.RpcContext;
-
-/**
+package com.ofcoder.klein.example;/**
  * @author far.liu
  */
-public class Acceptor  implements Lifecycle<ConsensusProp> {
-    private final PaxosNode self;
 
-    public Acceptor(PaxosNode self) {
-        this.self = self;
+import java.io.IOException;
+
+import com.google.common.collect.Lists;
+import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.rpc.facade.Endpoint;
+
+/**
+ * @author: 释慧利
+ */
+public class Main2 {
+    public static void main(String[] args) throws IOException {
+        KleinProp prop2 = KleinProp.loadIfPresent();
+
+        prop2.getConsensusProp().setMembers(Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220)));
+        prop2.getConsensusProp().setSelf(new Endpoint("2", "127.0.0.1", 1219));
+        prop2.getRpcProp().setPort(1219);
+
+        Klein instance2 = Klein.getInstance();
+
+        System.in.read();
     }
-    @Override
-    public void init(ConsensusProp op) {
-
-    }
-
-    @Override
-    public void shutdown() {
-
-    }
-
-
-    public void handlePrepareRequest(PrepareReq req, RpcContext context){
-
-    }
-
 }

@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import com.ofcoder.klein.consensus.facade.Node;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 import java.util.Objects;
 
@@ -24,41 +25,32 @@ import java.util.Objects;
  * @author: 释慧利
  */
 public class PaxosNode extends Node {
-    private long nextIndex;
-    private long nextProposalNo;
-    private long lastConfirmProposalNo;
-    private String id;
+    private long nextInstanceId;
+    private long curProposalNo;
+    private Endpoint self;
 
-    public long getNextIndex() {
-        return nextIndex;
+    public long getNextInstanceId() {
+        return nextInstanceId;
     }
 
-    public void setNextIndex(long nextIndex) {
-        this.nextIndex = nextIndex;
+    public void setNextInstanceId(long nextInstanceId) {
+        this.nextInstanceId = nextInstanceId;
     }
 
-    public long getNextProposalNo() {
-        return nextProposalNo;
+    public long getCurProposalNo() {
+        return curProposalNo;
     }
 
-    public void setNextProposalNo(long nextProposalNo) {
-        this.nextProposalNo = nextProposalNo;
+    public void setCurProposalNo(long curProposalNo) {
+        this.curProposalNo = curProposalNo;
     }
 
-    public long getLastConfirmProposalNo() {
-        return lastConfirmProposalNo;
+    public Endpoint getSelf() {
+        return self;
     }
 
-    public void setLastConfirmProposalNo(long lastConfirmProposalNo) {
-        this.lastConfirmProposalNo = lastConfirmProposalNo;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
+    public void setSelf(Endpoint self) {
+        this.self = self;
     }
 
     @Override
@@ -66,29 +58,27 @@ public class PaxosNode extends Node {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PaxosNode paxosNode = (PaxosNode) o;
-        return nextIndex == paxosNode.nextIndex && nextProposalNo == paxosNode.nextProposalNo && lastConfirmProposalNo == paxosNode.lastConfirmProposalNo && Objects.equals(id, paxosNode.id);
+        return getNextInstanceId() == paxosNode.getNextInstanceId() && getCurProposalNo() == paxosNode.getCurProposalNo() && Objects.equals(getSelf(), paxosNode.getSelf());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nextIndex, nextProposalNo, lastConfirmProposalNo, id);
+        return Objects.hash(getNextInstanceId(), getCurProposalNo(), getSelf());
     }
 
     @Override
     public String toString() {
         return "PaxosNode{" +
-                "nextIndex=" + nextIndex +
-                ", nextProposalNo=" + nextProposalNo +
-                ", lastConfirmProposalNo=" + lastConfirmProposalNo +
-                ", id='" + id + '\'' +
+                "nextInstanceId=" + nextInstanceId +
+                ", nextProposalNo=" + curProposalNo +
+                ", self=" + self +
                 "} " + super.toString();
     }
 
     public static final class Builder {
-        private long nextIndex;
+        private long nextInstanceId;
         private long nextProposalNo;
-        private long lastConfirmProposalNo;
-        private String id;
+        private Endpoint self;
 
         private Builder() {
         }
@@ -97,8 +87,8 @@ public class PaxosNode extends Node {
             return new Builder();
         }
 
-        public Builder nextIndex(long nextIndex) {
-            this.nextIndex = nextIndex;
+        public Builder nextInstanceId(long nextInstanceId) {
+            this.nextInstanceId = nextInstanceId;
             return this;
         }
 
@@ -107,22 +97,16 @@ public class PaxosNode extends Node {
             return this;
         }
 
-        public Builder lastConfirmProposalNo(long lastConfirmProposalNo) {
-            this.lastConfirmProposalNo = lastConfirmProposalNo;
-            return this;
-        }
-
-        public Builder id(String id) {
-            this.id = id;
+        public Builder self(Endpoint self) {
+            this.self = self;
             return this;
         }
 
         public PaxosNode build() {
             PaxosNode paxosNode = new PaxosNode();
-            paxosNode.setNextIndex(nextIndex);
-            paxosNode.setNextProposalNo(nextProposalNo);
-            paxosNode.setLastConfirmProposalNo(lastConfirmProposalNo);
-            paxosNode.setId(id);
+            paxosNode.setNextInstanceId(nextInstanceId);
+            paxosNode.setCurProposalNo(nextProposalNo);
+            paxosNode.setSelf(self);
             return paxosNode;
         }
     }

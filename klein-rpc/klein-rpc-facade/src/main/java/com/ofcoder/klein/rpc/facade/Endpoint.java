@@ -10,7 +10,8 @@ public class Endpoint {
     private String ip;
     private int port;
 
-    public Endpoint(String ip, int port) {
+    public Endpoint(String id, String ip, int port) {
+        this.id = id;
         this.ip = ip;
         this.port = port;
     }

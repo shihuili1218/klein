@@ -11,11 +11,11 @@ public interface RpcProcessor {
 
     String KLEIN = "klein";
 
-    default String service() {
+    String service();
+
+    default String method() {
         return KLEIN;
     }
-
-    String method();
 
     void handleRequest(final ByteBuffer request, final RpcContext context);
 

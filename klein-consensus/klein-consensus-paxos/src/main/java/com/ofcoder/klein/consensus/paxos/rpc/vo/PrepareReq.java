@@ -1,11 +1,14 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
+import java.io.Serializable;
+import java.util.Objects;
+
 /**
  * @author far.liu
  */
-public class PrepareReq {
+public class PrepareReq implements Serializable {
     private String nodeId;
-    private long index;
+    private long instanceId;
     private long proposalNo;
 
     public String getNodeId() {
@@ -16,12 +19,12 @@ public class PrepareReq {
         this.nodeId = nodeId;
     }
 
-    public long getIndex() {
-        return index;
+    public long getInstanceId() {
+        return instanceId;
     }
 
-    public void setIndex(long index) {
-        this.index = index;
+    public void setInstanceId(long instanceId) {
+        this.instanceId = instanceId;
     }
 
     public long getProposalNo() {
@@ -32,9 +35,31 @@ public class PrepareReq {
         this.proposalNo = proposalNo;
     }
 
+    @Override
+    public String toString() {
+        return "PrepareReq{" +
+                "nodeId='" + nodeId + '\'' +
+                ", instanceId=" + instanceId +
+                ", proposalNo=" + proposalNo +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PrepareReq that = (PrepareReq) o;
+        return instanceId == that.instanceId && proposalNo == that.proposalNo && Objects.equals(nodeId, that.nodeId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nodeId, instanceId, proposalNo);
+    }
+
     public static final class Builder {
         private String nodeId;
-        private long index;
+        private long instanceId;
         private long proposalNo;
 
         private Builder() {
@@ -49,8 +74,8 @@ public class PrepareReq {
             return this;
         }
 
-        public Builder index(long index) {
-            this.index = index;
+        public Builder instanceId(long instanceId) {
+            this.instanceId = instanceId;
             return this;
         }
 
@@ -61,9 +86,9 @@ public class PrepareReq {
 
         public PrepareReq build() {
             PrepareReq prepareReq = new PrepareReq();
-            prepareReq.setNodeId(nodeId);
-            prepareReq.setIndex(index);
-            prepareReq.setProposalNo(proposalNo);
+            prepareReq.instanceId = this.instanceId;
+            prepareReq.proposalNo = this.proposalNo;
+            prepareReq.nodeId = this.nodeId;
             return prepareReq;
         }
     }

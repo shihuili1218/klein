@@ -18,6 +18,7 @@
         <module>klein-storage</module>
         <module>klein-spi</module>
         <module>klein-common</module>
+        <module>klein-example</module>
     </modules>
 
     <properties>
@@ -95,7 +96,11 @@
                 <artifactId>klein-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>com.ofcoder.klein.storage.jvm</groupId>
+                <artifactId>klein-storage-jvm</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>io.netty</groupId>

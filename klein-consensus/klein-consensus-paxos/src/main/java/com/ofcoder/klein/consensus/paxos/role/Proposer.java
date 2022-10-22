@@ -14,30 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.member;
+package com.ofcoder.klein.consensus.paxos.role;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
-import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
+import com.ofcoder.klein.storage.facade.Instance;
 
 /**
  * @author far.liu
  */
 public class Proposer implements Lifecycle<ConsensusProp> {
+    private static final Logger LOG = LoggerFactory.getLogger(Proposer.class);
     private AtomicBoolean skipPrepare = new AtomicBoolean(false);
     private RpcClient client;
     private ConsensusProp prop;
@@ -63,6 +70,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     }
 
     public Result propose(final ByteBuffer data) {
+        LOG.info("开始协商，{}", self.getSelf().getId());
+
         if (!skipPrepare.get()) {
             prepare();
         }
@@ -70,27 +79,33 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         return null;
     }
 
-    public void accept() {
+    public void accept(ByteBuffer data) {
 
     }
 
     public void prepare() {
-        PaxosQuorum quorum = new PaxosQuorum(MemberManager.getMembers());
+        self.setCurProposalNo(self.getCurProposalNo() + 1);
+
+        PaxosQuorum quorum = PaxosQuorum.createInstance();
         AtomicBoolean nexted = new AtomicBoolean(false);
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
-                .index(self.getNextIndex())
-                .nodeId(self.getId())
-                .proposalNo(self.getNextProposalNo())
+                .instanceId(self.getNextInstanceId())
+                .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
                 .build();
-        MemberManager.getMembers().forEach(it -> {
+
+
+        // fixme exclude self
+        MemberManager.getAllMembers().forEach(it -> {
             InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                    .service(RpcProcessor.KLEIN)
-                    .method(req.getClass().getSimpleName())
-                    .data(ByteBuffer.wrap(new byte[0])).build();
+                    .service(PrepareReq.class.getSimpleName())
+                    .method(RpcProcessor.KLEIN)
+                    .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
+                    LOG.error(err.getMessage(),err);
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE
                             && nexted.compareAndSet(false, true)) {
@@ -100,25 +115,37 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 @Override
                 public void complete(PrepareRes result) {
-                    if (result.getProposalNo() == req.getProposalNo()) {
-                        quorum.grant(it);
-                        if (quorum.isGranted() == Quorum.GrantResult.PASS
-                                && nexted.compareAndSet(false, true)) {
-                            accept();
-                        }
-                    } else {
-                        quorum.refuse(it);
-                        if (result.getProposalNo() > quorum.getMaxRefuseProposalNo()) {
-                            quorum.setTempValue(result.getProposalNo(), result.getGrantValue());
-                        }
-
-                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE
-                                && nexted.compareAndSet(false, true)) {
-                            prepare();
-                        }
-                    }
+                    handlePrepareRequest(result, quorum, it, nexted);
                 }
             }, prepareTimeout);
         });
+    }
+
+    private void handlePrepareRequest(PrepareRes result, PaxosQuorum quorum, Endpoint it, AtomicBoolean nexted) {
+        LOG.info("处理Prepare响应，{}", self.getSelf().getId());
+        if (result.getResult()) {
+            quorum.grant(it);
+            if (quorum.isGranted() == Quorum.GrantResult.PASS
+                    && nexted.compareAndSet(false, true)) {
+
+//                accept(result.getGrantValue() == null ? );
+            }
+        } else {
+            quorum.refuse(it);
+            if (result.getState() == Instance.State.CONFIRMED) {
+                // return and learn
+            } else if (result.getState() == Instance.State.ACCEPTED) {
+                if (result.getProposalNo() > quorum.getMaxRefuseProposalNo()) {
+                    quorum.setTempValue(result.getProposalNo(), result.getGrantValue());
+                }
+                // return and prepare
+            }
+            self.setCurProposalNo(Math.max(self.getCurProposalNo(), result.getProposalNo()));
+
+            if (quorum.isGranted() == Quorum.GrantResult.REFUSE
+                    && nexted.compareAndSet(false, true)) {
+                prepare();
+            }
+        }
     }
 }
