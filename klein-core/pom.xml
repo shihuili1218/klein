@@ -30,8 +30,8 @@
             <artifactId>klein-rpc-grpc</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ofcoder.klein.storage.h2</groupId>
-            <artifactId>klein-storage-h2</artifactId>
+            <groupId>com.ofcoder.klein.storage.jvm</groupId>
+            <artifactId>klein-storage-jvm</artifactId>
         </dependency>
     </dependencies>
 

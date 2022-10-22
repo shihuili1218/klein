@@ -14,12 +14,12 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author: 释慧利
  */
 public class KleinProp {
-    private String storage = "h2";
+    private String storage = "jvm";
     private String consensus = "paxos";
     private String rpc = "grpc";
-    private ConsensusProp consensusProp;
-    private StorageProp storageProp;
-    private RpcProp rpcProp;
+    private ConsensusProp consensusProp = new ConsensusProp();
+    private StorageProp storageProp = new StorageProp();
+    private RpcProp rpcProp = new RpcProp();
 
     public String getStorage() {
         return storage;

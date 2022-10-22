@@ -26,7 +26,7 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
 public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
 
     @Override
-    public String method() {
+    public String service() {
         return ConfirmReq.class.getSimpleName();
     }
 

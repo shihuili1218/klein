@@ -1,10 +1,11 @@
 package com.ofcoder.klein.rpc.facade.util;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
-import org.apache.commons.lang3.StringUtils;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author: 释慧利
@@ -21,6 +22,7 @@ public class RpcUtil {
         }
     }
 
+    @Deprecated
     public static Endpoint parseEndpoint(final String s) {
         if (StringUtils.isEmpty(s)) {
             throw new IllegalArgumentException("parse Endpoint, but address is empty.");
@@ -31,7 +33,7 @@ public class RpcUtil {
         }
         try {
             final int port = Integer.parseInt(tmps[1]);
-            return new Endpoint(tmps[0], port);
+            return new Endpoint(null, tmps[0], port);
         } catch (final Exception e) {
             throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
         }

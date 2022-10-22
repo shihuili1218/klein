@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos;
 
 import java.util.Set;
 
+import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Node;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -27,7 +28,11 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class PaxosQuorum extends Quorum {
 
-    public PaxosQuorum(Set<Endpoint> allMembers) {
+    private PaxosQuorum(Set<Endpoint> allMembers) {
         super(allMembers);
+    }
+
+    public static PaxosQuorum createInstance(){
+        return new PaxosQuorum(MemberManager.getAllMembers());
     }
 }

@@ -1,6 +1,5 @@
 package com.ofcoder.klein;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -33,19 +32,19 @@ public class Klein {
             LOG.warn("klein engine is starting.");
             return;
         }
-        LOG.debug("starting klein...");
+        LOG.info("starting klein...");
         KleinProp prop = KleinProp.loadIfPresent();
 
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
-        ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
         StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
+        ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
 
         this.cache = new KleinCacheImpl();
         this.lock = new KleinLockImpl();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("*** shutting down Klein since JVM is shutting down");
-            StorageEngine.shutdown0();
+            StorageEngine.shutdown();
             ConsensusEngine.shutdown();
             RpcEngine.shutdown();
             LOG.info("*** Klein shut down");

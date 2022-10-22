@@ -23,9 +23,9 @@ import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.member.Acceptor;
-import com.ofcoder.klein.consensus.paxos.member.Learner;
-import com.ofcoder.klein.consensus.paxos.member.Proposer;
+import com.ofcoder.klein.consensus.paxos.role.Acceptor;
+import com.ofcoder.klein.consensus.paxos.role.Learner;
+import com.ofcoder.klein.consensus.paxos.role.Proposer;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
@@ -60,13 +60,13 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void init(ConsensusProp op) {
-        prop = op;
-        MemberManager.writeOn(op.getMembers());
-        registerProcessor();
+        this.prop = op;
+        MemberManager.writeOn(op.getMembers(), this.prop.getSelf());
         loadNode();
         initProposer();
         initAcceptor();
         initLearner();
+        registerProcessor();
     }
 
     private void initLearner() {
@@ -87,15 +87,14 @@ public class PaxosConsensus implements Consensus {
     private void loadNode() {
         // fixme reload from storage.
         this.self = PaxosNode.Builder.aPaxosNode()
-                .id(prop.getId())
-                .nextIndex(0)
-                .lastConfirmProposalNo(0)
+                .self(prop.getSelf())
+                .nextInstanceId(0)
                 .nextProposalNo(0)
                 .build();
     }
 
     private void registerProcessor() {
-        RpcEngine.registerProcessor(new PrepareProcessor());
+        RpcEngine.registerProcessor(new PrepareProcessor(this.acceptor));
         RpcEngine.registerProcessor(new AcceptProcessor());
         RpcEngine.registerProcessor(new ConfirmProcessor());
     }

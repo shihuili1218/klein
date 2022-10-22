@@ -1,6 +1,9 @@
 klein
 
-raft/paxos, grpc, h2
+paxos, grpc, h2
+
+paxos写请求
+- 支持乱序协商，顺序确认
 
 Paxos读请求优化
 - 增加Master节点

@@ -4,6 +4,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
@@ -46,12 +47,14 @@ public class GrpcClientTest {
 
     @Test
     public void testSendRequest() {
-        InvokeParam param = new InvokeParam();
-        param.setData(ByteBuffer.wrap(Hessian2Util.serialize("I'm Klein")));
-        param.setService(processor.service());
-        param.setMethod(processor.method());
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service("".getClass().getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize("I'm Klein"))).build();
+
+
         CountDownLatch latch = new CountDownLatch(1);
-        rpcClient.sendRequestAsync(new Endpoint("127.0.0.1", 1218), param, new InvokeCallback() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);

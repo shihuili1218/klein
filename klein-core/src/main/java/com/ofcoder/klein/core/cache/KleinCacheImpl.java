@@ -4,24 +4,23 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
+import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
-import com.ofcoder.klein.storage.facade.Storage;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
  * @author: 释慧利
  */
 public class KleinCacheImpl implements KleinCache, SM {
     protected Consensus consensus;
-    protected Storage storage;
 
     public KleinCacheImpl() {
         KleinProp kleinProp = KleinProp.loadIfPresent();
-//        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
-//        this.storage = ExtensionLoader.getExtensionLoader(Storage.class).getJoin(kleinProp.getStorage());
+        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
     }
 
     @Override

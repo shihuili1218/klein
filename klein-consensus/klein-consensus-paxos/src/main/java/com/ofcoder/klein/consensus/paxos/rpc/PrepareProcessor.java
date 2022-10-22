@@ -16,26 +16,40 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.paxos.role.Acceptor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
-/**   958
- * 1018     479  560
+/**
  * @author: 释慧利
  */
 public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
+    private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
+    private Acceptor acceptor;
+
+    public PrepareProcessor(Acceptor acceptor) {
+        this.acceptor = acceptor;
+    }
+
     @Override
-    public String method() {
+    public String service() {
         return PrepareReq.class.getSimpleName();
     }
 
     @Override
     public void handleRequest(PrepareReq request, RpcContext context) {
 
-        /** 判断proposalNo
-         *      判断当前index是否已经达成共识
-         */
+        if (!MemberManager.isValid(request.getNodeId())) {
+            LOG.error("prepare type msg, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
+                    request.getNodeId());
+            return;
+        }
+        acceptor.handlePrepareRequest(request, context);
     }
 
 }

@@ -24,8 +24,10 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author: 释慧利
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
+
+
     @Override
-    public String method() {
+    public String service() {
         return AcceptReq.class.getSimpleName();
     }
 

@@ -16,7 +16,7 @@ public class HelloProcessor implements RpcProcessor {
 
     @Override
     public String method() {
-        return "hello";
+        return String.class.getSimpleName();
     }
 
     @Override

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.member;
+package com.ofcoder.klein.consensus.paxos.role;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
