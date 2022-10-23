@@ -45,6 +45,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -70,8 +71,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     /**
      * Disruptor to run propose.
      */
-    private Disruptor<ProposeWithDone> applyDisruptor;
-    private RingBuffer<ProposeWithDone> applyQueue;
+    private Disruptor<ProposeWithDone> proposeDisruptor;
+    private RingBuffer<ProposeWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
 
     public Proposer(PaxosNode self) {
@@ -85,24 +86,23 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
-
-        this.applyDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
+        this.proposeDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
                 .setEventFactory(ProposeWithDone::new)
                 .setThreadFactory(KleinThreadFactory.create("klein-paxos-propose-disruptor-", true)) //
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();
-        this.applyDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
-        this.applyDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
-        this.applyQueue = this.applyDisruptor.start();
+        this.proposeDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
+        this.proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
+        this.proposeQueue = this.proposeDisruptor.start();
     }
 
     @Override
     public void shutdown() {
-        if (this.applyQueue != null) {
+        if (this.proposeQueue != null) {
             this.shutdownLatch = new CountDownLatch(1);
-            this.applyQueue.publishEvent((event, sequence) -> event.setShutdownLatch(this.shutdownLatch));
+            this.proposeQueue.publishEvent((event, sequence) -> event.setShutdownLatch(this.shutdownLatch));
             try {
                 shutdownLatch.await();
             } catch (InterruptedException e) {
@@ -120,28 +120,56 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             event.done = done;
             event.data = data;
         };
-        this.applyQueue.publishEvent(translator);
+        this.proposeQueue.publishEvent(translator);
     }
 
-    public void accept(List<ByteBuffer> datas, AcceptCallback callback) {
+    public void accept(long instanceId, long proposalNo, List<ByteBuffer> datas, PhaseCallback callback) {
+        final PaxosQuorum quorum = PaxosQuorum.createInstance();
+        final AtomicBoolean nexted = new AtomicBoolean(false);
+
+        final AcceptReq req = AcceptReq.Builder.anAcceptReq()
+                .nodeId(self.getSelf().getId())
+                .instanceId(instanceId)
+                .proposalNo(proposalNo)
+                .datas(datas)
+                .build();
+
+        MemberManager.getAllMembers().forEach(it -> {
+            InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                    .service(AcceptReq.class.getSimpleName())
+                    .method(RpcProcessor.KLEIN)
+                    .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+            client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
+                @Override
+                public void error(Throwable err) {
+                    LOG.error(err.getMessage(), err);
+
+                }
+
+                @Override
+                public void complete(PrepareRes result) {
+
+                }
+            }, acceptTimeout);
+        });
 
     }
 
-    public void prepare(int times, PrepareCallback callback) {
+    public void prepare(final long instanceId, int times, final PhaseCallback callback) {
         if (times++ >= this.prop.getRetry()) {
-            callback.refused();
+            callback.refused(instanceId);
             return;
         }
         final int finalTimes = times;
-        self.setCurProposalNo(self.getCurProposalNo() + 1);
+        long proposalNo = self.incrementProposalNo();
 
         PaxosQuorum quorum = PaxosQuorum.createInstance();
         AtomicBoolean nexted = new AtomicBoolean(false);
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
-                .instanceId(self.getNextInstanceId())
+                .instanceId(instanceId)
                 .nodeId(self.getSelf().getId())
-                .proposalNo(self.getCurProposalNo())
+                .proposalNo(proposalNo)
                 .build();
 
         // fixme exclude self
@@ -157,45 +185,51 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE
                             && nexted.compareAndSet(false, true)) {
-                        prepare(finalTimes, callback);
+                        prepare(instanceId, finalTimes, callback);
                     }
                 }
 
                 @Override
                 public void complete(PrepareRes result) {
-                    handlePrepareRequest(finalTimes, callback, result, quorum, it, nexted);
+                    handlePrepareRequest(instanceId, finalTimes, callback, result, quorum, it, nexted);
                 }
             }, prepareTimeout);
         });
     }
 
-    private void handlePrepareRequest(int times, PrepareCallback callback, PrepareRes result
-            , PaxosQuorum quorum, Endpoint it, AtomicBoolean nexted) {
+    private void handlePrepareRequest(final long instanceId, int times, final PhaseCallback callback, final PrepareRes result
+            , final PaxosQuorum quorum, final Endpoint it, final AtomicBoolean nexted) {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
+
+        if (result.getGrantValue() != null) {
+            quorum.setTempValue(result.getProposalNo(), result.getGrantValue());
+        }
+
         if (result.getResult()) {
             quorum.grant(it);
             if (quorum.isGranted() == Quorum.GrantResult.PASS
                     && nexted.compareAndSet(false, true)) {
                 // do accept phase.
-                callback.granted();
+                callback.granted(instanceId, result.getProposalNo(), quorum.getTempValue());
             }
         } else {
             quorum.refuse(it);
-            if (result.getState() == Instance.State.CONFIRMED) {
-                // todo return and learn
-            } else {
-                // return and prepare
-                if (result.getGrantValue() != null) {
-                    quorum.setTempValue(result.getProposalNo(), result.getGrantValue());
-                }
-                self.setCurProposalNo(Math.max(self.getCurProposalNo(), result.getProposalNo()));
-
-                if (quorum.isGranted() == Quorum.GrantResult.REFUSE
-                        && nexted.compareAndSet(false, true)) {
-                    prepare(times, callback);
-                }
+            final long selfProposalNo = self.getCurProposalNo();
+            long diff = result.getProposalNo() - selfProposalNo;
+            if (diff > 0) {
+                self.addProposalNo(diff);
             }
 
+            if (result.getState() == Instance.State.CONFIRMED
+                    && nexted.compareAndSet(false, true)) {
+                callback.confirmed(instanceId, result.getProposalNo(), quorum.getTempValue());
+            } else {
+                // do prepare phase
+                if (quorum.isGranted() == Quorum.GrantResult.REFUSE
+                        && nexted.compareAndSet(false, true)) {
+                    prepare(instanceId, times, callback);
+                }
+            }
         }
     }
 
@@ -215,27 +249,68 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         protected void handle(List<ProposeWithDone> events) {
             LOG.info("start negotiations, proposal size: {}", events.size());
             if (!Proposer.this.skipPrepare.get()) {
-                prepare(0, new PrepareCallback() {
-                    @Override
-                    public void granted() {
-                        accept(events.stream().map(it -> it.data).collect(Collectors.toList())
-                                , new AcceptCallback() {
-                                    @Override
-                                    public void pass() {
-                                        for (ProposeWithDone event : events) {
-                                            event.done.done(Result.SUCCESS);
-                                        }
-                                    }
-                                });
-                    }
+                prepare(self.incrementInstanceId(), 0, new PrepareCallback(events));
+            }
+        }
 
-                    @Override
-                    public void refused() {
-                        for (ProposeWithDone event : events) {
-                            event.done.done(Result.UNKNOWN);
-                        }
-                    }
-                });
+        public class PrepareCallback implements PhaseCallback {
+            private List<ProposeWithDone> events;
+
+            public PrepareCallback(List<ProposeWithDone> events) {
+                this.events = events;
+            }
+
+            @Override
+            public void granted(long instanceId, long proposalNo, List<ByteBuffer> datas) {
+                List<ByteBuffer> v = datas != null ? datas
+                        : events.stream().map(it -> it.data).collect(Collectors.toList());
+                accept(instanceId, proposalNo, v, new AcceptCallback(events));
+            }
+
+            @Override
+            public void confirmed(long instanceId, long proposalNo, List<ByteBuffer> datas) {
+                // todo learn
+                for (ProposeWithDone event : events) {
+                    event.done.done(Result.FAILURE);
+                }
+            }
+
+            @Override
+            public void refused(long instanceId) {
+                for (ProposeWithDone event : events) {
+                    event.done.done(Result.UNKNOWN);
+                }
+            }
+        }
+
+        public class AcceptCallback implements PhaseCallback {
+            List<ProposeWithDone> events;
+
+            public AcceptCallback(List<ProposeWithDone> events) {
+                this.events = events;
+            }
+
+            @Override
+            public void granted(long instanceId, long proposalNo, List<ByteBuffer> datas) {
+                for (ProposeWithDone event : events) {
+                    event.done.done(Result.SUCCESS);
+                }
+                // todo confirm for async
+            }
+
+            @Override
+            public void confirmed(long instanceId, long proposalNo, List<ByteBuffer> datas) {
+                // todo learn
+                for (ProposeWithDone event : events) {
+                    event.done.done(Result.FAILURE);
+                }
+            }
+
+            @Override
+            public void refused(long instanceId) {
+                for (ProposeWithDone event : events) {
+                    event.done.done(Result.UNKNOWN);
+                }
             }
         }
 

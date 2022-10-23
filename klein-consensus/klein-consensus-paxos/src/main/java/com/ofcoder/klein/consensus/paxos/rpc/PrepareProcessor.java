@@ -45,7 +45,7 @@ public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     public void handleRequest(PrepareReq request, RpcContext context) {
 
         if (!MemberManager.isValid(request.getNodeId())) {
-            LOG.error("prepare type msg, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
+            LOG.error("msg type: prepare, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
             return;
         }

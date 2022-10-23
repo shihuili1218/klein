@@ -16,7 +16,12 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.paxos.role.Acceptor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
@@ -24,7 +29,12 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author: 释慧利
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
+    private static final Logger LOG = LoggerFactory.getLogger(AcceptProcessor.class);
+    private Acceptor acceptor;
 
+    public AcceptProcessor(Acceptor acceptor) {
+        this.acceptor = acceptor;
+    }
 
     @Override
     public String service() {
@@ -34,6 +44,12 @@ public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     @Override
     public void handleRequest(AcceptReq request, RpcContext context) {
 
+        if (!MemberManager.isValid(request.getNodeId())) {
+            LOG.error("msg type: accept, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
+                    request.getNodeId());
+            return;
+        }
+        acceptor.handleAcceptRequest(request, context);
     }
 
 

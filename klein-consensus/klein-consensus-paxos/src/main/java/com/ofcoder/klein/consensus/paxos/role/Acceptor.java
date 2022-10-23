@@ -24,6 +24,8 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -55,9 +57,45 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     }
 
+    public void handleAcceptRequest(AcceptReq req, RpcContext context) {
+        LOG.info("processing the accept message from node-{}", req.getNodeId());
+        try {
+            logManager.getLock().writeLock().lock();
+            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
+                    .nodeId(self.getSelf().getId());
+            final long selfProposalNo = self.getCurProposalNo();
+            long diff = req.getProposalNo() - selfProposalNo;
+
+            if (diff >= 0) {
+                if (diff > 0){
+                    self.addProposalNo(diff);
+                }
+                resBuilder.result(true);
+                resBuilder.proposalNo(req.getProposalNo());
+
+                Instance localInstance = logManager.getInstance(req.getInstanceId());
+                if (localInstance == null) {
+                    // the prepare message is not received, but the accept message is received
+                    resBuilder.result(false);
+                } else {
+                    localInstance.setState(Instance.State.ACCEPTED);
+                    localInstance.setGrantedValue(req.getDatas());
+                    logManager.updateInstance(localInstance);
+                }
+
+            } else {
+                resBuilder.result(false);
+                resBuilder.proposalNo(selfProposalNo);
+            }
+
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
+        } finally {
+            logManager.getLock().writeLock().unlock();
+        }
+    }
 
     public void handlePrepareRequest(PrepareReq req, RpcContext context) {
-        LOG.info("处理prepare消息，{}", self.getSelf().getId());
+        LOG.info("processing the prepare message from node-{}", req.getNodeId());
 
         try {
             logManager.getLock().writeLock().lock();
@@ -65,18 +103,20 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
             PrepareRes.Builder resBuilder = PrepareRes.Builder.aPrepareRes()
                     .nodeId(self.getSelf().getId());
 
-            if (req.getProposalNo() > self.getCurProposalNo()) {
+            final long selfProposalNo = self.getCurProposalNo();
+            long diff = req.getProposalNo() - selfProposalNo;
+            if (diff > 0) {
                 resBuilder.result(true);
                 resBuilder.proposalNo(req.getProposalNo());
+                self.addProposalNo(diff);
             } else {
                 resBuilder.result(false);
-                resBuilder.proposalNo(self.getCurProposalNo());
+                resBuilder.proposalNo(selfProposalNo);
             }
 
             Instance localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 localInstance = Instance.Builder.anInstance()
-                        .grantedProposalNo(req.getProposalNo())
                         .instanceId(req.getInstanceId())
                         .state(Instance.State.PREPARED)
                         .build();

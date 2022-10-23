@@ -16,41 +16,43 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.ofcoder.klein.consensus.facade.Node;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-
-import java.util.Objects;
 
 /**
  * @author: 释慧利
  */
 public class PaxosNode extends Node {
-    private long nextInstanceId;
-    private long curProposalNo;
+    private AtomicLong curInstanceId;
+    private AtomicLong curProposalNo;
     private Endpoint self;
 
-    public long getNextInstanceId() {
-        return nextInstanceId;
+    public long incrementProposalNo() {
+        return addProposalNo(1);
     }
 
-    public void setNextInstanceId(long nextInstanceId) {
-        this.nextInstanceId = nextInstanceId;
+    public long addProposalNo(long v) {
+        return curProposalNo.addAndGet(v);
+    }
+
+    public long incrementInstanceId() {
+        return curInstanceId.incrementAndGet();
+    }
+
+
+    public long getCurInstanceId() {
+        return curInstanceId.get();
     }
 
     public long getCurProposalNo() {
-        return curProposalNo;
-    }
-
-    public void setCurProposalNo(long curProposalNo) {
-        this.curProposalNo = curProposalNo;
+        return curProposalNo.get();
     }
 
     public Endpoint getSelf() {
         return self;
-    }
-
-    public void setSelf(Endpoint self) {
-        this.self = self;
     }
 
     @Override
@@ -58,26 +60,26 @@ public class PaxosNode extends Node {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PaxosNode paxosNode = (PaxosNode) o;
-        return getNextInstanceId() == paxosNode.getNextInstanceId() && getCurProposalNo() == paxosNode.getCurProposalNo() && Objects.equals(getSelf(), paxosNode.getSelf());
+        return getCurInstanceId() == paxosNode.getCurInstanceId() && getCurProposalNo() == paxosNode.getCurProposalNo() && Objects.equals(getSelf(), paxosNode.getSelf());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getNextInstanceId(), getCurProposalNo(), getSelf());
+        return Objects.hash(getCurInstanceId(), getCurProposalNo(), getSelf());
     }
 
     @Override
     public String toString() {
         return "PaxosNode{" +
-                "nextInstanceId=" + nextInstanceId +
+                "nextInstanceId=" + curInstanceId +
                 ", nextProposalNo=" + curProposalNo +
                 ", self=" + self +
                 "} " + super.toString();
     }
 
     public static final class Builder {
-        private long nextInstanceId;
-        private long nextProposalNo;
+        private AtomicLong curInstanceId;
+        private AtomicLong curProposalNo;
         private Endpoint self;
 
         private Builder() {
@@ -87,13 +89,13 @@ public class PaxosNode extends Node {
             return new Builder();
         }
 
-        public Builder nextInstanceId(long nextInstanceId) {
-            this.nextInstanceId = nextInstanceId;
+        public Builder curInstanceId(AtomicLong nextInstanceId) {
+            this.curInstanceId = nextInstanceId;
             return this;
         }
 
-        public Builder nextProposalNo(long nextProposalNo) {
-            this.nextProposalNo = nextProposalNo;
+        public Builder curProposalNo(AtomicLong nextProposalNo) {
+            this.curProposalNo = nextProposalNo;
             return this;
         }
 
@@ -104,9 +106,9 @@ public class PaxosNode extends Node {
 
         public PaxosNode build() {
             PaxosNode paxosNode = new PaxosNode();
-            paxosNode.setNextInstanceId(nextInstanceId);
-            paxosNode.setCurProposalNo(nextProposalNo);
-            paxosNode.setSelf(self);
+            paxosNode.curInstanceId = curInstanceId;
+            paxosNode.curProposalNo = curProposalNo;
+            paxosNode.self = self;
             return paxosNode;
         }
     }

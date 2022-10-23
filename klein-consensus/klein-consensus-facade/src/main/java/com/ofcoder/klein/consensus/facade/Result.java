@@ -5,6 +5,7 @@ package com.ofcoder.klein.consensus.facade;
  */
 public enum Result {
     SUCCESS,
+    FAILURE,
     UNKNOWN
 
 }
