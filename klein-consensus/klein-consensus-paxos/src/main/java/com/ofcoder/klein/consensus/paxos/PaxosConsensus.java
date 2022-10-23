@@ -17,19 +17,25 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.role.Acceptor;
 import com.ofcoder.klein.consensus.paxos.role.Learner;
+import com.ofcoder.klein.consensus.paxos.role.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.role.Proposer;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.spi.Join;
 
 /**
@@ -44,8 +50,23 @@ public class PaxosConsensus implements Consensus {
     private ConsensusProp prop;
 
     @Override
-    public Result propose(ByteBuffer data) {
-        return proposer.propose(data);
+    public Result propose(final ByteBuffer data) {
+        final CompletableFuture<Result> future = new CompletableFuture<>();
+        proposeAsync(data, future::complete);
+
+        try {
+            return future.get(this.prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+        } catch (final TimeoutException e) {
+            future.cancel(true);
+            throw new InvokeTimeoutException(e.getMessage(), e);
+        } catch (final Throwable t) {
+            future.cancel(true);
+            throw new ConsensusException(t.getMessage(), t);
+        }
+    }
+
+    private void proposeAsync(final ByteBuffer data, final ProposeDone done) {
+        proposer.propose(data, done);
     }
 
     @Override

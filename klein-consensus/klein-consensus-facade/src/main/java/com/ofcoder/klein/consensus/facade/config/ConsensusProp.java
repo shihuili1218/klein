@@ -20,6 +20,14 @@ public class ConsensusProp {
      * timeout for single round.
      */
     private long roundTimeout = 10000;
+    /**
+     * the number of proposals negotiated by the single round.
+     */
+    private int batchSize = 3;
+    /**
+     * negotiation failed, number of retry times.
+     */
+    private int retry = 1;
 
     public Endpoint getSelf() {
         return self;
@@ -43,5 +51,21 @@ public class ConsensusProp {
 
     public void setRoundTimeout(long roundTimeout) {
         this.roundTimeout = roundTimeout;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
+    }
+
+    public void setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
+    }
+
+    public int getRetry() {
+        return retry;
+    }
+
+    public void setRetry(int retry) {
+        this.retry = retry;
     }
 }

@@ -14,17 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade.exception;
+package com.ofcoder.klein.consensus.facade.exception;
+
+import com.ofcoder.klein.common.exception.KleinException;
 
 /**
  * @author: 释慧利
  */
-public class LockException extends StorageException {
-    public LockException(String message) {
+public class ConsensusException extends KleinException {
+    public ConsensusException(String message) {
         super(message);
     }
 
-    public LockException(String message, Throwable cause) {
+    public ConsensusException(String message, Throwable cause) {
         super(message, cause);
     }
 }

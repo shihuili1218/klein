@@ -14,17 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade.exception;
+package com.ofcoder.klein.common.disruptor;
+
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author: 释慧利
  */
-public class LockException extends StorageException {
-    public LockException(String message) {
-        super(message);
+public class DisruptorEvent {
+    private CountDownLatch shutdownLatch;
+
+    public CountDownLatch getShutdownLatch() {
+        return shutdownLatch;
     }
 
-    public LockException(String message, Throwable cause) {
-        super(message, cause);
+    public void setShutdownLatch(CountDownLatch shutdownLatch) {
+        this.shutdownLatch = shutdownLatch;
     }
 }
