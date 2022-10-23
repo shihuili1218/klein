@@ -16,7 +16,7 @@
  *
  */
 
-package com.xinji.top.common.concurrent;
+package com.ofcoder.klein.common.util;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author: yuanyuan.liu
  * @date: 2020/1/14 9:34
  */
-public final class ThreadFactory implements java.util.concurrent.ThreadFactory {
+public final class KleinThreadFactory implements java.util.concurrent.ThreadFactory {
 
     private static final AtomicLong THREAD_NUMBER = new AtomicLong(1);
 
@@ -34,7 +34,7 @@ public final class ThreadFactory implements java.util.concurrent.ThreadFactory {
 
     private final String namePrefix;
 
-    private ThreadFactory(final String namePrefix, final boolean daemon) {
+    private KleinThreadFactory(final String namePrefix, final boolean daemon) {
         this.namePrefix = namePrefix;
         this.daemon = daemon;
     }
@@ -47,7 +47,7 @@ public final class ThreadFactory implements java.util.concurrent.ThreadFactory {
      * @return {@linkplain java.util.concurrent.ThreadFactory}
      */
     public static java.util.concurrent.ThreadFactory create(final String namePrefix, final boolean daemon) {
-        return new com.xinji.top.common.concurrent.ThreadFactory(namePrefix, daemon);
+        return new KleinThreadFactory(namePrefix, daemon);
     }
 
     @Override

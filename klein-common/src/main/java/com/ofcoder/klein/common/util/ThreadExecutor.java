@@ -13,7 +13,7 @@ public class ThreadExecutor {
     private final static ExecutorService EXECUTOR = new ThreadPoolExecutor(10, 30,
             300L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(10000),
-            com.xinji.top.common.concurrent.ThreadFactory.create("audit-predict", true));
+            KleinThreadFactory.create("audit-predict", true));
 
 
     public static void submit(Runnable task){

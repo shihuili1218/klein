@@ -14,17 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade.exception;
+package com.ofcoder.klein.consensus.paxos.role;/**
+ * @author far.liu
+ */
 
 /**
  * @author: 释慧利
  */
-public class LockException extends StorageException {
-    public LockException(String message) {
-        super(message);
-    }
-
-    public LockException(String message, Throwable cause) {
-        super(message, cause);
-    }
+public interface AcceptCallback {
+    void pass();
 }
