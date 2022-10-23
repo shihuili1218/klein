@@ -14,13 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.role;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.paxos.role;
+
+import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * @author: 释慧利
  */
-public interface AcceptCallback {
-    void pass();
+public interface PhaseCallback {
+
+    void granted(long instanceId, long proposalNo, List<ByteBuffer> datas);
+    void confirmed(long instanceId, long proposalNo, List<ByteBuffer> datas);
+    void refused(long instanceId);
+
+
 }

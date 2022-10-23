@@ -17,6 +17,7 @@
 package com.ofcoder.klein.storage.facade;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * @author: 释慧利
@@ -24,7 +25,7 @@ import java.nio.ByteBuffer;
 public class Instance {
 
     private long instanceId;
-    private ByteBuffer grantedValue;
+    private List<ByteBuffer> grantedValue;
     private State state = State.PREPARED;
 
     public long getInstanceId() {
@@ -35,11 +36,11 @@ public class Instance {
         this.instanceId = instanceId;
     }
 
-    public ByteBuffer getGrantedValue() {
+    public List<ByteBuffer> getGrantedValue() {
         return grantedValue;
     }
 
-    public void setGrantedValue(ByteBuffer grantedValue) {
+    public void setGrantedValue(List<ByteBuffer> grantedValue) {
         this.grantedValue = grantedValue;
     }
 
@@ -57,8 +58,7 @@ public class Instance {
 
     public static final class Builder {
         private long instanceId;
-        private long grantedProposalNo;
-        private ByteBuffer grantedValue;
+        private List<ByteBuffer> grantedValue;
         private State state;
 
         private Builder() {
@@ -73,12 +73,7 @@ public class Instance {
             return this;
         }
 
-        public Builder grantedProposalNo(long grantedProposalNo) {
-            this.grantedProposalNo = grantedProposalNo;
-            return this;
-        }
-
-        public Builder grantedValue(ByteBuffer grantedValue) {
+        public Builder grantedValue(List<ByteBuffer> grantedValue) {
             this.grantedValue = grantedValue;
             return this;
         }

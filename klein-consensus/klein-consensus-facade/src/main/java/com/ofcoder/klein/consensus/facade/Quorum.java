@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.facade;
 
 import java.nio.ByteBuffer;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -30,7 +31,7 @@ public abstract class Quorum {
     private Set<Endpoint> grantedMembers = new HashSet<>();
     private Set<Endpoint> failedMembers = new HashSet<>();
     private long maxRefuseProposalNo = 0;
-    private ByteBuffer tempValue = null;
+    private List<ByteBuffer> tempValue = null;
     private int threshold;
 
     public Quorum(final Set<Endpoint> allMembers) {
@@ -62,7 +63,7 @@ public abstract class Quorum {
         return failedMembers.add(node);
     }
 
-    public void setTempValue(long maxRefuseProposalNo, ByteBuffer tempValue){
+    public void setTempValue(long maxRefuseProposalNo, List<ByteBuffer> tempValue){
         this.maxRefuseProposalNo = maxRefuseProposalNo;
         this.tempValue = tempValue;
     }
@@ -71,7 +72,7 @@ public abstract class Quorum {
         return maxRefuseProposalNo;
     }
 
-    public ByteBuffer getTempValue() {
+    public List<ByteBuffer> getTempValue() {
         return tempValue;
     }
 

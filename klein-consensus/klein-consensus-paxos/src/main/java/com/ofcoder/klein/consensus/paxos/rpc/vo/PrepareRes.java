@@ -2,6 +2,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.List;
 
 import com.ofcoder.klein.storage.facade.Instance;
 
@@ -12,7 +13,7 @@ public class PrepareRes implements Serializable {
     private String nodeId;
     private boolean result;
     private long proposalNo;
-    private ByteBuffer grantValue;
+    private List<ByteBuffer> grantValue;
     private Instance.State state;
 
     public String getNodeId() {
@@ -39,11 +40,11 @@ public class PrepareRes implements Serializable {
         this.proposalNo = proposalNo;
     }
 
-    public ByteBuffer getGrantValue() {
+    public List<ByteBuffer> getGrantValue() {
         return grantValue;
     }
 
-    public void setGrantValue(ByteBuffer grantValue) {
+    public void setGrantValue(List<ByteBuffer> grantValue) {
         this.grantValue = grantValue;
     }
 
@@ -60,7 +61,7 @@ public class PrepareRes implements Serializable {
         private String nodeId;
         private boolean result;
         private long proposalNo;
-        private ByteBuffer grantValue;
+        private List<ByteBuffer> grantValue;
         private Instance.State state;
 
         private Builder() {
@@ -85,7 +86,7 @@ public class PrepareRes implements Serializable {
             return this;
         }
 
-        public Builder grantValue(ByteBuffer grantValue) {
+        public Builder grantValue(List<ByteBuffer> grantValue) {
             this.grantValue = grantValue;
             return this;
         }

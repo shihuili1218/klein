@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
@@ -109,14 +110,14 @@ public class PaxosConsensus implements Consensus {
         // fixme reload from storage.
         this.self = PaxosNode.Builder.aPaxosNode()
                 .self(prop.getSelf())
-                .nextInstanceId(0)
-                .nextProposalNo(0)
+                .curInstanceId(new AtomicLong(0))
+                .curProposalNo(new AtomicLong(0))
                 .build();
     }
 
     private void registerProcessor() {
         RpcEngine.registerProcessor(new PrepareProcessor(this.acceptor));
-        RpcEngine.registerProcessor(new AcceptProcessor());
+        RpcEngine.registerProcessor(new AcceptProcessor(this.acceptor));
         RpcEngine.registerProcessor(new ConfirmProcessor());
     }
 
