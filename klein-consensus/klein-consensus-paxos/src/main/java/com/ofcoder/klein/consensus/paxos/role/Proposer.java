@@ -16,6 +16,15 @@
  */
 package com.ofcoder.klein.consensus.paxos.role;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
 import com.lmax.disruptor.RingBuffer;
@@ -45,14 +54,6 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 /**
  * @author far.liu
@@ -60,7 +61,7 @@ import java.util.stream.Collectors;
 public class Proposer implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Proposer.class);
     private static final int RUNNING_BUFFER_SIZE = 16384;
-    private AtomicBoolean skipPrepare = new AtomicBoolean(false);
+    private final AtomicReference<PrepareState> skipPrepare = new AtomicReference<>(PrepareState.NO_PREPARE);
     private RpcClient client;
     private ConsensusProp prop;
     private final PaxosNode self;
@@ -122,7 +123,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     }
 
     public void accept(final ProposeContext context, PhaseCallback callback) {
-        LOG.info("start accept phase, instanceId: {}, the {} retry", context.getInstanceId());
+        LOG.info("start accept phase, instanceId: {}, the {} retry", context.getInstanceId(), context.getTimes());
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
@@ -154,6 +155,23 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     public void prepare(final ProposeContext ctxt, final PhaseCallback callback) {
         LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
+        if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
+            synchronized (skipPrepare) {
+                try {
+                    skipPrepare.wait();
+                } catch (InterruptedException e) {
+                    throw new ConsensusException(e.getMessage(), e);
+                }
+            }
+            if (skipPrepare.get() == PrepareState.PREPARED
+                    && ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                callback.granted(ctxt);
+                return;
+            } else {
+                prepare(ctxt, callback);
+                return;
+            }
+        }
 
         ctxt.reset();
 
@@ -246,7 +264,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         protected void handle(List<ProposeWithDone> events) {
             LOG.info("start negotiations, proposal size: {}", events.size());
             ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), events.stream().map(it -> it.data).collect(Collectors.toList()));
-            if (!Proposer.this.skipPrepare.get()) {
+            if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback(ctxt, events));
             }
         }
@@ -262,11 +280,19 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void granted(ProposeContext context) {
+                synchronized (skipPrepare){
+                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                    skipPrepare.notifyAll();
+                }
                 accept(context, new AcceptCallback(events));
             }
 
             @Override
             public void confirmed(ProposeContext context) {
+                synchronized (skipPrepare){
+                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                    skipPrepare.notifyAll();
+                }
                 // todo learn
                 for (ProposeWithDone event : events) {
                     event.done.done(Result.FAILURE);
@@ -275,6 +301,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void refused(ProposeContext context) {
+                synchronized (skipPrepare){
+                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                    skipPrepare.notifyAll();
+                }
+
                 for (ProposeWithDone event : events) {
                     event.done.done(Result.UNKNOWN);
                 }
