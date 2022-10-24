@@ -17,7 +17,7 @@ public class AcceptRes implements Serializable {
         return nodeId;
     }
 
-    public boolean isResult() {
+    public boolean getResult() {
         return result;
     }
 

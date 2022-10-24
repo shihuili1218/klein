@@ -45,6 +45,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -82,7 +83,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     public void init(ConsensusProp op) {
         this.prop = op;
         this.client = RpcEngine.getClient();
-        this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
+        this.prepareTimeout = (long) (op.getRoundTimeout() * 0.3);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
         this.proposeDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
@@ -122,14 +123,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.proposeQueue.publishEvent(translator);
     }
 
-    public void accept(final ProposeContext context, PhaseCallback callback) {
-        LOG.info("start accept phase, instanceId: {}, the {} retry", context.getInstanceId(), context.getTimes());
+    private void accept(final ProposeContext ctxt, PhaseCallback callback) {
+        LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
-                .instanceId(context.getInstanceId())
+                .instanceId(ctxt.getInstanceId())
                 .proposalNo(self.getCurProposalNo())
-                .datas(context.getPrepareQuorum().getTempValue() != null ? context.getPrepareQuorum().getTempValue() : context.getDatas())
+                .datas(ctxt.getPrepareQuorum().getTempValue() != null ? ctxt.getPrepareQuorum().getTempValue() : ctxt.getDatas())
                 .build();
 
         MemberManager.getAllMembers().forEach(it -> {
@@ -137,23 +138,56 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     .service(AcceptReq.class.getSimpleName())
                     .method(RpcProcessor.KLEIN)
                     .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
+            client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
                     LOG.error(err.getMessage(), err);
 
+                    ctxt.getPrepareQuorum().refuse(it);
+                    if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
+                            && ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                        prepare(ctxt, callback);
+                    }
                 }
 
                 @Override
-                public void complete(PrepareRes result) {
-
+                public void complete(AcceptRes result) {
+                    handleAcceptRequest(ctxt, callback, result, it);
                 }
             }, acceptTimeout);
         });
 
     }
 
-    public void prepare(final ProposeContext ctxt, final PhaseCallback callback) {
+    private void handleAcceptRequest(final ProposeContext ctxt, final PhaseCallback callback, final AcceptRes result
+            , final Endpoint it) {
+        LOG.info("handling node-{}'s accept response", result.getNodeId());
+
+        if (result.getResult()) {
+            ctxt.getAcceptQuorum().grant(it);
+            if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.PASS
+                    && ctxt.getAcceptNexted().compareAndSet(false, true)) {
+                // do learn phase and return client.
+                callback.granted(ctxt);
+            }
+        } else {
+            ctxt.getAcceptQuorum().refuse(it);
+
+            final long selfProposalNo = self.getCurProposalNo();
+            long diff = result.getProposalNo() - selfProposalNo;
+            if (diff > 0) {
+                self.addProposalNo(diff);
+            }
+
+            // do prepare phase
+            if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
+                    && ctxt.getAcceptNexted().compareAndSet(false, true)) {
+                prepare(ctxt, callback);
+            }
+        }
+    }
+
+    private void prepare(final ProposeContext ctxt, final PhaseCallback callback) {
         LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
@@ -280,7 +314,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void granted(ProposeContext context) {
-                synchronized (skipPrepare){
+                synchronized (skipPrepare) {
                     skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                     skipPrepare.notifyAll();
                 }
@@ -289,7 +323,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void confirmed(ProposeContext context) {
-                synchronized (skipPrepare){
+                synchronized (skipPrepare) {
                     skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                     skipPrepare.notifyAll();
                 }
@@ -301,7 +335,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void refused(ProposeContext context) {
-                synchronized (skipPrepare){
+                synchronized (skipPrepare) {
                     skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                     skipPrepare.notifyAll();
                 }

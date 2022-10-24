@@ -46,14 +46,30 @@ public class GrpcClientTest {
     }
 
     @Test
-    public void testSendRequest() {
+    public void testSendRequest() throws InterruptedException {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service("".getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize("I'm Klein"))).build();
 
 
-        CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch = new CountDownLatch(2);
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218), param, new InvokeCallback() {
+            @Override
+            public void error(Throwable err) {
+                LOG.error(err.getMessage(), err);
+                latch.countDown();
+            }
+
+            @Override
+            public void complete(ByteBuffer result) {
+                LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
+                latch.countDown();
+            }
+        }, 5000);
+
+        Thread.sleep(500);
+
         rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {

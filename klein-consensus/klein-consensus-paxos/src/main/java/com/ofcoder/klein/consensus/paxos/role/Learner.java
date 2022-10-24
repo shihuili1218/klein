@@ -16,6 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos.role;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -24,6 +27,7 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
  * @author: 释慧利
  */
 public class Learner implements Lifecycle<ConsensusProp> {
+    private static final Logger LOG = LoggerFactory.getLogger(Learner.class);
     private final PaxosNode self;
 
     public Learner(PaxosNode self) {
@@ -37,6 +41,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     @Override
     public void shutdown() {
+
+    }
+
+    public void learn(long instanceId) {
+        LOG.info("start learn phase, instanceId: {}", instanceId);
 
     }
 }
