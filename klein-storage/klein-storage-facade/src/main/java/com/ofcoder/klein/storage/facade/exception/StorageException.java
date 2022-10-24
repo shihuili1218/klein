@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade.exception
+package com.ofcoder.klein.storage.facade.exception;
 
 import com.ofcoder.klein.common.exception.KleinException;
 

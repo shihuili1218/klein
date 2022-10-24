@@ -15,7 +15,7 @@ public class HelloProcessor implements RpcProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(HelloProcessor.class);
 
     @Override
-    public String method() {
+    public String service() {
         return String.class.getSimpleName();
     }
 

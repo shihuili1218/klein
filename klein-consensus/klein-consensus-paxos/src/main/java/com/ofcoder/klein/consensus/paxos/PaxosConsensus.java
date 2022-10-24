@@ -56,7 +56,7 @@ public class PaxosConsensus implements Consensus {
         proposeAsync(data, future::complete);
 
         try {
-            return future.get(this.prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+            return future.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
@@ -67,7 +67,12 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void proposeAsync(final ByteBuffer data, final ProposeDone done) {
-        proposer.propose(data, done);
+        proposer.propose(data, result -> {
+            if (result == Result.SUCCESS) {
+                learner.learn(0);
+            }
+            done.done(result);
+        });
     }
 
     @Override
