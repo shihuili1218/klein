@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.role;
+package com.ofcoder.klein.consensus.paxos.role;/**
+ * @author far.liu
+ */
 
 /**
  * @author: 释慧利
  */
-public interface PhaseCallback {
-
-    void granted(ProposeContext context);
-
-    void confirmed(ProposeContext context);
-
-    void refused(ProposeContext context);
-
-
+public enum PrepareState {
+    NO_PREPARE,
+    PREPARING,
+    PREPARED,
+    ;
 }
