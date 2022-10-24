@@ -24,9 +24,11 @@ import java.util.List;
  */
 public interface PhaseCallback {
 
-    void granted(long instanceId, long proposalNo, List<ByteBuffer> datas);
-    void confirmed(long instanceId, long proposalNo, List<ByteBuffer> datas);
-    void refused(long instanceId);
+    void granted(ProposeContext context);
+
+    void confirmed(ProposeContext context);
+
+    void refused(ProposeContext context);
 
 
 }
