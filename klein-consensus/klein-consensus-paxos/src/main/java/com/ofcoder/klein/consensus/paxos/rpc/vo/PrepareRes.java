@@ -13,7 +13,7 @@ public class PrepareRes implements Serializable {
     private String nodeId;
     private boolean result;
     private long proposalNo;
-    private List<ByteBuffer> grantValue;
+    private List<Object> grantValue;
     private Instance.State state;
 
     public String getNodeId() {
@@ -40,11 +40,11 @@ public class PrepareRes implements Serializable {
         this.proposalNo = proposalNo;
     }
 
-    public List<ByteBuffer> getGrantValue() {
+    public List<Object> getGrantValue() {
         return grantValue;
     }
 
-    public void setGrantValue(List<ByteBuffer> grantValue) {
+    public void setGrantValue(List<Object> grantValue) {
         this.grantValue = grantValue;
     }
 
@@ -61,7 +61,7 @@ public class PrepareRes implements Serializable {
         private String nodeId;
         private boolean result;
         private long proposalNo;
-        private List<ByteBuffer> grantValue;
+        private List<Object> grantValue;
         private Instance.State state;
 
         private Builder() {
@@ -86,7 +86,7 @@ public class PrepareRes implements Serializable {
             return this;
         }
 
-        public Builder grantValue(List<ByteBuffer> grantValue) {
+        public Builder grantValue(List<Object> grantValue) {
             this.grantValue = grantValue;
             return this;
         }

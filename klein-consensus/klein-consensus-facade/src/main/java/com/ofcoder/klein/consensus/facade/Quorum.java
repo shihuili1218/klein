@@ -31,7 +31,7 @@ public abstract class Quorum {
     private Set<Endpoint> grantedMembers = new HashSet<>();
     private Set<Endpoint> failedMembers = new HashSet<>();
     private long maxRefuseProposalNo = 0;
-    private List<ByteBuffer> tempValue = null;
+    private List<Object> tempValue = null;
     private int threshold;
 
     public Quorum(final Set<Endpoint> allMembers) {
@@ -63,7 +63,7 @@ public abstract class Quorum {
         return failedMembers.add(node);
     }
 
-    public void setTempValue(long maxRefuseProposalNo, List<ByteBuffer> tempValue){
+    public void setTempValue(long maxRefuseProposalNo, List<Object> tempValue){
         this.maxRefuseProposalNo = maxRefuseProposalNo;
         this.tempValue = tempValue;
     }
@@ -72,7 +72,7 @@ public abstract class Quorum {
         return maxRefuseProposalNo;
     }
 
-    public List<ByteBuffer> getTempValue() {
+    public List<Object> getTempValue() {
         return tempValue;
     }
 

@@ -52,6 +52,7 @@ public class DisruptorBuilderTest extends TestCase {
         };
 
         this.applyQueue.publishEvent(translator);
+        this.applyQueue.publishEvent(translator);
 
         System.in.read();
 
@@ -73,6 +74,8 @@ public class DisruptorBuilderTest extends TestCase {
             @Override
             public void onEvent(ProposeWithDone proposeWithDone, long l, boolean b) throws Exception {
                 System.out.println("zzzzzzzzzzzzzzzzzzzz");
+
+                Thread.sleep(1000);
             }
         }
     }

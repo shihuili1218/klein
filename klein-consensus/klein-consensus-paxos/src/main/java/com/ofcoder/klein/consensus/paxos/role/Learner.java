@@ -16,12 +16,20 @@
  */
 package com.ofcoder.klein.consensus.paxos.role;
 
+import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.consensus.facade.SM;
+import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.StorageEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * @author: 释慧利
@@ -29,6 +37,8 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 public class Learner implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Learner.class);
     private final PaxosNode self;
+    private LogManager logManager;
+    private SM sm;
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -36,16 +46,54 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     @Override
     public void init(ConsensusProp op) {
-
+        logManager = StorageEngine.getLogManager();
     }
 
     @Override
     public void shutdown() {
+        CountDownLatch latch = new CountDownLatch(1);
+        ThreadExecutor.submit(() -> {
+            try {
+                sm.makeImage();
+            } finally {
+                latch.countDown();
+            }
+        });
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+        }
 
+    }
+
+    public void loadSM(SM sm) {
+        this.sm = sm;
     }
 
     public void learn(long instanceId) {
-        LOG.info("start learn phase, instanceId: {}", instanceId);
+        LOG.info("start learn, instanceId: {}", instanceId);
 
     }
+
+    public void confirm(long instanceId, List<Object> datas) {
+        LOG.info("start confirm phase, instanceId: {}", instanceId);
+        try {
+            logManager.getLock().writeLock().lock();
+
+            Instance localInstance = logManager.getInstance(instanceId);
+            if (localInstance == null) {
+                // the prepare message is not received, but the confirm message is received
+                learn(instanceId);
+                return;
+            }
+//            sm.apply();
+//            PriorityQueue
+
+//            logManager.updateInstance();
+        } finally {
+            logManager.getLock().writeLock().unlock();
+        }
+    }
+
+
 }

@@ -11,7 +11,7 @@ public class AcceptReq implements Serializable {
     private String nodeId;
     private long instanceId;
     private long proposalNo;
-    private List<ByteBuffer> datas;
+    private List<Object> datas;
 
     public String getNodeId() {
         return nodeId;
@@ -25,7 +25,7 @@ public class AcceptReq implements Serializable {
         return proposalNo;
     }
 
-    public List<ByteBuffer> getDatas() {
+    public List<Object> getDatas() {
         return datas;
     }
 
@@ -33,7 +33,7 @@ public class AcceptReq implements Serializable {
         private String nodeId;
         private long instanceId;
         private long proposalNo;
-        private List<ByteBuffer> datas;
+        private List<Object> datas;
 
         private Builder() {
         }
@@ -57,7 +57,7 @@ public class AcceptReq implements Serializable {
             return this;
         }
 
-        public Builder datas(List<ByteBuffer> datas) {
+        public Builder datas(List<Object> datas) {
             this.datas = datas;
             return this;
         }

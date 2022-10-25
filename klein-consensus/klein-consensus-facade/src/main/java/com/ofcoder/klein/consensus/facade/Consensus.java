@@ -1,5 +1,6 @@
 package com.ofcoder.klein.consensus.facade;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 
 import com.ofcoder.klein.common.Lifecycle;
@@ -13,11 +14,7 @@ import com.ofcoder.klein.spi.SPI;
 @SPI
 public interface Consensus extends Lifecycle<ConsensusProp> {
 
-    default Result propose(final Object data) {
-        return propose(ByteBuffer.wrap(Hessian2Util.serialize(data)));
-    }
-
-    Result propose(final ByteBuffer data);
+    <E extends Serializable> Result propose(final E data);
 
     Result read(final ByteBuffer data);
 

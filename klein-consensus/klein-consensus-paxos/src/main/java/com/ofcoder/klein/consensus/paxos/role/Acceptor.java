@@ -16,11 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.role;
 
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -33,6 +28,10 @@ import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
 
 /**
  * @author far.liu
@@ -67,7 +66,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
             long diff = req.getProposalNo() - selfProposalNo;
 
             if (diff >= 0) {
-                if (diff > 0){
+                if (diff > 0) {
                     self.addProposalNo(diff);
                 }
                 resBuilder.result(true);
