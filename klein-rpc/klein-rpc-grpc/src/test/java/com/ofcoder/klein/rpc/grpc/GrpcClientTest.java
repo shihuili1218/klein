@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class GrpcClientTest {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClientTest.class);

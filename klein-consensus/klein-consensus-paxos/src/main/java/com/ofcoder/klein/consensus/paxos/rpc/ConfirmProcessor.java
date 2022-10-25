@@ -17,12 +17,12 @@
 package com.ofcoder.klein.consensus.paxos.rpc;
 
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.consensus.paxos.role.Learner;
+import com.ofcoder.klein.consensus.paxos.core.Learner;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
     private Learner learner;

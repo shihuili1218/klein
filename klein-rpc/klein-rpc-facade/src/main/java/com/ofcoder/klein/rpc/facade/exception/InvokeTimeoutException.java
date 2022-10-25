@@ -1,7 +1,7 @@
 package com.ofcoder.klein.rpc.facade.exception;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class InvokeTimeoutException extends RpcException{
     public InvokeTimeoutException(String message) {

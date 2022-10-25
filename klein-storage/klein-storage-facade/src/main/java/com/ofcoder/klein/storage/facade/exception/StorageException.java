@@ -19,7 +19,7 @@ package com.ofcoder.klein.storage.facade.exception;
 import com.ofcoder.klein.common.exception.KleinException;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class StorageException extends KleinException {
     public StorageException(String message) {

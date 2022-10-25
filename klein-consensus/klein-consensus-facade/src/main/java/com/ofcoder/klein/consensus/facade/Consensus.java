@@ -9,7 +9,7 @@ import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.spi.SPI;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 @SPI
 public interface Consensus extends Lifecycle<ConsensusProp> {

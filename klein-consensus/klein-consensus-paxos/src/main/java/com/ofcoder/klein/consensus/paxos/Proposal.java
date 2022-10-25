@@ -19,7 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.nio.ByteBuffer;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Proposal {
     private long proposalNo;

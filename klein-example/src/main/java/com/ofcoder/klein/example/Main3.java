@@ -24,7 +24,7 @@ import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Main3 {
     public static void main(String[] args) throws IOException {

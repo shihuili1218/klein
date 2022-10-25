@@ -24,7 +24,7 @@ import java.util.Set;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public abstract class Quorum {
     private Set<Endpoint> allMembers = new HashSet<>();

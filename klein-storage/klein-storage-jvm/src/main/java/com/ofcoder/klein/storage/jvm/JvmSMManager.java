@@ -21,7 +21,7 @@ import com.ofcoder.klein.storage.facade.SMManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 @Join
 public class JvmSMManager implements SMManager {

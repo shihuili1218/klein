@@ -14,8 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.role;
+package com.ofcoder.klein.consensus.paxos.core;
 
+import com.lmax.disruptor.RingBuffer;
+import com.lmax.disruptor.dsl.Disruptor;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.SM;
@@ -28,17 +30,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Learner implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Learner.class);
     private final PaxosNode self;
     private LogManager logManager;
     private SM sm;
+    /**
+     * Disruptor to run propose.
+     */
+    private Disruptor<Proposer.ProposeWithDone> proposeDisruptor;
+    private RingBuffer<Proposer.ProposeWithDone> proposeQueue;
 
     public Learner(PaxosNode self) {
         this.self = self;

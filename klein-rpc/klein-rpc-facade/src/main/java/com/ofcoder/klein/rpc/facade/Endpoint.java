@@ -3,7 +3,7 @@ package com.ofcoder.klein.rpc.facade;
 import java.util.Objects;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Endpoint {
     private String id;

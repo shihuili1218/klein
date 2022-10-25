@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.ByteBuffer;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class HelloProcessor implements RpcProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(HelloProcessor.class);
