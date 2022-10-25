@@ -17,7 +17,7 @@
 package com.ofcoder.klein.common.exception;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class NoImplementationException extends KleinException{
     public NoImplementationException(String message) {

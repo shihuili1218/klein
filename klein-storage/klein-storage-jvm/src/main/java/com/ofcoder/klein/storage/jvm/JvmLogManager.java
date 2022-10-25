@@ -27,7 +27,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 @Join
 public class JvmLogManager implements LogManager {

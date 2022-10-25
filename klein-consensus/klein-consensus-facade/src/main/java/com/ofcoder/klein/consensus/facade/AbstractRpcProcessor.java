@@ -23,7 +23,7 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public abstract class AbstractRpcProcessor<REQ> implements RpcProcessor {
 

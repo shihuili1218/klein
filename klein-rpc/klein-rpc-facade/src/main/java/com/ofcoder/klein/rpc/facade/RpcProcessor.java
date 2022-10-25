@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 /**
  * message processor
  *
- * @author: 释慧利
+ * @author 释慧利
  */
 public interface RpcProcessor {
 

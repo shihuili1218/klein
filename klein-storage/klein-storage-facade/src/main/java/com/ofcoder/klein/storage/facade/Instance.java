@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Instance {
 

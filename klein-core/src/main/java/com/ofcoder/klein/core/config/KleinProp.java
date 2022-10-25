@@ -11,7 +11,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * rpc: grpc
  * max-size:
  *
- * @author: 释慧利
+ * @author 释慧利
  */
 public class KleinProp {
     private String storage = "jvm";

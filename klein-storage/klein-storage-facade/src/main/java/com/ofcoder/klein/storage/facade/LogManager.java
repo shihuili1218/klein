@@ -7,7 +7,7 @@ import com.ofcoder.klein.spi.SPI;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 @SPI
 public interface LogManager extends Lifecycle<StorageProp> {

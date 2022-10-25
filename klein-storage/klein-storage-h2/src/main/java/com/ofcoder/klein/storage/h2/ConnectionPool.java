@@ -6,7 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class ConnectionPool {
     private static ConnectionPool cp = null;

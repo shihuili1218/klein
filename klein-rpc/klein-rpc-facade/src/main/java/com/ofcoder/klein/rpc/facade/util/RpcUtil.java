@@ -8,7 +8,7 @@ import org.apache.commons.lang3.StringUtils;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class RpcUtil {
     public static final String IP_ANY = "0.0.0.0";

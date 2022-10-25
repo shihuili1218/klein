@@ -32,7 +32,7 @@ import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 @Join
 public class GrpcClient implements RpcClient {

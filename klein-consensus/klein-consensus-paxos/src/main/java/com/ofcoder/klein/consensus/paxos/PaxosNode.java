@@ -23,7 +23,7 @@ import com.ofcoder.klein.consensus.facade.Node;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class PaxosNode extends Node {
     private AtomicLong curInstanceId;

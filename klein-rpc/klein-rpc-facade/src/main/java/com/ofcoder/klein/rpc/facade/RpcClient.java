@@ -7,7 +7,7 @@ import com.ofcoder.klein.spi.SPI;
 /**
  * grpc client for send request.
  *
- * @author: 释慧利
+ * @author 释慧利
  */
 @SPI
 public interface RpcClient extends Lifecycle<RpcProp> {

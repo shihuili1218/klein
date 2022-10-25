@@ -21,12 +21,12 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.MemberManager;
-import com.ofcoder.klein.consensus.paxos.role.Acceptor;
+import com.ofcoder.klein.consensus.paxos.core.Acceptor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptProcessor.class);

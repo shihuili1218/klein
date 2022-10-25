@@ -1,7 +1,7 @@
 package com.ofcoder.klein.common.exception;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class KleinException extends RuntimeException{
     public KleinException(String message) {

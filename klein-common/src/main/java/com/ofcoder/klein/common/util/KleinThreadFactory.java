@@ -21,7 +21,7 @@ package com.ofcoder.klein.common.util;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * @author: yuanyuan.liu
+ * @author yuanyuan.liu
  * @date: 2020/1/14 9:34
  */
 public final class KleinThreadFactory implements java.util.concurrent.ThreadFactory {

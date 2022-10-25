@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public interface KleinCache {
     boolean exist(String key);

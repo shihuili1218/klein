@@ -14,17 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.role;
+package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class ProposeContext {
     private long instanceId;

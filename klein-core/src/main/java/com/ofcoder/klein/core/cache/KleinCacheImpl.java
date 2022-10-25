@@ -13,7 +13,7 @@ import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class KleinCacheImpl implements KleinCache, SM {
     protected Consensus consensus;

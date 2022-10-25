@@ -5,7 +5,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class ExtensionLoaderTest {
 

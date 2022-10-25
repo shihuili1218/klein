@@ -17,7 +17,7 @@
 package com.ofcoder.klein.storage.facade.exception;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class LockException extends StorageException {
     public LockException(String message) {

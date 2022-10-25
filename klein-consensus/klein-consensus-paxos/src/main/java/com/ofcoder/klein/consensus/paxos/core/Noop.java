@@ -14,19 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade.exception;
+package com.ofcoder.klein.consensus.paxos.core;
 
-import com.ofcoder.klein.common.exception.KleinException;
+import java.io.Serializable;
 
 /**
+ * NOOP proposal.
  * @author 释慧利
  */
-public class ConsensusException extends KleinException {
-    public ConsensusException(String message) {
-        super(message);
-    }
-
-    public ConsensusException(String message, Throwable cause) {
-        super(message, cause);
-    }
+public class Noop implements Serializable {
 }

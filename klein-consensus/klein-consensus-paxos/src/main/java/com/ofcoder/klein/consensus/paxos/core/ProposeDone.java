@@ -14,16 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.role;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.paxos.core;
+
+import com.ofcoder.klein.consensus.facade.Result;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
-public enum PrepareState {
-    NO_PREPARE,
-    PREPARING,
-    PREPARED,
-    ;
+public interface ProposeDone {
+    void done(Result result);
 }

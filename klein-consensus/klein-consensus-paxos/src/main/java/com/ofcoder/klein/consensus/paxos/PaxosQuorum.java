@@ -24,7 +24,7 @@ import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class PaxosQuorum extends Quorum {
 
