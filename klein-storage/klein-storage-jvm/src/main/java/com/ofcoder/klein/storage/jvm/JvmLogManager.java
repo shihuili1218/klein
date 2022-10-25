@@ -34,7 +34,7 @@ public class JvmLogManager implements LogManager {
 
     private ConcurrentMap<Long, Instance> instances;
     private ReentrantReadWriteLock lock;
-
+    private long maxConfirmInstanceId = 0;
     @Override
     public void init(StorageProp op) {
         instances = new ConcurrentHashMap<>();
@@ -65,10 +65,18 @@ public class JvmLogManager implements LogManager {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
         instances.put(instance.getInstanceId(), instance);
+        if (instance.getState() == Instance.State.CONFIRMED && instance.getInstanceId() < maxConfirmInstanceId){
+            maxConfirmInstanceId = instance.getInstanceId();
+        }
     }
 
     @Override
     public long maxInstanceId() {
         return instances.keySet().stream().max(Long::compareTo).get();
+    }
+
+    @Override
+    public long maxConfirmInstanceId() {
+        return maxConfirmInstanceId;
     }
 }

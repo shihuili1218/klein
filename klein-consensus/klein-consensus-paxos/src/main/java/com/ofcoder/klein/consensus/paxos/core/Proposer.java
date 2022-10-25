@@ -16,6 +16,16 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
@@ -48,15 +58,6 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * @author far.liu
@@ -76,11 +77,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private Disruptor<ProposeWithDone> proposeDisruptor;
     private RingBuffer<ProposeWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
-    private Learner learner;
 
-    public Proposer(PaxosNode self, Learner learner) {
+    public Proposer(PaxosNode self) {
         this.self = self;
-        this.learner = learner;
     }
 
     @Override
@@ -194,6 +193,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     private void prepare(final ProposeContext ctxt, final PhaseCallback callback) {
         LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
+
+        // limit the prepare phase to only one thread.
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
@@ -212,12 +213,18 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             }
         }
 
-        ctxt.reset();
+        // do prepare
+        forcePrepare(ctxt, callback);
+    }
 
+    public void forcePrepare(ProposeContext ctxt, PhaseCallback callback) {
+        // check retry times, refused() is invoked only when the number of retry times reaches the threshold
         if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
             callback.refused(ctxt);
             return;
         }
+
+        ctxt.reset();
         long proposalNo = self.incrementProposalNo();
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
@@ -240,7 +247,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        prepare(ctxt, callback);
+                        forcePrepare(ctxt, callback);
                     }
                 }
 
@@ -257,6 +264,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
 
         if (result.getGrantValue() != null && result.getProposalNo() > ctxt.getPrepareQuorum().getMaxRefuseProposalNo()) {
+            // confirmed instance must have been included.
+            // this is because an instance in state CONFIRMED must be copied to the majority,
+            // and the instance in maxProposalNo must be the same as that in state CONFIRMED
             ctxt.getPrepareQuorum().setTempValue(result.getProposalNo(), result.getGrantValue());
         }
 
@@ -282,7 +292,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 // do prepare phase
                 if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                         && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                    prepare(ctxt, callback);
+                    forcePrepare(ctxt, callback);
                 }
             }
         }
@@ -336,7 +346,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 ThreadExecutor.submit(() -> {
                     // learn
-                    learner.learn(context.getInstanceId());
+                    RoleAccessor.getLearner().learn(context.getInstanceId());
+
                     for (ProposeWithDone event : events) {
                         event.done.done(Result.FAILURE);
                     }
@@ -352,7 +363,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 ThreadExecutor.submit(() -> {
                     for (ProposeWithDone event : events) {
-                        event.done.done(Result.UNKNOWN);
+                        event.done.done(Result.FAILURE);
                     }
                 });
             }
@@ -370,7 +381,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 ThreadExecutor.submit(() -> {
                     // do confirm
-                    learner.confirm(context.getInstanceId(), context.getDatas());
+                    RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDatas());
 
                     for (ProposeWithDone event : events) {
                         event.done.done(Result.SUCCESS);
@@ -383,9 +394,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             public void confirmed(ProposeContext context) {
                 ThreadExecutor.submit(() -> {
                     // do learn
-                    learner.learn(context.getInstanceId());
+                    RoleAccessor.getLearner().learn(context.getInstanceId());
                     for (ProposeWithDone event : events) {
-                        event.done.done(Result.FAILURE);
+                        event.done.done(Result.UNKNOWN);
                     }
                 });
 

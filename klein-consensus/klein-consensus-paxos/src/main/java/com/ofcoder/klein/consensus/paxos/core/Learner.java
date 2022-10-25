@@ -16,8 +16,15 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import com.lmax.disruptor.RingBuffer;
-import com.lmax.disruptor.dsl.Disruptor;
+import java.util.Comparator;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.concurrent.CountDownLatch;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.SM;
@@ -26,11 +33,6 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @author 释慧利
@@ -40,12 +42,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private final PaxosNode self;
     private LogManager logManager;
     private SM sm;
-    /**
-     * Disruptor to run propose.
-     */
-    private Disruptor<Proposer.ProposeWithDone> proposeDisruptor;
-    private RingBuffer<Proposer.ProposeWithDone> proposeQueue;
-
+    private PriorityQueue<ApplyEntry> applyQueue = new  PriorityQueue<>(Comparator.comparingLong(ApplyEntry::getInstanceId));
     public Learner(PaxosNode self) {
         this.self = self;
     }
@@ -78,8 +75,42 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     public void learn(long instanceId) {
         LOG.info("start learn, instanceId: {}", instanceId);
+        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(Noop.DEFAULT));
+        RoleAccessor.getProposer().forcePrepare(ctxt, new PhaseCallback() {
+            @Override
+            public void granted(ProposeContext context) {
+//                RoleAccessor.getProposer().accept
+            }
+
+            @Override
+            public void confirmed(ProposeContext context) {
+//                confirm();
+            }
+
+            @Override
+            public void refused(ProposeContext context) {
+
+            }
+        });
+    }
+
+
+
+    private void apply(long instanceId, List<Object> datas) {
+        if (instanceId <= logManager.maxConfirmInstanceId()) {
+            // the Instance has been confirmed.
+            return;
+        }
+        long exceptConfirmId = logManager.maxConfirmInstanceId() + 1;
+        if (instanceId > exceptConfirmId) {
+            learn(exceptConfirmId);
+        }
+
+        datas.forEach(it -> sm.apply(it));
+        // update log to applied.
 
     }
+
 
     public void confirm(long instanceId, List<Object> datas) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
@@ -92,12 +123,28 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 learn(instanceId);
                 return;
             }
-//            sm.apply();
-//            PriorityQueue
+            localInstance.setState(Instance.State.CONFIRMED);
+            localInstance.setGrantedValue(datas);
+            logManager.updateInstance(localInstance);
 
-//            logManager.updateInstance();
+            // apply statemachine
+            applyQueue.offer(new ApplyEntry(instanceId, datas));
         } finally {
             logManager.getLock().writeLock().unlock();
+        }
+    }
+
+    private static class ApplyEntry  {
+        private long instanceId;
+        private List<Object> datas;
+
+        public ApplyEntry(long instanceId, List<Object> datas) {
+            this.instanceId = instanceId;
+            this.datas = datas;
+        }
+
+        public long getInstanceId() {
+            return instanceId;
         }
     }
 

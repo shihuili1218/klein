@@ -26,6 +26,7 @@ import com.ofcoder.klein.consensus.paxos.core.Acceptor;
 import com.ofcoder.klein.consensus.paxos.core.Learner;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.Proposer;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
@@ -86,25 +87,11 @@ public class PaxosConsensus implements Consensus {
         this.prop = op;
         MemberManager.writeOn(op.getMembers(), this.prop.getSelf());
         loadNode();
-        initLearner();
-        initAcceptor();
-        initProposer();
+        RoleAccessor.create(prop, self);
+        this.proposer = RoleAccessor.getProposer();
+        this.acceptor = RoleAccessor.getAcceptor();
+        this.learner = RoleAccessor.getLearner();
         registerProcessor();
-    }
-
-    private void initLearner() {
-        this.learner = new Learner(this.self);
-        this.learner.init(prop);
-    }
-
-    private void initAcceptor() {
-        this.acceptor = new Acceptor(this.self);
-        this.acceptor.init(prop);
-    }
-
-    private void initProposer() {
-        this.proposer = new Proposer(this.self, this.learner);
-        this.proposer.init(prop);
     }
 
     private void loadNode() {
@@ -117,9 +104,9 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void registerProcessor() {
-        RpcEngine.registerProcessor(new PrepareProcessor(this.acceptor));
-        RpcEngine.registerProcessor(new AcceptProcessor(this.acceptor));
-        RpcEngine.registerProcessor(new ConfirmProcessor(this.learner));
+        RpcEngine.registerProcessor(new PrepareProcessor());
+        RpcEngine.registerProcessor(new AcceptProcessor());
+        RpcEngine.registerProcessor(new ConfirmProcessor());
     }
 
 
