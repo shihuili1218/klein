@@ -25,7 +25,7 @@ import java.util.List;
 public class Instance {
 
     private long instanceId;
-    private List<ByteBuffer> grantedValue;
+    private List<Object> grantedValue;
     private State state = State.PREPARED;
 
     public long getInstanceId() {
@@ -36,11 +36,11 @@ public class Instance {
         this.instanceId = instanceId;
     }
 
-    public List<ByteBuffer> getGrantedValue() {
+    public List<Object> getGrantedValue() {
         return grantedValue;
     }
 
-    public void setGrantedValue(List<ByteBuffer> grantedValue) {
+    public void setGrantedValue(List<Object> grantedValue) {
         this.grantedValue = grantedValue;
     }
 
@@ -58,7 +58,7 @@ public class Instance {
 
     public static final class Builder {
         private long instanceId;
-        private List<ByteBuffer> grantedValue;
+        private List<Object> grantedValue;
         private State state;
 
         private Builder() {
@@ -73,7 +73,7 @@ public class Instance {
             return this;
         }
 
-        public Builder grantedValue(List<ByteBuffer> grantedValue) {
+        public Builder grantedValue(List<Object> grantedValue) {
             this.grantedValue = grantedValue;
             return this;
         }

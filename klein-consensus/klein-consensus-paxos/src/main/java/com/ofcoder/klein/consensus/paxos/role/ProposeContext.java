@@ -28,14 +28,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class ProposeContext {
     private long instanceId;
-    private List<ByteBuffer> datas;
+    private List<Object> datas;
     private int times = 0;
     private Quorum prepareQuorum;
     private AtomicBoolean prepareNexted;
     private Quorum acceptQuorum;
     private AtomicBoolean acceptNexted;
 
-    public ProposeContext(long instanceId, List<ByteBuffer> datas) {
+    public ProposeContext(long instanceId, List<Object> datas) {
         this.instanceId = instanceId;
         this.datas = datas;
         reset();
@@ -57,11 +57,11 @@ public class ProposeContext {
         return instanceId;
     }
 
-    public List<ByteBuffer> getDatas() {
+    public List<Object> getDatas() {
         return datas;
     }
 
-    public void setDatas(List<ByteBuffer> datas) {
+    public void setDatas(List<Object> datas) {
         this.datas = datas;
     }
 

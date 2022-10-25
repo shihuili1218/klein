@@ -28,7 +28,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.EXIST);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
 
@@ -38,7 +38,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUT);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
 
@@ -49,7 +49,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setKey(key);
         message.setOp(Message.PUT);
         message.setTtl(unit.toMicros(ttl));
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
 
@@ -59,7 +59,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
 
@@ -70,7 +70,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
         message.setTtl(unit.toMicros(ttl));
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
 
@@ -80,7 +80,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.GET);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
         return null;
     }
 
@@ -89,23 +89,33 @@ public class KleinCacheImpl implements KleinCache, SM {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.INVALIDATE);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
     }
 
     @Override
     public void invalidateAll() {
         Message message = new Message();
         message.setOp(Message.INVALIDATEALL);
-        Result result = consensus.propose(ByteBuffer.wrap(Hessian2Util.serialize(message)));
+        Result result = consensus.propose(message);
     }
 
     @Override
-    public void apply(ByteBuffer data) {
+    public void apply(Object data) {
 
     }
 
     @Override
     public void makeImage() {
 
+    }
+
+    @Override
+    public void loadImage() {
+
+    }
+
+    @Override
+    public long lastApplyInstance() {
+        return 0;
     }
 }

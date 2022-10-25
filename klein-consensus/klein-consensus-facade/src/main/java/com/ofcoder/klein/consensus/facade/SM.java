@@ -7,8 +7,12 @@ import java.nio.ByteBuffer;
  */
 public interface SM {
 
-    void apply(ByteBuffer data);
+    void apply(Object data);
 
     void makeImage();
+
+    void loadImage();
+
+    long lastApplyInstance();
 
 }

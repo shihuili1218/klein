@@ -16,15 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.role;
 
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
 import com.lmax.disruptor.RingBuffer;
@@ -37,6 +29,7 @@ import com.ofcoder.klein.common.disruptor.DisruptorEvent;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -55,6 +48,15 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * @author far.liu
@@ -74,9 +76,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private Disruptor<ProposeWithDone> proposeDisruptor;
     private RingBuffer<ProposeWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
+    private Learner learner;
 
-    public Proposer(PaxosNode self) {
+    public Proposer(PaxosNode self, Learner learner) {
         this.self = self;
+        this.learner = learner;
     }
 
     @Override
@@ -111,7 +115,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
     }
 
-    public void propose(final ByteBuffer data, final ProposeDone done) {
+    public <E extends Serializable> void propose(final E data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
@@ -133,11 +137,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .datas(ctxt.getPrepareQuorum().getTempValue() != null ? ctxt.getPrepareQuorum().getTempValue() : ctxt.getDatas())
                 .build();
 
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(AcceptReq.class.getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+
         MemberManager.getAllMembers().forEach(it -> {
-            InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                    .service(AcceptReq.class.getSimpleName())
-                    .method(RpcProcessor.KLEIN)
-                    .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -221,12 +226,13 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .proposalNo(proposalNo)
                 .build();
 
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(PrepareReq.class.getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+
         // fixme exclude self
         MemberManager.getAllMembers().forEach(it -> {
-            InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                    .service(PrepareReq.class.getSimpleName())
-                    .method(RpcProcessor.KLEIN)
-                    .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -284,7 +290,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
 
     public static class ProposeWithDone extends DisruptorEvent {
-        private ByteBuffer data;
+        private Object data;
         private ProposeDone done;
     }
 
@@ -297,19 +303,19 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         @Override
         protected void handle(List<ProposeWithDone> events) {
             LOG.info("start negotiations, proposal size: {}", events.size());
-            ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), events.stream().map(it -> it.data).collect(Collectors.toList()));
+
+            final List<ProposeWithDone> finalEvents = ImmutableList.copyOf(events);
+            ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents.stream().map(it -> it.data).collect(Collectors.toList()));
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
-                prepare(ctxt, new PrepareCallback(ctxt, events));
+                prepare(ctxt, new PrepareCallback(finalEvents));
             }
         }
 
         public class PrepareCallback implements PhaseCallback {
             private List<ProposeWithDone> events;
-            private ProposeContext context;
 
-            public PrepareCallback(ProposeContext context, List<ProposeWithDone> events) {
+            public PrepareCallback(List<ProposeWithDone> events) {
                 this.events = events;
-                this.context = context;
             }
 
             @Override
@@ -327,10 +333,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                     skipPrepare.notifyAll();
                 }
-                // todo learn
-                for (ProposeWithDone event : events) {
-                    event.done.done(Result.FAILURE);
-                }
+
+                ThreadExecutor.submit(() -> {
+                    // learn
+                    learner.learn(context.getInstanceId());
+                    for (ProposeWithDone event : events) {
+                        event.done.done(Result.FAILURE);
+                    }
+                });
             }
 
             @Override
@@ -340,9 +350,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     skipPrepare.notifyAll();
                 }
 
-                for (ProposeWithDone event : events) {
-                    event.done.done(Result.UNKNOWN);
-                }
+                ThreadExecutor.submit(() -> {
+                    for (ProposeWithDone event : events) {
+                        event.done.done(Result.UNKNOWN);
+                    }
+                });
             }
         }
 
@@ -355,25 +367,38 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             @Override
             public void granted(ProposeContext context) {
-                for (ProposeWithDone event : events) {
-                    event.done.done(Result.SUCCESS);
-                }
-                // todo confirm for async
+
+                ThreadExecutor.submit(() -> {
+                    // do confirm
+                    learner.confirm(context.getInstanceId(), context.getDatas());
+
+                    for (ProposeWithDone event : events) {
+                        event.done.done(Result.SUCCESS);
+                    }
+                });
+
             }
 
             @Override
             public void confirmed(ProposeContext context) {
-                // todo learn
-                for (ProposeWithDone event : events) {
-                    event.done.done(Result.FAILURE);
-                }
+                ThreadExecutor.submit(() -> {
+                    // do learn
+                    learner.learn(context.getInstanceId());
+                    for (ProposeWithDone event : events) {
+                        event.done.done(Result.FAILURE);
+                    }
+                });
+
             }
 
             @Override
             public void refused(ProposeContext context) {
-                for (ProposeWithDone event : events) {
-                    event.done.done(Result.UNKNOWN);
-                }
+                ThreadExecutor.submit(() -> {
+
+                    for (ProposeWithDone event : events) {
+                        event.done.done(Result.UNKNOWN);
+                    }
+                });
             }
         }
 

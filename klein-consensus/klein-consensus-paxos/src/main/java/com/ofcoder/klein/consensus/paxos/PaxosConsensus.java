@@ -16,12 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -39,6 +33,13 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.spi.Join;
 
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * @author far.liu
  */
@@ -51,7 +52,7 @@ public class PaxosConsensus implements Consensus {
     private ConsensusProp prop;
 
     @Override
-    public Result propose(final ByteBuffer data) {
+    public <E extends Serializable> Result propose(E data) {
         final CompletableFuture<Result> future = new CompletableFuture<>();
         proposeAsync(data, future::complete);
 
@@ -66,13 +67,8 @@ public class PaxosConsensus implements Consensus {
         }
     }
 
-    private void proposeAsync(final ByteBuffer data, final ProposeDone done) {
-        proposer.propose(data, result -> {
-            if (result == Result.SUCCESS) {
-                learner.learn(0);
-            }
-            done.done(result);
-        });
+    private <E extends Serializable> void proposeAsync(final E data, final ProposeDone done) {
+        proposer.propose(data, done);
     }
 
     @Override
@@ -82,7 +78,7 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void loadSM(SM sm) {
-
+        learner.loadSM(sm);
     }
 
     @Override
@@ -90,9 +86,9 @@ public class PaxosConsensus implements Consensus {
         this.prop = op;
         MemberManager.writeOn(op.getMembers(), this.prop.getSelf());
         loadNode();
-        initProposer();
-        initAcceptor();
         initLearner();
+        initAcceptor();
+        initProposer();
         registerProcessor();
     }
 
@@ -107,7 +103,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void initProposer() {
-        this.proposer = new Proposer(this.self);
+        this.proposer = new Proposer(this.self, this.learner);
         this.proposer.init(prop);
     }
 
@@ -123,7 +119,7 @@ public class PaxosConsensus implements Consensus {
     private void registerProcessor() {
         RpcEngine.registerProcessor(new PrepareProcessor(this.acceptor));
         RpcEngine.registerProcessor(new AcceptProcessor(this.acceptor));
-        RpcEngine.registerProcessor(new ConfirmProcessor());
+        RpcEngine.registerProcessor(new ConfirmProcessor(this.learner));
     }
 
 
