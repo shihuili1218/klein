@@ -20,7 +20,9 @@ import java.io.Serializable;
 
 /**
  * NOOP proposal.
+ *
  * @author 释慧利
  */
 public class Noop implements Serializable {
+    public static final Noop DEFAULT = new Noop();
 }

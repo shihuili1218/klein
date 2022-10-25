@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.MemberManager;
-import com.ofcoder.klein.consensus.paxos.core.Acceptor;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
@@ -30,11 +30,6 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptProcessor.class);
-    private Acceptor acceptor;
-
-    public AcceptProcessor(Acceptor acceptor) {
-        this.acceptor = acceptor;
-    }
 
     @Override
     public String service() {
@@ -49,7 +44,7 @@ public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
                     request.getNodeId());
             return;
         }
-        acceptor.handleAcceptRequest(request, context);
+        RoleAccessor.getAcceptor().handleAcceptRequest(request, context);
     }
 
 
