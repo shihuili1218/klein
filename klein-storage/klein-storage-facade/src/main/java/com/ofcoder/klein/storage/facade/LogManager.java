@@ -32,6 +32,6 @@ public interface LogManager extends Lifecycle<StorageProp> {
     void updateInstance(final Instance instance);
 
     long maxInstanceId();
-    long maxConfirmInstanceId();
+    long maxAppliedInstanceId();
 
 }

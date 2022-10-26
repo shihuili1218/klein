@@ -55,6 +55,11 @@ public class GrpcServer implements RpcServer {
                         }
 
                         @Override
+                        public void response() {
+                            responseObserver.onCompleted();
+                        }
+
+                        @Override
                         public String getRemoteAddress() {
                             // Rely on GRPC's capabilities, not magic (netty channel)
                             return remoteAddress != null ? remoteAddress.toString() : null;

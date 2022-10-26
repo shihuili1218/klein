@@ -59,6 +59,9 @@ public class ProposeContext {
         this.acceptNexted = new AtomicBoolean(false);
     }
 
+    public void setTimes(int times) {
+        this.times = times;
+    }
 
     public long getInstanceId() {
         return instanceId;
