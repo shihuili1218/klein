@@ -18,6 +18,7 @@ package com.ofcoder.klein.storage.facade;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author 释慧利
@@ -27,6 +28,7 @@ public class Instance {
     private long instanceId;
     private List<Object> grantedValue;
     private State state = State.PREPARED;
+    private AtomicBoolean applied = new AtomicBoolean(false);
 
     public long getInstanceId() {
         return instanceId;
@@ -52,6 +54,14 @@ public class Instance {
         this.state = state;
     }
 
+    public AtomicBoolean getApplied() {
+        return applied;
+    }
+
+    public void setApplied(AtomicBoolean applied) {
+        this.applied = applied;
+    }
+
     public static enum State{
         PREPARED, ACCEPTED, CONFIRMED;
     }
@@ -60,6 +70,7 @@ public class Instance {
         private long instanceId;
         private List<Object> grantedValue;
         private State state;
+        private AtomicBoolean applied;
 
         private Builder() {
         }
@@ -83,11 +94,17 @@ public class Instance {
             return this;
         }
 
+        public Builder applied(AtomicBoolean applied) {
+            this.applied = applied;
+            return this;
+        }
+
         public Instance build() {
             Instance instance = new Instance();
             instance.setInstanceId(instanceId);
             instance.setGrantedValue(grantedValue);
             instance.setState(state);
+            instance.setApplied(applied);
             return instance;
         }
     }

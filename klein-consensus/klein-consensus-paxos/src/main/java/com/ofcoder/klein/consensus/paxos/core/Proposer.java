@@ -16,16 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
@@ -58,6 +48,15 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * @author far.liu
@@ -126,7 +125,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.proposeQueue.publishEvent(translator);
     }
 
-    private void accept(final ProposeContext ctxt, PhaseCallback callback) {
+    public void accept(final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
@@ -150,7 +149,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        prepare(ctxt, callback);
+                        prepare(ctxt, new PrepareCallback());
                     }
                 }
 
@@ -163,7 +162,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     }
 
-    private void handleAcceptRequest(final ProposeContext ctxt, final PhaseCallback callback, final AcceptRes result
+    private void handleAcceptRequest(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s accept response", result.getNodeId());
 
@@ -186,12 +185,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-                prepare(ctxt, callback);
+                prepare(ctxt,  new PrepareCallback());
             }
         }
     }
 
-    private void prepare(final ProposeContext ctxt, final PhaseCallback callback) {
+    private void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
@@ -217,7 +216,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         forcePrepare(ctxt, callback);
     }
 
-    public void forcePrepare(ProposeContext ctxt, PhaseCallback callback) {
+    public void forcePrepare(ProposeContext ctxt, PhaseCallback.PreparePhaseCallback callback) {
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
         if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
             callback.refused(ctxt);
@@ -259,7 +258,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         });
     }
 
-    private void handlePrepareRequest(final ProposeContext ctxt, final PhaseCallback callback, final PrepareRes result
+    private void handlePrepareRequest(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
 
@@ -302,6 +301,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     public static class ProposeWithDone extends DisruptorEvent {
         private Object data;
         private ProposeDone done;
+
+        public Object getData() {
+            return data;
+        }
+
+        public ProposeDone getDone() {
+            return done;
+        }
     }
 
     public class ProposeEventHandler extends AbstractBatchEventHandler<ProposeWithDone> {
@@ -315,104 +322,72 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposeWithDone> finalEvents = ImmutableList.copyOf(events);
-            ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents.stream().map(it -> it.data).collect(Collectors.toList()));
+            //
+            ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents);
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
-                prepare(ctxt, new PrepareCallback(finalEvents));
+                prepare(ctxt, new PrepareCallback());
             }
         }
+    }
 
-        public class PrepareCallback implements PhaseCallback {
-            private List<ProposeWithDone> events;
+    public class PrepareCallback implements PhaseCallback.PreparePhaseCallback {
 
-            public PrepareCallback(List<ProposeWithDone> events) {
-                this.events = events;
+        @Override
+        public void granted(ProposeContext context) {
+            synchronized (skipPrepare) {
+                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                skipPrepare.notifyAll();
             }
-
-            @Override
-            public void granted(ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
-                    skipPrepare.notifyAll();
-                }
-                accept(context, new AcceptCallback(events));
-            }
-
-            @Override
-            public void confirmed(ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                    skipPrepare.notifyAll();
-                }
-
-                ThreadExecutor.submit(() -> {
-                    // learn
-                    RoleAccessor.getLearner().learn(context.getInstanceId());
-
-                    for (ProposeWithDone event : events) {
-                        event.done.done(Result.FAILURE);
-                    }
-                });
-            }
-
-            @Override
-            public void refused(ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                    skipPrepare.notifyAll();
-                }
-
-                ThreadExecutor.submit(() -> {
-                    for (ProposeWithDone event : events) {
-                        event.done.done(Result.FAILURE);
-                    }
-                });
-            }
+            accept(context, new AcceptCallback());
         }
 
-        public class AcceptCallback implements PhaseCallback {
-            List<ProposeWithDone> events;
-
-            public AcceptCallback(List<ProposeWithDone> events) {
-                this.events = events;
+        @Override
+        public void confirmed(ProposeContext context) {
+            synchronized (skipPrepare) {
+                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                skipPrepare.notifyAll();
             }
 
-            @Override
-            public void granted(ProposeContext context) {
+            ThreadExecutor.submit(() -> {
+                // learn
+                RoleAccessor.getLearner().learn(context.getInstanceId());
 
-                ThreadExecutor.submit(() -> {
-                    // do confirm
-                    RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDatas());
-
-                    for (ProposeWithDone event : events) {
-                        event.done.done(Result.SUCCESS);
-                    }
-                });
-
-            }
-
-            @Override
-            public void confirmed(ProposeContext context) {
-                ThreadExecutor.submit(() -> {
-                    // do learn
-                    RoleAccessor.getLearner().learn(context.getInstanceId());
-                    for (ProposeWithDone event : events) {
-                        event.done.done(Result.UNKNOWN);
-                    }
-                });
-
-            }
-
-            @Override
-            public void refused(ProposeContext context) {
-                ThreadExecutor.submit(() -> {
-
-                    for (ProposeWithDone event : events) {
-                        event.done.done(Result.UNKNOWN);
-                    }
-                });
-            }
+                for (ProposeDone event : context.getDones()) {
+                    event.done(Result.FAILURE);
+                }
+            });
         }
 
+        @Override
+        public void refused(ProposeContext context) {
+            synchronized (skipPrepare) {
+                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                skipPrepare.notifyAll();
+            }
+
+            ThreadExecutor.submit(() -> {
+                for (ProposeDone event : context.getDones()) {
+                    event.done(Result.FAILURE);
+                }
+            });
+        }
+    }
+
+    public class AcceptCallback implements PhaseCallback.AcceptPhaseCallback {
+
+        @Override
+        public void granted(ProposeContext context) {
+
+            ThreadExecutor.submit(() -> {
+                // do confirm
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDatas());
+
+                for (ProposeDone event : context.getDones()) {
+                    event.done(Result.SUCCESS);
+                }
+            });
+
+        }
     }
 
 

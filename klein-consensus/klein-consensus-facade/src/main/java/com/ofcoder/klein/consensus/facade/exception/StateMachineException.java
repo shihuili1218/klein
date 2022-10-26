@@ -14,26 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.facade.exception;
 
 /**
- * @author 释慧利
+ * @author: 释慧利
  */
-public interface PhaseCallback {
-
-    interface PreparePhaseCallback {
-        void granted(ProposeContext context);
-
-        void confirmed(ProposeContext context);
-
-        void refused(ProposeContext context);
+public class StateMachineException extends ConsensusException{
+    public StateMachineException(String message) {
+        super(message);
     }
 
-
-    interface AcceptPhaseCallback {
-        void granted(ProposeContext context);
-
+    public StateMachineException(String message, Throwable cause) {
+        super(message, cause);
     }
-
-
 }

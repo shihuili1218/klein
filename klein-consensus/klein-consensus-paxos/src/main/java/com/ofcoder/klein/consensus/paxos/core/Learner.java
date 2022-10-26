@@ -16,16 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.concurrent.CountDownLatch;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -33,6 +26,16 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * @author 释慧利
@@ -42,7 +45,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private final PaxosNode self;
     private LogManager logManager;
     private SM sm;
-    private PriorityQueue<ApplyEntry> applyQueue = new  PriorityQueue<>(Comparator.comparingLong(ApplyEntry::getInstanceId));
+    private BlockingQueue<ApplyEntry> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(ApplyEntry::getInstanceId));
+    private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("audit-predict", true));
+    private CountDownLatch shutdownLatch;
+
+
     public Learner(PaxosNode self) {
         this.self = self;
     }
@@ -50,20 +57,31 @@ public class Learner implements Lifecycle<ConsensusProp> {
     @Override
     public void init(ConsensusProp op) {
         logManager = StorageEngine.getLogManager();
+
+        applyExecutor.execute(() -> {
+            while (shutdownLatch == null) {
+                try {
+                    ApplyEntry take = applyQueue.take();
+                    apply(take.instanceId, take.datas);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     @Override
     public void shutdown() {
-        CountDownLatch latch = new CountDownLatch(1);
+        shutdownLatch = new CountDownLatch(1);
         ThreadExecutor.submit(() -> {
             try {
                 sm.makeImage();
             } finally {
-                latch.countDown();
+                shutdownLatch.countDown();
             }
         });
         try {
-            latch.await();
+            shutdownLatch.await();
         } catch (InterruptedException e) {
         }
 
@@ -75,25 +93,24 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     public void learn(long instanceId) {
         LOG.info("start learn, instanceId: {}", instanceId);
-        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(Noop.DEFAULT));
-        RoleAccessor.getProposer().forcePrepare(ctxt, new PhaseCallback() {
+        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(Noop.DEFAULT), Lists.newArrayList());
+        RoleAccessor.getProposer().forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
             @Override
             public void granted(ProposeContext context) {
-//                RoleAccessor.getProposer().accept
+                RoleAccessor.getProposer().ac
             }
 
             @Override
             public void confirmed(ProposeContext context) {
-//                confirm();
+                confirm(context.getInstanceId(), context.getDatas());
             }
 
             @Override
             public void refused(ProposeContext context) {
-
+                learn(context.getInstanceId());
             }
         });
     }
-
 
 
     private void apply(long instanceId, List<Object> datas) {
@@ -103,12 +120,29 @@ public class Learner implements Lifecycle<ConsensusProp> {
         }
         long exceptConfirmId = logManager.maxConfirmInstanceId() + 1;
         if (instanceId > exceptConfirmId) {
-            learn(exceptConfirmId);
+            learn(instanceId - 1);
         }
 
-        datas.forEach(it -> sm.apply(it));
         // update log to applied.
+        try {
+            logManager.getLock().writeLock().lock();
 
+            Instance localInstance = logManager.getInstance(instanceId);
+            if (!localInstance.getApplied().compareAndSet(false, true)) {
+                return ;
+            }
+            logManager.updateInstance(localInstance);
+        } finally {
+            logManager.getLock().writeLock().unlock();
+        }
+
+        for (Object data : datas) {
+            try {
+                sm.apply(data);
+            } catch (Exception e) {
+                LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
+            }
+        }
     }
 
 
@@ -134,7 +168,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         }
     }
 
-    private static class ApplyEntry  {
+    private static class ApplyEntry {
         private long instanceId;
         private List<Object> datas;
 
