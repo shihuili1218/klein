@@ -16,6 +16,15 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
@@ -39,6 +48,7 @@ import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -48,15 +58,6 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * @author far.liu
@@ -149,20 +150,23 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                        synchronized (skipPrepare) {
+                            skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                        }
                         prepare(ctxt, new PrepareCallback());
                     }
                 }
 
                 @Override
                 public void complete(AcceptRes result) {
-                    handleAcceptRequest(ctxt, callback, result, it);
+                    handleAcceptRespose(ctxt, callback, result, it);
                 }
             }, acceptTimeout);
         });
 
     }
 
-    private void handleAcceptRequest(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
+    private void handleAcceptRespose(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s accept response", result.getNodeId());
 
@@ -185,12 +189,30 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-                prepare(ctxt,  new PrepareCallback());
+                synchronized (skipPrepare) {
+                    skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                }
+                prepare(ctxt, new PrepareCallback());
             }
         }
     }
 
-    private void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
+    /**
+     * 并行协商多个instance，不能跳过prepare
+     * <p>
+     * <instanceId, proposalNo>
+     * A: pre<2, 1> → A, C
+     * A: acc<2, 1> → A, C    reach consensus.
+     * <p>
+     * B-T1: pre<2, 1>           network failure.
+     * B-T1: pre<2, 2>           network failure.
+     * B-T2: pre<3, 3> → A, B, C
+     * B-T1: notify, acc<2, 3>   once again reach consensus.
+     *
+     * @param ctxt
+     * @param callback
+     */
+    public void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
@@ -252,13 +274,13 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 @Override
                 public void complete(PrepareRes result) {
-                    handlePrepareRequest(ctxt, callback, result, it);
+                    handlePrepareResponse(ctxt, callback, result, it);
                 }
             }, prepareTimeout);
         });
     }
 
-    private void handlePrepareRequest(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
+    private void handlePrepareResponse(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
 
@@ -349,11 +371,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             }
 
             ThreadExecutor.submit(() -> {
-                // learn
-                RoleAccessor.getLearner().learn(context.getInstanceId());
+                // confirm
+                RoleAccessor.getLearner().handleConfirmRequest(
+                        ConfirmReq.Builder.aConfirmReq().nodeId(self.getSelf().getId())
+                                .datas(context.getPrepareQuorum().getTempValue())
+                                .instanceId(context.getInstanceId())
+                                .build()
+                );
 
                 for (ProposeDone event : context.getDones()) {
-                    event.done(Result.FAILURE);
+                    event.done(Result.UNKNOWN);
                 }
             });
         }

@@ -76,7 +76,7 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
-    public long maxConfirmInstanceId() {
+    public long maxAppliedInstanceId() {
         return maxConfirmInstanceId;
     }
 }
