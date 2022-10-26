@@ -13,7 +13,7 @@ public class ThreadExecutor {
     private final static ExecutorService EXECUTOR = new ThreadPoolExecutor(10, 30,
             300L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>(10000),
-            KleinThreadFactory.create("audit-predict", true));
+            KleinThreadFactory.create("klein-common-thread-", true));
 
 
     public static void submit(Runnable task){

@@ -21,6 +21,7 @@ import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * @author 释慧利
@@ -28,15 +29,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class ProposeContext {
     private long instanceId;
     private List<Object> datas;
+    private List<ProposeDone> dones;
     private int times = 0;
     private Quorum prepareQuorum;
     private AtomicBoolean prepareNexted;
     private Quorum acceptQuorum;
     private AtomicBoolean acceptNexted;
 
-    public ProposeContext(long instanceId, List<Object> datas) {
+    public ProposeContext(long instanceId, List<Proposer.ProposeWithDone> events) {
+        this(instanceId, events.stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList())
+                , events.stream().map(Proposer.ProposeWithDone::getDone).collect(Collectors.toList()));
+    }
+
+    public ProposeContext(long instanceId, List<Object> datas, List<ProposeDone> dones) {
         this.instanceId = instanceId;
         this.datas = datas;
+        this.dones = dones;
         reset();
     }
 
@@ -60,8 +68,8 @@ public class ProposeContext {
         return datas;
     }
 
-    public void setDatas(List<Object> datas) {
-        this.datas = datas;
+    public List<ProposeDone> getDones() {
+        return dones;
     }
 
     public int getTimes() {
