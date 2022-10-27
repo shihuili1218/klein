@@ -16,6 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
@@ -48,16 +59,6 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author far.liu
@@ -80,7 +81,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     /**
      * The instance of the Prepare phase has been executed.
      */
-    private ConcurrentMap<Long, Instance> preparedInstanceMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Instance> preparedInstanceMap = new ConcurrentHashMap<>();
 
     public Proposer(PaxosNode self) {
         this.self = self;
@@ -143,6 +144,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                                 : ctxt.getDatas()
                 )
                 .build();
+        ctxt.getConsensusDatas().addAll(req.getDatas());
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(AcceptReq.class.getSimpleName())
@@ -166,19 +168,19 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 @Override
                 public void complete(AcceptRes result) {
-                    handleAcceptRespose(ctxt, callback, result, it);
+                    handleAcceptResponse(ctxt, callback, result, it);
                 }
             }, acceptTimeout);
         });
 
     }
 
-    private void handleAcceptRespose(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
+    private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s accept response", result.getNodeId());
-        if (result.getInstance().getState() == Instance.State.CONFIRMED
+        if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-            callback.confirm(ctxt, result.getInstance());
+            callback.confirm(ctxt);
             return;
         }
 
@@ -207,6 +209,10 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
     }
 
+    public void prepare(final ProposeContext context) {
+        prepare(context, new PrepareCallback());
+    }
+
     public void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         LOG.info("start prepare phase, the {} retry", ctxt.getTimes());
 
@@ -233,7 +239,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         forcePrepare(ctxt, callback);
     }
 
-    public void forcePrepare(ProposeContext ctxt, PhaseCallback.PreparePhaseCallback callback) {
+    private void forcePrepare(ProposeContext ctxt, PhaseCallback.PreparePhaseCallback callback) {
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
         if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
             callback.refused(ctxt);
@@ -386,13 +392,15 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
 
         @Override
-        public void confirm(ProposeContext context, Instance instance) {
+        public void confirm(ProposeContext context) {
             Proposer.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
-                // do confirm
-                RoleAccessor.getLearner().confirm(instance.getInstanceId(), instance.getGrantedValue());
+                // do learn
+                RoleAccessor.getLearner().learn(context.getInstanceId());
+            });
 
+            ThreadExecutor.submit(() ->{
                 for (ProposeDone event : context.getDones()) {
                     event.done(Result.UNKNOWN);
                 }

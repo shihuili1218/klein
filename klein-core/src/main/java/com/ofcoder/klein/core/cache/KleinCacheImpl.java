@@ -4,6 +4,9 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -16,6 +19,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  * @author 释慧利
  */
 public class KleinCacheImpl implements KleinCache, SM {
+    private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected Consensus consensus;
 
     public KleinCacheImpl() {
@@ -101,7 +105,7 @@ public class KleinCacheImpl implements KleinCache, SM {
 
     @Override
     public void apply(Object data) {
-
+        LOG.info("apply data");
     }
 
     @Override

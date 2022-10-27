@@ -12,7 +12,8 @@ public class AcceptRes implements Serializable {
     private String nodeId;
     private boolean result;
     private long proposalNo;
-    private Instance instance;
+    private long instanceId;
+    private Instance.State instanceState;
 
     public String getNodeId() {
         return nodeId;
@@ -26,15 +27,21 @@ public class AcceptRes implements Serializable {
         return proposalNo;
     }
 
-    public Instance getInstance() {
-        return instance;
+
+    public long getInstanceId() {
+        return instanceId;
+    }
+
+    public Instance.State getInstanceState() {
+        return instanceState;
     }
 
     public static final class Builder {
         private String nodeId;
         private boolean result;
         private long proposalNo;
-        private Instance instance;
+        private long instanceId;
+        private Instance.State instanceState;
 
         private Builder() {
         }
@@ -58,17 +65,23 @@ public class AcceptRes implements Serializable {
             return this;
         }
 
-        public Builder instance(Instance instance) {
-            this.instance = instance;
+        public Builder instanceId(long instanceId) {
+            this.instanceId = instanceId;
+            return this;
+        }
+
+        public Builder instanceState(Instance.State instanceState) {
+            this.instanceState = instanceState;
             return this;
         }
 
         public AcceptRes build() {
             AcceptRes acceptRes = new AcceptRes();
-            acceptRes.instance = this.instance;
+            acceptRes.instanceId = this.instanceId;
             acceptRes.result = this.result;
-            acceptRes.nodeId = this.nodeId;
             acceptRes.proposalNo = this.proposalNo;
+            acceptRes.instanceState = this.instanceState;
+            acceptRes.nodeId = this.nodeId;
             return acceptRes;
         }
     }
