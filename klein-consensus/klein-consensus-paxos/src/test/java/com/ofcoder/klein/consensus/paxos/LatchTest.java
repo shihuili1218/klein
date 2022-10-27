@@ -14,29 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.paxos;/**
+ * @author far.liu
+ */
 
-import com.ofcoder.klein.storage.facade.Instance;
+import java.util.concurrent.CountDownLatch;
+
+import org.junit.Test;
 
 /**
  * @author 释慧利
  */
-public interface PhaseCallback {
-
-    interface PreparePhaseCallback {
-        void granted(ProposeContext context);
-
-
-        void refused(ProposeContext context);
+public class LatchTest {
+    @Test
+    public void testCountDownTwo() throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.countDown();
+        latch.countDown();
+        latch.await();
     }
-
-
-    interface AcceptPhaseCallback {
-        void granted(ProposeContext context);
-
-        void confirm(ProposeContext context);
-
-    }
-
-
 }

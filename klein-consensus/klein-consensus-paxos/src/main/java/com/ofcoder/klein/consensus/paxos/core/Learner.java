@@ -16,12 +16,28 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -35,18 +51,6 @@ import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
-import org.apache.commons.collections4.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * @author 释慧利
@@ -61,7 +65,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("audit-predict", true));
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
-
+    private final Map<Long, CountDownLatch> learningLatch = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -106,37 +110,38 @@ public class Learner implements Lifecycle<ConsensusProp> {
         this.sm = sm;
     }
 
+
+    /**
+     * The method blocks until instance changes to confirm
+     *
+     * @param instanceId id of the instance that you want to learn
+     */
     public void learn(long instanceId) {
         LOG.info("start learn, instanceId: {}", instanceId);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        if (learningLatch.putIfAbsent(instanceId, latch) != latch) {
+            latch = learningLatch.get(instanceId);
+        }
+
         Instance instance = logManager.getInstance(instanceId);
         List<Object> localValue = instance != null ? instance.getGrantedValue() : null;
-        localValue  = CollectionUtils.isEmpty(localValue) ?  Lists.newArrayList(Noop.DEFAULT) : localValue;
-        ProposeContext ctxt = new ProposeContext(instanceId, localValue, Lists.newArrayList());
+        localValue = CollectionUtils.isEmpty(localValue) ? Lists.newArrayList(Noop.DEFAULT) : localValue;
+        ProposeContext ctxt = new ProposeContext(instanceId, localValue, Lists.newArrayList(result -> {
+            if (Result.SUCCESS.equals(result)) {
 
-        // only runs once
-        ctxt.setTimes(prop.getRetry() - 1);
-        RoleAccessor.getProposer().prepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
-            @Override
-            public void granted(ProposeContext context) {
-
-                RoleAccessor.getProposer().accept(ctxt, new PhaseCallback.AcceptPhaseCallback() {
-                    @Override
-                    public void granted(ProposeContext context) {
-
-                    }
-
-                    @Override
-                    public void confirm(ProposeContext context, Instance instance) {
-
-                    }
-                });
+            } else {
+                learn(instanceId);
             }
+        }));
+        RoleAccessor.getProposer().prepare(ctxt);
 
-            @Override
-            public void refused(ProposeContext context) {
-                learn(context.getInstanceId());
-            }
-        });
+        try {
+            latch.wait(2000);
+        } catch (InterruptedException e) {
+            learn(instanceId);
+        }
+        learningLatch.remove(instanceId);
     }
 
 
@@ -153,6 +158,8 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 apply(pre, preInstance.getGrantedValue());
             } else {
                 learn(pre);
+                preInstance = logManager.getInstance(pre);
+                apply(pre, preInstance.getGrantedValue());
             }
         }
 
@@ -224,7 +231,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .instanceId(req.getInstanceId())
                         .build();
             }
-            if(localInstance.getState() == Instance.State.CONFIRMED){
+            if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
                 return;
             }
@@ -237,6 +244,10 @@ public class Learner implements Lifecycle<ConsensusProp> {
             applyQueue.offer(req);
         } finally {
             logManager.getLock().writeLock().unlock();
+        }
+
+        if (learningLatch.containsKey(req.getInstanceId())) {
+            learningLatch.get(req.getInstanceId()).countDown();
         }
     }
 

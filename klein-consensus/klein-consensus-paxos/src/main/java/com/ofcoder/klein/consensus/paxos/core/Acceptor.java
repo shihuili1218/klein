@@ -79,7 +79,8 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 resBuilder.result(false)
-                        .instance(localInstance);
+                        .instanceState(localInstance.getState())
+                        .instanceId(localInstance.getInstanceId());
             } else {
                 long diff = req.getProposalNo() - selfProposalNo;
                 if (diff >= 0) {
@@ -92,10 +93,12 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                     localInstance.setGrantedValue(req.getDatas());
 
                     resBuilder.result(true)
-                            .instance(localInstance);
+                            .instanceState(localInstance.getState())
+                            .instanceId(localInstance.getInstanceId());
                 } else {
                     resBuilder.result(false)
-                            .instance(localInstance);
+                            .instanceState(localInstance.getState())
+                            .instanceId(localInstance.getInstanceId());
                 }
             }
             logManager.updateInstance(localInstance);
@@ -131,10 +134,6 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
         } finally {
             logManager.getLock().writeLock().unlock();
         }
-    }
-
-    private void grantPrepare(PrepareReq req, RpcContext context) {
-
     }
 
 }

@@ -17,7 +17,6 @@
 package com.ofcoder.klein.storage.facade;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -72,7 +71,7 @@ public class Instance implements Serializable {
         this.applied = applied;
     }
 
-    public static enum State{
+    public static enum State {
         PREPARED, ACCEPTED, CONFIRMED;
     }
 

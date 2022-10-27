@@ -16,9 +16,11 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -27,9 +29,25 @@ import java.util.stream.Collectors;
  * @author 释慧利
  */
 public class ProposeContext {
-    private long instanceId;
-    private List<Object> datas;
-    private List<ProposeDone> dones;
+    /**
+     * The instance that stores data
+     */
+    private final long instanceId;
+    /**
+     * Origin data, type is {@link com.google.common.collect.ImmutableList}
+     */
+    private final List<Object> datas;
+    /**
+     * Client callback, type is {@link com.google.common.collect.ImmutableList}
+     */
+    private final List<ProposeDone> dones;
+    /**
+     * The data on which consensus was reached
+     */
+    private final List<Object> consensusDatas = new ArrayList<>();
+    /**
+     * Current retry times
+     */
     private int times = 0;
     private Quorum prepareQuorum;
     private AtomicBoolean prepareNexted;
@@ -43,8 +61,8 @@ public class ProposeContext {
 
     public ProposeContext(long instanceId, List<Object> datas, List<ProposeDone> dones) {
         this.instanceId = instanceId;
-        this.datas = datas;
-        this.dones = dones;
+        this.datas = ImmutableList.copyOf(datas);
+        this.dones = ImmutableList.copyOf(dones);
         reset();
     }
 
@@ -57,10 +75,7 @@ public class ProposeContext {
         this.prepareNexted = new AtomicBoolean(false);
         this.acceptQuorum = PaxosQuorum.createInstance();
         this.acceptNexted = new AtomicBoolean(false);
-    }
-
-    public void setTimes(int times) {
-        this.times = times;
+        this.consensusDatas.clear();
     }
 
     public long getInstanceId() {
@@ -73,6 +88,10 @@ public class ProposeContext {
 
     public List<ProposeDone> getDones() {
         return dones;
+    }
+
+    public List<Object> getConsensusDatas() {
+        return consensusDatas;
     }
 
     public int getTimes() {
