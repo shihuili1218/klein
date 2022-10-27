@@ -16,15 +16,17 @@
  */
 package com.ofcoder.klein.storage.jvm;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
+
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author 释慧利
@@ -32,18 +34,22 @@ import com.ofcoder.klein.storage.facade.exception.LockException;
 @Join
 public class JvmLogManager implements LogManager {
 
-    private ConcurrentMap<Long, Instance> instances;
+    private ConcurrentMap<Long, Instance> runningInstances;
+    private ConcurrentMap<Long, Instance> confirmedInstances;
     private ReentrantReadWriteLock lock;
     private long maxConfirmInstanceId = 0;
+
     @Override
     public void init(StorageProp op) {
-        instances = new ConcurrentHashMap<>();
+        runningInstances = new ConcurrentHashMap<>();
+        confirmedInstances = new ConcurrentHashMap<>();
         lock = new ReentrantReadWriteLock(true);
     }
 
     @Override
     public void shutdown() {
-        instances.clear();
+        runningInstances.clear();
+        confirmedInstances.clear();
     }
 
     @Override
@@ -53,10 +59,18 @@ public class JvmLogManager implements LogManager {
 
     @Override
     public Instance getInstance(long id) {
-        if (!instances.containsKey(id)) {
-            return null;
+        if (runningInstances.containsKey(id)) {
+            return runningInstances.get(id);
         }
-        return instances.get(id);
+        if (confirmedInstances.containsKey(id)) {
+            return confirmedInstances.get(id);
+        }
+        return null;
+    }
+
+    @Override
+    public List<Instance> getInstanceNoConfirm() {
+        return Lists.newArrayList(runningInstances.values());
     }
 
     @Override
@@ -64,15 +78,22 @@ public class JvmLogManager implements LogManager {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
-        instances.put(instance.getInstanceId(), instance);
-        if (instance.getState() == Instance.State.CONFIRMED && instance.getInstanceId() < maxConfirmInstanceId){
-            maxConfirmInstanceId = instance.getInstanceId();
+        if (instance.getState() == Instance.State.CONFIRMED) {
+            confirmedInstances.put(instance.getInstanceId(), instance);
+            runningInstances.remove(instance.getInstanceId());
+            if (instance.getInstanceId() < maxConfirmInstanceId) {
+                maxConfirmInstanceId = instance.getInstanceId();
+            }
+        } else {
+            runningInstances.put(instance.getInstanceId(), instance);
         }
     }
 
     @Override
     public long maxInstanceId() {
-        return instances.keySet().stream().max(Long::compareTo).get();
+        Long running = runningInstances.keySet().stream().max(Long::compareTo).get();
+        Long confirmed = confirmedInstances.keySet().stream().max(Long::compareTo).get();
+        return Math.max(running, confirmed);
     }
 
     @Override

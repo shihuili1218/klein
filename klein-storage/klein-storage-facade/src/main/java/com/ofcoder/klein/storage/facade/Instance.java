@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.storage.facade;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,9 +24,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * @author 释慧利
  */
-public class Instance {
+public class Instance implements Serializable {
 
     private long instanceId;
+    private long proposalNo;
     private List<Object> grantedValue;
     private State state = State.PREPARED;
     private AtomicBoolean applied = new AtomicBoolean(false);
@@ -36,6 +38,14 @@ public class Instance {
 
     public void setInstanceId(long instanceId) {
         this.instanceId = instanceId;
+    }
+
+    public long getProposalNo() {
+        return proposalNo;
+    }
+
+    public void setProposalNo(long proposalNo) {
+        this.proposalNo = proposalNo;
     }
 
     public List<Object> getGrantedValue() {
@@ -68,6 +78,7 @@ public class Instance {
 
     public static final class Builder {
         private long instanceId;
+        private long proposalNo;
         private List<Object> grantedValue;
         private State state;
         private AtomicBoolean applied;
@@ -81,6 +92,11 @@ public class Instance {
 
         public Builder instanceId(long instanceId) {
             this.instanceId = instanceId;
+            return this;
+        }
+
+        public Builder proposalNo(long proposalNo) {
+            this.proposalNo = proposalNo;
             return this;
         }
 
@@ -102,6 +118,7 @@ public class Instance {
         public Instance build() {
             Instance instance = new Instance();
             instance.setInstanceId(instanceId);
+            instance.setProposalNo(proposalNo);
             instance.setGrantedValue(grantedValue);
             instance.setState(state);
             instance.setApplied(applied);

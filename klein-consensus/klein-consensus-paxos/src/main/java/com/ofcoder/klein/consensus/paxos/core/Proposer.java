@@ -16,15 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventTranslator;
@@ -48,7 +39,6 @@ import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -58,6 +48,16 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author far.liu
@@ -77,6 +77,10 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private Disruptor<ProposeWithDone> proposeDisruptor;
     private RingBuffer<ProposeWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
+    /**
+     * The instance of the Prepare phase has been executed.
+     */
+    private ConcurrentMap<Long, Instance> preparedInstanceMap = new ConcurrentHashMap<>();
 
     public Proposer(PaxosNode self) {
         this.self = self;
@@ -133,7 +137,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .nodeId(self.getSelf().getId())
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(self.getCurProposalNo())
-                .datas(ctxt.getPrepareQuorum().getTempValue() != null ? ctxt.getPrepareQuorum().getTempValue() : ctxt.getDatas())
+                .datas(
+                        preparedInstanceMap.containsKey(ctxt.getInstanceId())
+                                ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
+                                : ctxt.getDatas()
+                )
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -150,9 +158,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        synchronized (skipPrepare) {
-                            skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                        }
+
+                        skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                         prepare(ctxt, new PrepareCallback());
                     }
                 }
@@ -169,6 +176,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private void handleAcceptRespose(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s accept response", result.getNodeId());
+        if (result.getInstance().getState() == Instance.State.CONFIRMED
+                && ctxt.getAcceptNexted().compareAndSet(false, true)) {
+            callback.confirm(ctxt, result.getInstance());
+            return;
+        }
 
         if (result.getResult()) {
             ctxt.getAcceptQuorum().grant(it);
@@ -189,31 +201,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                }
+                skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                 prepare(ctxt, new PrepareCallback());
             }
         }
     }
 
-    /**
-     * 并行协商多个instance，不能跳过prepare
-     * <p>
-     * <instanceId, proposalNo>
-     * A: pre<2, 1> → A, C
-     * A: acc<2, 1> → A, C    reach consensus.
-     * <p>
-     * B-T1: pre<2, 1>           network failure.
-     * B-T1: pre<2, 2>           network failure.
-     * B-T2: pre<3, 3> → A, B, C
-     * B-T1: notify, acc<2, 3>   once again reach consensus.
-     *
-     * @param ctxt
-     * @param callback
-     */
     public void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
-        LOG.info("start prepare phase, instanceId: {}, the {} retry", ctxt.getInstanceId(), ctxt.getTimes());
+        LOG.info("start prepare phase, the {} retry", ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
@@ -249,7 +244,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         long proposalNo = self.incrementProposalNo();
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
-                .instanceId(ctxt.getInstanceId())
                 .nodeId(self.getSelf().getId())
                 .proposalNo(proposalNo)
                 .build();
@@ -283,12 +277,13 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private void handlePrepareResponse(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
             , final Endpoint it) {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
-
-        if (result.getGrantValue() != null && result.getProposalNo() > ctxt.getPrepareQuorum().getMaxRefuseProposalNo()) {
-            // confirmed instance must have been included.
-            // this is because an instance in state CONFIRMED must be copied to the majority,
-            // and the instance in maxProposalNo must be the same as that in state CONFIRMED
-            ctxt.getPrepareQuorum().setTempValue(result.getProposalNo(), result.getGrantValue());
+        for (Instance instance : result.getInstances()) {
+            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != instance) {
+                Instance prepared = preparedInstanceMap.get(instance.getInstanceId());
+                if (instance.getProposalNo() > prepared.getProposalNo()) {
+                    preparedInstanceMap.put(instance.getInstanceId(), instance);
+                }
+            }
         }
 
         if (result.getResult()) {
@@ -306,15 +301,10 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 self.addProposalNo(diff);
             }
 
-            if (result.getState() == Instance.State.CONFIRMED
+            // do prepare phase
+            if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                callback.confirmed(ctxt);
-            } else {
-                // do prepare phase
-                if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
-                        && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                    forcePrepare(ctxt, callback);
-                }
+                forcePrepare(ctxt, callback);
             }
         }
     }
@@ -364,28 +354,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
 
         @Override
-        public void confirmed(ProposeContext context) {
-            synchronized (skipPrepare) {
-                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                skipPrepare.notifyAll();
-            }
-
-            ThreadExecutor.submit(() -> {
-                // confirm
-                RoleAccessor.getLearner().handleConfirmRequest(
-                        ConfirmReq.Builder.aConfirmReq().nodeId(self.getSelf().getId())
-                                .datas(context.getPrepareQuorum().getTempValue())
-                                .instanceId(context.getInstanceId())
-                                .build()
-                );
-
-                for (ProposeDone event : context.getDones()) {
-                    event.done(Result.UNKNOWN);
-                }
-            });
-        }
-
-        @Override
         public void refused(ProposeContext context) {
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
@@ -404,6 +372,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         @Override
         public void granted(ProposeContext context) {
+            Proposer.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
                 // do confirm
@@ -411,6 +380,21 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
                 for (ProposeDone event : context.getDones()) {
                     event.done(Result.SUCCESS);
+                }
+            });
+
+        }
+
+        @Override
+        public void confirm(ProposeContext context, Instance instance) {
+            Proposer.this.preparedInstanceMap.remove(context.getInstanceId());
+
+            ThreadExecutor.submit(() -> {
+                // do confirm
+                RoleAccessor.getLearner().confirm(instance.getInstanceId(), instance.getGrantedValue());
+
+                for (ProposeDone event : context.getDones()) {
+                    event.done(Result.UNKNOWN);
                 }
             });
 

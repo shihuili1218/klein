@@ -1,5 +1,6 @@
 package com.ofcoder.klein.storage.facade;
 
+import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.ofcoder.klein.common.Lifecycle;
@@ -23,6 +24,13 @@ public interface LogManager extends Lifecycle<StorageProp> {
     Instance getInstance(final long id);
 
     /**
+     * Get instance without consensus.
+     *
+     * @return all instance for no confirm, state in (PREPARED, ACCEPTED)
+     */
+    List<Instance> getInstanceNoConfirm();
+
+    /**
      * Persisting the Instance.
      * <p>
      * NOTICE: It needs to be called in a synchronous method.
@@ -32,6 +40,7 @@ public interface LogManager extends Lifecycle<StorageProp> {
     void updateInstance(final Instance instance);
 
     long maxInstanceId();
+
     long maxAppliedInstanceId();
 
 }

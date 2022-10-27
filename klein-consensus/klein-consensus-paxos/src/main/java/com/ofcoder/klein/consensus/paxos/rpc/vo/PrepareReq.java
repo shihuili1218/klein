@@ -8,7 +8,6 @@ import java.util.Objects;
  */
 public class PrepareReq implements Serializable {
     private String nodeId;
-    private long instanceId;
     private long proposalNo;
 
     public String getNodeId() {
@@ -19,13 +18,6 @@ public class PrepareReq implements Serializable {
         this.nodeId = nodeId;
     }
 
-    public long getInstanceId() {
-        return instanceId;
-    }
-
-    public void setInstanceId(long instanceId) {
-        this.instanceId = instanceId;
-    }
 
     public long getProposalNo() {
         return proposalNo;
@@ -39,7 +31,6 @@ public class PrepareReq implements Serializable {
     public String toString() {
         return "PrepareReq{" +
                 "nodeId='" + nodeId + '\'' +
-                ", instanceId=" + instanceId +
                 ", proposalNo=" + proposalNo +
                 '}';
     }
@@ -49,17 +40,16 @@ public class PrepareReq implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PrepareReq that = (PrepareReq) o;
-        return instanceId == that.instanceId && proposalNo == that.proposalNo && Objects.equals(nodeId, that.nodeId);
+        return proposalNo == that.proposalNo && Objects.equals(nodeId, that.nodeId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nodeId, instanceId, proposalNo);
+        return Objects.hash(nodeId, proposalNo);
     }
 
     public static final class Builder {
         private String nodeId;
-        private long instanceId;
         private long proposalNo;
 
         private Builder() {
@@ -74,10 +64,6 @@ public class PrepareReq implements Serializable {
             return this;
         }
 
-        public Builder instanceId(long instanceId) {
-            this.instanceId = instanceId;
-            return this;
-        }
 
         public Builder proposalNo(long proposalNo) {
             this.proposalNo = proposalNo;
@@ -86,7 +72,6 @@ public class PrepareReq implements Serializable {
 
         public PrepareReq build() {
             PrepareReq prepareReq = new PrepareReq();
-            prepareReq.instanceId = this.instanceId;
             prepareReq.proposalNo = this.proposalNo;
             prepareReq.nodeId = this.nodeId;
             return prepareReq;

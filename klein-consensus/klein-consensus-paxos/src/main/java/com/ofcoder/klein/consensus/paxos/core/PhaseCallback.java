@@ -16,6 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import com.ofcoder.klein.storage.facade.Instance;
+
+import java.util.List;
+
 /**
  * @author 释慧利
  */
@@ -24,7 +28,6 @@ public interface PhaseCallback {
     interface PreparePhaseCallback {
         void granted(ProposeContext context);
 
-        void confirmed(ProposeContext context);
 
         void refused(ProposeContext context);
     }
@@ -32,6 +35,8 @@ public interface PhaseCallback {
 
     interface AcceptPhaseCallback {
         void granted(ProposeContext context);
+
+        void confirm(ProposeContext context, Instance instance);
 
     }
 

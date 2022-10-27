@@ -31,13 +31,48 @@ origin paxos handle prepare request:
 klein paxos handle prepare request:
     if(msg.proposalNo > local.proposalNo) {
         msgId = msg.instanceId;
-        localChecksum = checksum(value in the range [0, msgId)); 
-        if(localChecksum == msg.checksum) {
-            return <granted, local.value>;
-        } else {
-            return <refuse, null>;
-        }
+        localValues = local(value with PREPARED/ACCEPTED status within [0, msgId)); 
+        return <granted, localValues>;
     } else {
         return <refuse, null>;
     }
+```
+修改过后的Prepare相当于对当前所有的Instance都进行了Prepare阶段，那么在Accept选择值时，就可以直接从Prepare的响应中获取了。
+
+不过在Prepare的响应中携带所有的instance，是不现实的。针对于此，有两个可优化的地方
+- 我们需要引入快照，只携带快照以外的instance。
+- 只携带非CONFIRMED的instance。
+
+对于第二点，如果某个instance是CONFIRMED，那么其他成员是感知不到，其他成员仍然可以以自己的值发起提案，因此，还需要修改Acceptor处理accept请求的逻辑：
+```
+origin paxos handle accept request:
+    if(msg.proposalNo >= local.proposalNo) {
+        return <granted>;
+    } else {
+        return <refuse>;
+    }
+
+klein paxos handle accept request:
+    if(local.instance.state == CONFIRMED) {
+        // 
+        return <refuse, local.instance>;
+    }
+    if(msg.proposalNo >= local.proposalNo) {
+        return <granted, localValues>;
+    } else {
+        return <refuse, null>;
+    }
+
+```
+
+## 到底哪个提案会达成共识？
+```
+A: pre<2, 1> → A, C
+A: acc<2, 1> → A
+
+B: pre<2, 2> → B, C
+B: acc<2, 2> → B
+
+C: pre<2, 3> → A, C     -----> 1
+C: pre<2, 3> → B, C     -----> 2
 ```
