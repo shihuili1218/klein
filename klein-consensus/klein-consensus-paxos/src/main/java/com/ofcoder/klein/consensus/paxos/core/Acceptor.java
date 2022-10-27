@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * @author far.liu
@@ -60,33 +61,44 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
         LOG.info("processing the accept message from node-{}", req.getNodeId());
         try {
             logManager.getLock().writeLock().lock();
-            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
-                    .nodeId(self.getSelf().getId());
             final long selfProposalNo = self.getCurProposalNo();
-            long diff = req.getProposalNo() - selfProposalNo;
 
-            if (diff >= 0) {
-                if (diff > 0) {
-                    self.addProposalNo(diff);
-                }
-                resBuilder.result(true);
-                resBuilder.proposalNo(req.getProposalNo());
+            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
+                    .nodeId(self.getSelf().getId())
+                    .proposalNo(selfProposalNo);
 
-                Instance localInstance = logManager.getInstance(req.getInstanceId());
-                if (localInstance == null) {
-                    // the prepare message is not received, but the accept message is received
-                    resBuilder.result(false);
-                } else {
-                    localInstance.setState(Instance.State.ACCEPTED);
-                    localInstance.setGrantedValue(req.getDatas());
-                    logManager.updateInstance(localInstance);
-                }
-
-            } else {
-                resBuilder.result(false);
-                resBuilder.proposalNo(selfProposalNo);
+            Instance localInstance = logManager.getInstance(req.getInstanceId());
+            if (localInstance == null) {
+                localInstance = Instance.Builder.anInstance()
+                        .instanceId(req.getInstanceId())
+                        .proposalNo(req.getProposalNo())
+                        .grantedValue(req.getDatas())
+                        .state(Instance.State.ACCEPTED)
+                        .build();
             }
 
+            if (localInstance.getState() == Instance.State.CONFIRMED) {
+                resBuilder.result(false)
+                        .instance(localInstance);
+            } else {
+                long diff = req.getProposalNo() - selfProposalNo;
+                if (diff >= 0) {
+                    if (diff > 0) {
+                        self.addProposalNo(diff);
+                    }
+
+                    localInstance.setState(Instance.State.ACCEPTED);
+                    localInstance.setProposalNo(req.getProposalNo());
+                    localInstance.setGrantedValue(req.getDatas());
+
+                    resBuilder.result(true)
+                            .instance(localInstance);
+                } else {
+                    resBuilder.result(false)
+                            .instance(localInstance);
+                }
+            }
+            logManager.updateInstance(localInstance);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
         } finally {
             logManager.getLock().writeLock().unlock();
@@ -113,24 +125,12 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                 resBuilder.proposalNo(selfProposalNo);
             }
 
-            Instance localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null) {
-                localInstance = Instance.Builder.anInstance()
-                        .instanceId(req.getInstanceId())
-                        .state(Instance.State.PREPARED)
-                        .build();
-                logManager.updateInstance(localInstance);
-                resBuilder.grantValue(null);
-                resBuilder.state(Instance.State.PREPARED);
-            } else {
-                resBuilder.grantValue(localInstance.getGrantedValue());
-                resBuilder.state(localInstance.getState());
-            }
+            List<Instance> instances = logManager.getInstanceNoConfirm();
+            resBuilder.instances(instances);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
         } finally {
             logManager.getLock().writeLock().unlock();
         }
-
     }
 
     private void grantPrepare(PrepareReq req, RpcContext context) {

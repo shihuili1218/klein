@@ -8,8 +8,17 @@ import java.util.List;
  */
 public class ConfirmReq implements Serializable {
     private String nodeId;
+    private long proposalNo;
     private long instanceId;
     private List<Object> datas;
+
+    public long getProposalNo() {
+        return proposalNo;
+    }
+
+    public void setProposalNo(long proposalNo) {
+        this.proposalNo = proposalNo;
+    }
 
     public String getNodeId() {
         return nodeId;
@@ -37,6 +46,7 @@ public class ConfirmReq implements Serializable {
 
     public static final class Builder {
         private String nodeId;
+        private long proposalNo;
         private long instanceId;
         private List<Object> datas;
 
@@ -52,6 +62,11 @@ public class ConfirmReq implements Serializable {
             return this;
         }
 
+        public Builder proposalNo(long proposalNo) {
+            this.proposalNo = proposalNo;
+            return this;
+        }
+
         public Builder instanceId(long instanceId) {
             this.instanceId = instanceId;
             return this;
@@ -64,9 +79,10 @@ public class ConfirmReq implements Serializable {
 
         public ConfirmReq build() {
             ConfirmReq confirmReq = new ConfirmReq();
+            confirmReq.setNodeId(nodeId);
+            confirmReq.setProposalNo(proposalNo);
             confirmReq.setInstanceId(instanceId);
             confirmReq.setDatas(datas);
-            confirmReq.nodeId = this.nodeId;
             return confirmReq;
         }
     }

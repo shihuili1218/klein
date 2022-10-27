@@ -13,8 +13,7 @@ public class PrepareRes implements Serializable {
     private String nodeId;
     private boolean result;
     private long proposalNo;
-    private List<Object> grantValue;
-    private Instance.State state;
+    private List<Instance> instances;
 
     public String getNodeId() {
         return nodeId;
@@ -40,29 +39,19 @@ public class PrepareRes implements Serializable {
         this.proposalNo = proposalNo;
     }
 
-    public List<Object> getGrantValue() {
-        return grantValue;
+    public List<Instance> getInstances() {
+        return instances;
     }
 
-    public void setGrantValue(List<Object> grantValue) {
-        this.grantValue = grantValue;
+    public void setInstances(List<Instance> instances) {
+        this.instances = instances;
     }
-
-    public Instance.State getState() {
-        return state;
-    }
-
-    public void setState(Instance.State state) {
-        this.state = state;
-    }
-
 
     public static final class Builder {
         private String nodeId;
         private boolean result;
         private long proposalNo;
-        private List<Object> grantValue;
-        private Instance.State state;
+        private List<Instance> instances;
 
         private Builder() {
         }
@@ -86,13 +75,8 @@ public class PrepareRes implements Serializable {
             return this;
         }
 
-        public Builder grantValue(List<Object> grantValue) {
-            this.grantValue = grantValue;
-            return this;
-        }
-
-        public Builder state(Instance.State state) {
-            this.state = state;
+        public Builder instances(List<Instance> instances) {
+            this.instances = instances;
             return this;
         }
 
@@ -101,8 +85,7 @@ public class PrepareRes implements Serializable {
             prepareRes.setNodeId(nodeId);
             prepareRes.setResult(result);
             prepareRes.setProposalNo(proposalNo);
-            prepareRes.setGrantValue(grantValue);
-            prepareRes.setState(state);
+            prepareRes.instances = this.instances;
             return prepareRes;
         }
     }

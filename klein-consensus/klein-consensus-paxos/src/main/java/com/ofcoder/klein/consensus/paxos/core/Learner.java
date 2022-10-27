@@ -16,18 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.nio.ByteBuffer;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
@@ -47,6 +35,18 @@ import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
 
 /**
  * @author 释慧利
@@ -72,7 +72,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
         this.prop = op;
         logManager = StorageEngine.getLogManager();
         this.client = RpcEngine.getClient();
-
 
         applyExecutor.execute(() -> {
             while (shutdownLatch == null) {
@@ -109,10 +108,14 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     public void learn(long instanceId) {
         LOG.info("start learn, instanceId: {}", instanceId);
-        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(Noop.DEFAULT), Lists.newArrayList());
+        Instance instance = logManager.getInstance(instanceId);
+        List<Object> localValue = instance != null ? instance.getGrantedValue() : null;
+        localValue  = CollectionUtils.isEmpty(localValue) ?  Lists.newArrayList(Noop.DEFAULT) : localValue;
+        ProposeContext ctxt = new ProposeContext(instanceId, localValue, Lists.newArrayList());
+
         // only runs once
         ctxt.setTimes(prop.getRetry() - 1);
-        RoleAccessor.getProposer().forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
+        RoleAccessor.getProposer().prepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
             @Override
             public void granted(ProposeContext context) {
 
@@ -121,17 +124,12 @@ public class Learner implements Lifecycle<ConsensusProp> {
                     public void granted(ProposeContext context) {
 
                     }
-                });
-            }
 
-            @Override
-            public void confirmed(ProposeContext context) {
-                handleConfirmRequest(
-                        ConfirmReq.Builder.aConfirmReq().nodeId(self.getSelf().getId())
-                                .datas(context.getPrepareQuorum().getTempValue())
-                                .instanceId(context.getInstanceId())
-                                .build()
-                );
+                    @Override
+                    public void confirm(ProposeContext context, Instance instance) {
+
+                    }
+                });
             }
 
             @Override
@@ -144,14 +142,14 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     private void apply(long instanceId, List<Object> datas) {
         if (instanceId <= logManager.maxAppliedInstanceId()) {
-            // the Instance has been applied.
+            // the instance has been applied.
             return;
         }
         long exceptConfirmId = logManager.maxAppliedInstanceId() + 1;
         if (instanceId > exceptConfirmId) {
             long pre = instanceId - 1;
             Instance preInstance = logManager.getInstance(pre);
-            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED){
+            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
                 apply(pre, preInstance.getGrantedValue());
             } else {
                 learn(pre);
@@ -164,6 +162,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
             Instance localInstance = logManager.getInstance(instanceId);
             if (!localInstance.getApplied().compareAndSet(false, true)) {
+                // the instance has been applied.
                 return;
             }
             logManager.updateInstance(localInstance);
@@ -185,6 +184,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
                 .instanceId(instanceId)
                 .datas(datas)
                 .build();
@@ -198,12 +198,14 @@ public class Learner implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage(), err);
+                    LOG.warn(err.getMessage());
+                    // do nothing
                 }
 
                 @Override
                 public void complete(PrepareRes result) {
                     LOG.info("node-{} confirm result: {}", it.getId(), result);
+                    // do nothing
                 }
             }, 1000);
         });
@@ -222,7 +224,12 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .instanceId(req.getInstanceId())
                         .build();
             }
+            if(localInstance.getState() == Instance.State.CONFIRMED){
+                // the instance is confirmed.
+                return;
+            }
             localInstance.setState(Instance.State.CONFIRMED);
+            localInstance.setProposalNo(req.getProposalNo());
             localInstance.setGrantedValue(req.getDatas());
             logManager.updateInstance(localInstance);
 
