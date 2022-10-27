@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author far.liu
@@ -74,6 +75,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                         .proposalNo(req.getProposalNo())
                         .grantedValue(req.getDatas())
                         .state(Instance.State.ACCEPTED)
+                        .applied(new AtomicBoolean(false))
                         .build();
             }
 
