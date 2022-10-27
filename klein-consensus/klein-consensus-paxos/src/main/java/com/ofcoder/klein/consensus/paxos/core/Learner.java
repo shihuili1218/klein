@@ -26,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -229,6 +230,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 localInstance = Instance.Builder.anInstance()
                         .instanceId(req.getInstanceId())
+                        .applied(new AtomicBoolean(false))
                         .build();
             }
             if (localInstance.getState() == Instance.State.CONFIRMED) {
