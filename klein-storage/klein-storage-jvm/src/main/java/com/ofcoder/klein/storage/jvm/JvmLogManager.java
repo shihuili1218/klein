@@ -24,6 +24,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -91,8 +92,8 @@ public class JvmLogManager implements LogManager {
 
     @Override
     public long maxInstanceId() {
-        Long running = runningInstances.keySet().stream().max(Long::compareTo).get();
-        Long confirmed = confirmedInstances.keySet().stream().max(Long::compareTo).get();
+        long running = runningInstances.keySet().stream().max(Long::compareTo).orElse(0L);
+        long confirmed = confirmedInstances.keySet().stream().max(Long::compareTo).orElse(0L);
         return Math.max(running, confirmed);
     }
 

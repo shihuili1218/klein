@@ -26,8 +26,9 @@ public class ConsensusProp {
     private int batchSize = 3;
     /**
      * negotiation failed, number of retry times.
+     * if set 2, then runs 3 times
      */
-    private int retry = 1;
+    private int retry = 2;
 
     public Endpoint getSelf() {
         return self;
