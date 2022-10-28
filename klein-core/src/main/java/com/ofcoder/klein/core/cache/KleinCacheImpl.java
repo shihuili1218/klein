@@ -106,7 +106,7 @@ public class KleinCacheImpl implements KleinCache, SM {
 
     @Override
     public void apply(Object data) {
-        LOG.info("apply data");
+        LOG.info("apply data: {}", data);
     }
 
     @Override
