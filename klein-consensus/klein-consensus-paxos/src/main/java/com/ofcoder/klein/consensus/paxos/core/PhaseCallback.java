@@ -26,7 +26,6 @@ public interface PhaseCallback {
     interface PreparePhaseCallback {
         void granted(ProposeContext context);
 
-
         void refused(ProposeContext context);
     }
 

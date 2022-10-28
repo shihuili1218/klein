@@ -33,6 +33,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.StorageEngine;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
@@ -95,11 +97,12 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void loadNode() {
-        // fixme reload from storage.
+        // reload self information from storage.
+        LogManager logManager = StorageEngine.getLogManager();
         this.self = PaxosNode.Builder.aPaxosNode()
                 .self(prop.getSelf())
-                .curInstanceId(new AtomicLong(0))
-                .curProposalNo(new AtomicLong(0))
+                .curInstanceId(new AtomicLong(logManager.maxInstanceId()))
+                .curProposalNo(new AtomicLong(logManager.maxProposalNo()))
                 .build();
     }
 

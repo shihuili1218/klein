@@ -39,7 +39,11 @@ public class PaxosNode extends Node {
     }
 
     public long incrementInstanceId() {
-        return curInstanceId.incrementAndGet();
+        return addInstanceId(1);
+    }
+
+    public long addInstanceId(long v) {
+        return curInstanceId.addAndGet(v);
     }
 
 
