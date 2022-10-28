@@ -43,9 +43,13 @@ import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
@@ -66,7 +70,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("audit-predict", true));
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
-    private final Map<Long, CountDownLatch> learningLatch = new ConcurrentHashMap<>();
+    private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -117,12 +121,12 @@ public class Learner implements Lifecycle<ConsensusProp> {
      *
      * @param instanceId id of the instance that you want to learn
      */
-    public void learn(long instanceId) {
-        LOG.info("start learn, instanceId: {}", instanceId);
+    public void boost(long instanceId) {
+        LOG.info("start boost, instanceId: {}", instanceId);
 
         CountDownLatch latch = new CountDownLatch(1);
-        if (learningLatch.putIfAbsent(instanceId, latch) != latch) {
-            latch = learningLatch.get(instanceId);
+        if (boostingLatch.putIfAbsent(instanceId, latch) != null) {
+            latch = boostingLatch.get(instanceId);
         }
 
         Instance instance = logManager.getInstance(instanceId);
@@ -132,7 +136,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             if (Result.SUCCESS.equals(result)) {
 
             } else {
-                learn(instanceId);
+                boost(instanceId);
             }
         }));
         RoleAccessor.getProposer().prepare(ctxt);
@@ -140,9 +144,42 @@ public class Learner implements Lifecycle<ConsensusProp> {
         try {
             latch.wait(2000);
         } catch (InterruptedException e) {
-            learn(instanceId);
+            boost(instanceId);
         }
-        learningLatch.remove(instanceId);
+        boostingLatch.remove(instanceId);
+    }
+
+    public void learn(long instanceId, Endpoint target) {
+        LOG.info("start learn, instanceId: {}", instanceId);
+
+        LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(LearnReq.class.getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+
+        client.sendRequestAsync(target, param, new AbstractInvokeCallback<LearnRes>() {
+            @Override
+            public void error(Throwable err) {
+                LOG.warn(err.getMessage());
+                // do nothing
+            }
+
+            @Override
+            public void complete(LearnRes result) {
+                LOG.info("node-{} learn result: {}", target.getId(), result);
+                if (result.getInstance() == null) {
+                    LOG.info("learn instance: {} from node-{}, but result.instance is null", instanceId, target.getId());
+                    return;
+                }
+                handleConfirmRequest(ConfirmReq.Builder.aConfirmReq()
+                        .nodeId(result.getNodeId())
+                        .proposalNo(result.getInstance().getProposalNo())
+                        .instanceId(result.getInstance().getInstanceId())
+                        .datas(result.getInstance().getGrantedValue())
+                        .build());
+            }
+        }, 1000);
     }
 
 
@@ -158,7 +195,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
                 apply(pre);
             } else {
-                learn(pre);
+                boost(pre);
                 apply(pre);
             }
         }
@@ -266,9 +303,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
             logManager.getLock().writeLock().unlock();
         }
 
-        if (learningLatch.containsKey(req.getInstanceId())) {
-            learningLatch.get(req.getInstanceId()).countDown();
+        if (boostingLatch.containsKey(req.getInstanceId())) {
+            boostingLatch.get(req.getInstanceId()).countDown();
         }
+    }
+
+    public void handleLearnRequest(LearnReq request, RpcContext context) {
+        Instance instance = logManager.getInstance(request.getInstanceId());
+        LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 
 
