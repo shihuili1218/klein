@@ -119,6 +119,15 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
     }
 
+    /**
+     * Propose proposal.
+     * Put the request on the {@link Proposer#proposeQueue},
+     * and process it as {@link ProposeEventHandler}
+     *
+     * @param data client's data
+     * @param done client's callbck
+     * @param <E> client's data type, extend Serializable
+     */
     public <E extends Serializable> void propose(final E data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
@@ -131,6 +140,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.proposeQueue.publishEvent(translator);
     }
 
+    /**
+     * Send accept message to all Acceptor.
+     *
+     * @param ctxt Negotiation Context
+     * @param callback Callback of accept phase,
+     *                 if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
+     *                 if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#confirm(ProposeContext)}
+     */
     public void accept(final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
 
@@ -213,7 +230,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         prepare(context, new PrepareCallback());
     }
 
-    public void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
+    /**
+     * Send Prepare message to all Acceptor.
+     * Only one thread is executing this method at the same time.
+     *
+     * @param ctxt Negotiation Context
+     * @param callback Callback of prepare phase,
+     *                 if the majority approved prepare, call {@link PhaseCallback.PreparePhaseCallback#granted(ProposeContext)}
+     *                 if the majority refuses to prepare after several retries, call {@link PhaseCallback.PreparePhaseCallback#refused(ProposeContext)}
+     */
+    private void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         LOG.info("start prepare phase, the {} retry", ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
@@ -400,7 +426,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 RoleAccessor.getLearner().learn(context.getInstanceId());
             });
 
-            ThreadExecutor.submit(() ->{
+            ThreadExecutor.submit(() -> {
                 for (ProposeDone event : context.getDones()) {
                     event.done(Result.UNKNOWN);
                 }

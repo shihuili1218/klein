@@ -77,6 +77,10 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                         .state(Instance.State.ACCEPTED)
                         .applied(new AtomicBoolean(false))
                         .build();
+                long diffId = req.getInstanceId() - self.getCurInstanceId();
+                if (diffId > 0) {
+                    self.addInstanceId(diffId);
+                }
             }
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {

@@ -62,7 +62,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private final PaxosNode self;
     private LogManager logManager;
     private SM sm;
-    private BlockingQueue<ConfirmReq> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(ConfirmReq::getInstanceId));
+    private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("audit-predict", true));
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
@@ -81,8 +81,8 @@ public class Learner implements Lifecycle<ConsensusProp> {
         applyExecutor.execute(() -> {
             while (shutdownLatch == null) {
                 try {
-                    ConfirmReq take = applyQueue.take();
-                    apply(take.getInstanceId(), take.getDatas());
+                    long take = applyQueue.take();
+                    apply(take);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -146,7 +146,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
 
-    private void apply(long instanceId, List<Object> datas) {
+    private void apply(long instanceId) {
         if (instanceId <= logManager.maxAppliedInstanceId()) {
             // the instance has been applied.
             return;
@@ -156,29 +156,31 @@ public class Learner implements Lifecycle<ConsensusProp> {
             long pre = instanceId - 1;
             Instance preInstance = logManager.getInstance(pre);
             if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
-                apply(pre, preInstance.getGrantedValue());
+                apply(pre);
             } else {
                 learn(pre);
-                preInstance = logManager.getInstance(pre);
-                apply(pre, preInstance.getGrantedValue());
+                apply(pre);
             }
         }
 
         // update log to applied.
+        Instance localInstance;
         try {
             logManager.getLock().writeLock().lock();
 
-            Instance localInstance = logManager.getInstance(instanceId);
+            localInstance = logManager.getInstance(instanceId);
             if (!localInstance.getApplied().compareAndSet(false, true)) {
                 // the instance has been applied.
                 return;
             }
+            List<Object> datas = localInstance.getGrantedValue();
             logManager.updateInstance(localInstance);
         } finally {
             logManager.getLock().writeLock().unlock();
         }
 
-        for (Object data : datas) {
+        // input state machine
+        for (Object data : localInstance.getGrantedValue()) {
             try {
                 sm.apply(data);
             } catch (Exception e) {
@@ -188,6 +190,12 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
 
+    /**
+     * Send confirm message.
+     *
+     * @param instanceId id of the instance
+     * @param datas      data in instance
+     */
     public void confirm(long instanceId, List<Object> datas) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
@@ -219,6 +227,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
         });
     }
 
+    /**
+     * Processing confirm message with Learner.
+     *
+     * @param req message
+     */
     public void handleConfirmRequest(ConfirmReq req) {
 
         try {
@@ -232,6 +245,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .instanceId(req.getInstanceId())
                         .applied(new AtomicBoolean(false))
                         .build();
+
+                long diffId = req.getInstanceId() - self.getCurInstanceId();
+                if (diffId > 0) {
+                    self.addInstanceId(diffId);
+                }
             }
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
@@ -243,7 +261,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             logManager.updateInstance(localInstance);
 
             // apply statemachine
-            applyQueue.offer(req);
+            applyQueue.offer(req.getInstanceId());
         } finally {
             logManager.getLock().writeLock().unlock();
         }

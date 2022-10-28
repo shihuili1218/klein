@@ -97,6 +97,11 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
+    public long maxProposalNo() {
+        return 0;
+    }
+
+    @Override
     public long maxAppliedInstanceId() {
         return maxConfirmInstanceId;
     }
