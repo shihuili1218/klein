@@ -197,7 +197,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         LOG.info("handling node-{}'s accept response", result.getNodeId());
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-            callback.confirm(ctxt);
+            callback.confirm(ctxt, it);
             return;
         }
 
@@ -243,6 +243,11 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         LOG.info("start prepare phase, the {} retry", ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
+        if (skipPrepare.get() == PrepareState.PREPARED
+                && ctxt.getPrepareNexted().compareAndSet(false, true)) {
+            callback.granted(ctxt);
+            return;
+        }
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
@@ -272,6 +277,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             return;
         }
 
+        // todo ctxt应该clone出来，因为上一次失败的请求仍然会进入refused
         ctxt.reset();
         long proposalNo = self.incrementProposalNo();
 
@@ -310,7 +316,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             , final Endpoint it) {
         LOG.info("handling node-{}'s prepare response", result.getNodeId());
         for (Instance instance : result.getInstances()) {
-            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != instance) {
+            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), null) != instance) {
                 Instance prepared = preparedInstanceMap.get(instance.getInstanceId());
                 if (instance.getProposalNo() > prepared.getProposalNo()) {
                     preparedInstanceMap.put(instance.getInstanceId(), instance);
@@ -418,12 +424,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         }
 
         @Override
-        public void confirm(ProposeContext context) {
+        public void confirm(ProposeContext context, Endpoint it) {
             Proposer.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
                 // do learn
-                RoleAccessor.getLearner().learn(context.getInstanceId());
+                RoleAccessor.getLearner().learn(context.getInstanceId(), it);
             });
 
             ThreadExecutor.submit(() -> {
