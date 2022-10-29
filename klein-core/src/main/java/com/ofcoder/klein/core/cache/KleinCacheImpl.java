@@ -1,31 +1,28 @@
 package com.ofcoder.klein.core.cache;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.consensus.facade.SM;
 import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
  * @author 释慧利
  */
-public class KleinCacheImpl implements KleinCache, SM {
+public class KleinCacheImpl implements KleinCache{
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected Consensus consensus;
+    private static final CacheSM SM = new CacheSM();
 
     public KleinCacheImpl() {
         KleinProp kleinProp = KleinProp.loadIfPresent();
         this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
-        consensus.loadSM(this);
+        consensus.loadSM(SM);
     }
 
     @Override
@@ -53,7 +50,8 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUT);
-        message.setTtl(unit.toMicros(ttl));
+
+        message.setExpire(System.currentTimeMillis() + unit.toMillis(ttl));
         Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
@@ -74,7 +72,7 @@ public class KleinCacheImpl implements KleinCache, SM {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        message.setTtl(unit.toMicros(ttl));
+        message.setExpire(unit.toMicros(ttl));
         Result result = consensus.propose(message);
         return Result.SUCCESS.equals(result);
     }
@@ -104,23 +102,4 @@ public class KleinCacheImpl implements KleinCache, SM {
         Result result = consensus.propose(message);
     }
 
-    @Override
-    public void apply(Object data) {
-        LOG.info("apply data: {}", data);
-    }
-
-    @Override
-    public void makeImage() {
-
-    }
-
-    @Override
-    public void loadImage() {
-
-    }
-
-    @Override
-    public long lastApplyInstance() {
-        return 0;
-    }
 }
