@@ -1,7 +1,6 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
-import java.util.List;
 
 /**
  * @author far.liu
@@ -10,7 +9,7 @@ public class ConfirmReq implements Serializable {
     private String nodeId;
     private long proposalNo;
     private long instanceId;
-    private List<Object> datas;
+    private Object data;
 
     public long getProposalNo() {
         return proposalNo;
@@ -36,19 +35,19 @@ public class ConfirmReq implements Serializable {
         this.instanceId = instanceId;
     }
 
-    public List<Object> getDatas() {
-        return datas;
+    public Object getData() {
+        return data;
     }
 
-    public void setDatas(List<Object> datas) {
-        this.datas = datas;
+    public void setData(Object data) {
+        this.data = data;
     }
 
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private long instanceId;
-        private List<Object> datas;
+        private Object data;
 
         private Builder() {
         }
@@ -72,8 +71,8 @@ public class ConfirmReq implements Serializable {
             return this;
         }
 
-        public Builder datas(List<Object> datas) {
-            this.datas = datas;
+        public Builder data(Object data) {
+            this.data = data;
             return this;
         }
 
@@ -82,7 +81,7 @@ public class ConfirmReq implements Serializable {
             confirmReq.setNodeId(nodeId);
             confirmReq.setProposalNo(proposalNo);
             confirmReq.setInstanceId(instanceId);
-            confirmReq.setDatas(datas);
+            confirmReq.setData(data);
             return confirmReq;
         }
     }

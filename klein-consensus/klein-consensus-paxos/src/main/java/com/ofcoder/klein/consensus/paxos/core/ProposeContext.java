@@ -16,14 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import com.google.common.collect.ImmutableList;
-import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+
+import com.google.common.collect.ImmutableList;
+import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 
 /**
  * @author 释慧利
@@ -34,9 +33,9 @@ public class ProposeContext {
      */
     private final long instanceId;
     /**
-     * Origin data, type is {@link com.google.common.collect.ImmutableList}
+     * Origin data
      */
-    private final List<Object> datas;
+    private final Object data;
     /**
      * Client callback, type is {@link com.google.common.collect.ImmutableList}
      */
@@ -44,54 +43,49 @@ public class ProposeContext {
     /**
      * The data on which consensus was reached
      */
-    private final List<Object> consensusDatas = new ArrayList<>();
+    private Object consensusData;
     /**
      * Current retry times
      */
     private int times = 0;
-    private Quorum prepareQuorum;
-    private AtomicBoolean prepareNexted;
-    private Quorum acceptQuorum;
-    private AtomicBoolean acceptNexted;
+    private final Quorum prepareQuorum = PaxosQuorum.createInstance();
+    private final AtomicBoolean prepareNexted = new AtomicBoolean(false);
+    private final Quorum acceptQuorum = PaxosQuorum.createInstance();
+    private final AtomicBoolean acceptNexted = new AtomicBoolean(false);
 
     public ProposeContext(long instanceId, List<Proposer.ProposeWithDone> events) {
         this(instanceId, events.stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList())
                 , events.stream().map(Proposer.ProposeWithDone::getDone).collect(Collectors.toList()));
     }
 
-    public ProposeContext(long instanceId, List<Object> datas, List<ProposeDone> dones) {
+    public ProposeContext(long instanceId, Object data, List<ProposeDone> dones) {
         this.instanceId = instanceId;
-        this.datas = ImmutableList.copyOf(datas);
+        this.data = data;
         this.dones = ImmutableList.copyOf(dones);
-        reset();
     }
 
     public int getTimesAndIncrement() {
         return times++;
     }
 
-    public void reset() {
-        this.prepareQuorum = PaxosQuorum.createInstance();
-        this.prepareNexted = new AtomicBoolean(false);
-        this.acceptQuorum = PaxosQuorum.createInstance();
-        this.acceptNexted = new AtomicBoolean(false);
-        this.consensusDatas.clear();
-    }
-
     public long getInstanceId() {
         return instanceId;
     }
 
-    public List<Object> getDatas() {
-        return datas;
+    public Object getData() {
+        return data;
     }
 
     public List<ProposeDone> getDones() {
         return dones;
     }
 
-    public List<Object> getConsensusDatas() {
-        return consensusDatas;
+    public Object getConsensusData() {
+        return consensusData;
+    }
+
+    public void setConsensusData(Object consensusData) {
+        this.consensusData = consensusData;
     }
 
     public int getTimes() {
@@ -112,5 +106,18 @@ public class ProposeContext {
 
     public AtomicBoolean getAcceptNexted() {
         return acceptNexted;
+    }
+
+    /**
+     * Creating a new reference
+     * Keep news of the last round's lateness from clouding this round's decision-making
+     *
+     * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
+     */
+    public ProposeContext createRef() {
+        ProposeContext target = new ProposeContext(this.instanceId, this.data, this.dones);
+        target.times = this.times;
+        target.consensusData = null;
+        return target;
     }
 }
