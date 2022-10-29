@@ -11,12 +11,15 @@ klein是一个分布式基于本地的k-v存储项目，它可以不依赖任何
 paxos, grpc, h2
 
 # 优化
+## Master节点
+- 处理读请求
+- 成员变更，递增配置版本，Vertical Paxos
+
 ## paxos写请求
 - 支持乱序协商，顺序确认
 - 支持批量协商
 
 ## Paxos读请求优化
-- 增加Master节点
 - NWR
 - confirm
 - 不存在干扰key，无需执行一轮Prepare
