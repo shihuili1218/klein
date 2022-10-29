@@ -126,7 +126,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
      *
      * @param data client's data
      * @param done client's callbck
-     * @param <E> client's data type, extend Serializable
+     * @param <E>  client's data type, extend Serializable
      */
     public <E extends Serializable> void propose(final E data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
@@ -143,7 +143,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     /**
      * Send accept message to all Acceptor.
      *
-     * @param ctxt Negotiation Context
+     * @param ctxt     Negotiation Context
      * @param callback Callback of accept phase,
      *                 if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
      *                 if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#confirm(ProposeContext)}
@@ -151,17 +151,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     public void accept(final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
 
+        ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
+                ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
+                : ctxt.getData());
+
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(self.getCurProposalNo())
-                .datas(
-                        preparedInstanceMap.containsKey(ctxt.getInstanceId())
-                                ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                                : ctxt.getDatas()
-                )
+                .data(ctxt.getConsensusData())
                 .build();
-        ctxt.getConsensusDatas().addAll(req.getDatas());
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(AcceptReq.class.getSimpleName())
@@ -234,13 +233,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
      * Send Prepare message to all Acceptor.
      * Only one thread is executing this method at the same time.
      *
-     * @param ctxt Negotiation Context
+     * @param ctxt     Negotiation Context
      * @param callback Callback of prepare phase,
      *                 if the majority approved prepare, call {@link PhaseCallback.PreparePhaseCallback#granted(ProposeContext)}
      *                 if the majority refuses to prepare after several retries, call {@link PhaseCallback.PreparePhaseCallback#refused(ProposeContext)}
      */
     private void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
-        LOG.info("start prepare phase, the {} retry", ctxt.getTimes());
 
         // limit the prepare phase to only one thread.
         if (skipPrepare.get() == PrepareState.PREPARED
@@ -270,15 +268,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         forcePrepare(ctxt, callback);
     }
 
-    private void forcePrepare(ProposeContext ctxt, PhaseCallback.PreparePhaseCallback callback) {
+    private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {
+        LOG.info("start prepare phase, the {} retry", context.getTimes());
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
-        if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
-            callback.refused(ctxt);
+        if (context.getTimesAndIncrement() >= this.prop.getRetry()) {
+            callback.refused(context);
             return;
         }
 
-        // todo ctxt应该clone出来，因为上一次失败的请求仍然会进入refused
-        ctxt.reset();
+        final ProposeContext ctxt = context.createRef();
+
         long proposalNo = self.incrementProposalNo();
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
@@ -414,7 +413,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             ThreadExecutor.submit(() -> {
                 // do confirm
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDatas());
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getData());
 
                 for (ProposeDone event : context.getDones()) {
                     event.done(Result.SUCCESS);

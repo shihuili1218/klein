@@ -28,7 +28,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -130,8 +129,8 @@ public class Learner implements Lifecycle<ConsensusProp> {
         }
 
         Instance instance = logManager.getInstance(instanceId);
-        List<Object> localValue = instance != null ? instance.getGrantedValue() : null;
-        localValue = CollectionUtils.isEmpty(localValue) ? Lists.newArrayList(Noop.DEFAULT) : localValue;
+        Object localValue = instance != null ? instance.getGrantedValue() : null;
+        localValue = localValue == null ? Instance.Noop.DEFAULT : localValue;
         ProposeContext ctxt = new ProposeContext(instanceId, localValue, Lists.newArrayList(result -> {
             if (Result.SUCCESS.equals(result)) {
 
@@ -176,7 +175,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .nodeId(result.getNodeId())
                         .proposalNo(result.getInstance().getProposalNo())
                         .instanceId(result.getInstance().getInstanceId())
-                        .datas(result.getInstance().getGrantedValue())
+                        .data(result.getInstance().getGrantedValue())
                         .build());
             }
         }, 1000);
@@ -210,20 +209,26 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 // the instance has been applied.
                 return;
             }
-            List<Object> datas = localInstance.getGrantedValue();
             logManager.updateInstance(localInstance);
         } finally {
             logManager.getLock().writeLock().unlock();
         }
 
-        // input state machine
-        for (Object data : localInstance.getGrantedValue()) {
-            try {
-                sm.apply(data);
-            } catch (Exception e) {
-                LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
+        if (localInstance.getGrantedValue() instanceof List) {
+            // input state machine
+            for (Object data : (List<Object>) localInstance.getGrantedValue()) {
+                try {
+                    sm.apply(data);
+                } catch (Exception e) {
+                    LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
+                }
             }
+        } else if (localInstance.getGrantedValue() instanceof Instance.Noop) {
+            //do nothing
+        } else {
+            LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
         }
+
     }
 
 
@@ -231,15 +236,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
      * Send confirm message.
      *
      * @param instanceId id of the instance
-     * @param datas      data in instance
+     * @param data      data in instance
      */
-    public void confirm(long instanceId, List<Object> datas) {
+    public void confirm(long instanceId, Object data) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .instanceId(instanceId)
-                .datas(datas)
+                .data(data)
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -294,7 +299,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             }
             localInstance.setState(Instance.State.CONFIRMED);
             localInstance.setProposalNo(req.getProposalNo());
-            localInstance.setGrantedValue(req.getDatas());
+            localInstance.setGrantedValue(req.getData());
             logManager.updateInstance(localInstance);
 
             // apply statemachine

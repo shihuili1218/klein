@@ -1,7 +1,6 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 
 import com.ofcoder.klein.storage.facade.Instance;
 

@@ -73,7 +73,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                 localInstance = Instance.Builder.anInstance()
                         .instanceId(req.getInstanceId())
                         .proposalNo(req.getProposalNo())
-                        .grantedValue(req.getDatas())
+                        .grantedValue(req.getData())
                         .state(Instance.State.ACCEPTED)
                         .applied(new AtomicBoolean(false))
                         .build();
@@ -96,7 +96,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
                     localInstance.setState(Instance.State.ACCEPTED);
                     localInstance.setProposalNo(req.getProposalNo());
-                    localInstance.setGrantedValue(req.getDatas());
+                    localInstance.setGrantedValue(req.getData());
 
                     resBuilder.result(true)
                             .instanceState(localInstance.getState())
