@@ -17,7 +17,7 @@ public class Message implements Serializable {
     private byte op;
     private String key;
     private Object data;
-    private long ttl;
+    private long expire;
 
     public byte getOp() {
         return op;
@@ -43,12 +43,12 @@ public class Message implements Serializable {
         this.data = data;
     }
 
-    public long getTtl() {
-        return ttl;
+    public long getExpire() {
+        return expire;
     }
 
-    public void setTtl(long ttl) {
-        this.ttl = ttl;
+    public void setExpire(long expire) {
+        this.expire = expire;
     }
 
     @Override
@@ -57,7 +57,7 @@ public class Message implements Serializable {
                 "op=" + op +
                 ", key='" + key + '\'' +
                 ", data=" + data +
-                ", ttl=" + ttl +
+                ", ttl=" + expire +
                 '}';
     }
 }
