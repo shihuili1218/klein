@@ -18,7 +18,6 @@ package com.ofcoder.klein.core.cache;
 
 import java.io.Serializable;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -56,7 +55,7 @@ public class CacheSM implements SM {
                 CONTAINER.put(message.getKey(), message.getData());
                 break;
             case Message.GET:
-                break;
+                return (E) CONTAINER.getOrDefault(message.getKey(), null);
             case Message.INVALIDATE:
                 break;
             case Message.INVALIDATEALL:

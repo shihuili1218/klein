@@ -21,10 +21,10 @@ import java.io.Serializable;
 /**
  * @author 释慧利
  */
-public class Result implements Serializable {
+public class Result<D extends Serializable> implements Serializable {
 
     private State state;
-    private Serializable data;
+    private D data;
 
     public enum State {
         SUCCESS,
@@ -39,39 +39,39 @@ public class Result implements Serializable {
         this.state = state;
     }
 
-    public Serializable getData() {
+    public D getData() {
         return data;
     }
 
-    public void setData(Serializable data) {
+    public void setData(D data) {
         this.data = data;
     }
 
-    public static final class Builder {
+    public static final class Builder<D extends Serializable> {
         private State state;
-        private Serializable data;
+        private D data;
 
         private Builder() {
         }
 
         public static Builder aResult() {
-            return new Builder();
+            return new Builder<>();
         }
 
-        public Builder state(State state) {
+        public Builder<D> state(State state) {
             this.state = state;
             return this;
         }
 
-        public Builder data(Serializable data) {
+        public Builder<D> data(D data) {
             this.data = data;
             return this;
         }
 
-        public Result build() {
+        public Result<D> build() {
             Result result = new Result();
-            result.state = this.state;
-            result.data = this.data;
+            result.setState(state);
+            result.setData(data);
             return result;
         }
     }

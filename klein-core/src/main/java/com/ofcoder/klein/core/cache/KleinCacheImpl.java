@@ -30,8 +30,8 @@ public class KleinCacheImpl implements KleinCache{
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.EXIST);
-        Result.State result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result);
+        Result result = consensus.propose(message);
+        return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
@@ -40,8 +40,8 @@ public class KleinCacheImpl implements KleinCache{
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUT);
-        Result.State result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result);
+        Result result = consensus.propose(message);
+        return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
@@ -52,8 +52,8 @@ public class KleinCacheImpl implements KleinCache{
         message.setOp(Message.PUT);
 
         message.setExpire(System.currentTimeMillis() + unit.toMillis(ttl));
-        Result.State result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result);
+        Result result = consensus.propose(message);
+        return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
@@ -62,8 +62,8 @@ public class KleinCacheImpl implements KleinCache{
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        Result.State result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result);
+        Result result = consensus.propose(message);
+        return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
@@ -73,8 +73,8 @@ public class KleinCacheImpl implements KleinCache{
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
         message.setExpire(unit.toMicros(ttl));
-        Result.State result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result);
+        Result result = consensus.propose(message);
+        return Result.State.SUCCESS.equals(result.getState());
     }
 
     // todo
@@ -83,8 +83,8 @@ public class KleinCacheImpl implements KleinCache{
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.GET);
-        Result.State result = consensus.propose(message);
-        return null;
+        Result<D> result = consensus.read(message);
+        return result.getData();
     }
 
     @Override
@@ -92,14 +92,14 @@ public class KleinCacheImpl implements KleinCache{
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.INVALIDATE);
-        Result.State result = consensus.propose(message);
+        Result result = consensus.propose(message);
     }
 
     @Override
     public void invalidateAll() {
         Message message = new Message();
         message.setOp(Message.INVALIDATEALL);
-        Result.State result = consensus.propose(message);
+        Result result = consensus.propose(message);
     }
 
 }

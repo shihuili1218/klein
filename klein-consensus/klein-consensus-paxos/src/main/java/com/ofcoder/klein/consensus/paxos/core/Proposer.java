@@ -37,7 +37,6 @@ import com.lmax.disruptor.dsl.ProducerType;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.disruptor.AbstractBatchEventHandler;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
-import com.ofcoder.klein.common.disruptor.DisruptorEvent;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
@@ -76,8 +75,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     /**
      * Disruptor to run propose.
      */
-    private Disruptor<ProposeWithDone> proposeDisruptor;
-    private RingBuffer<ProposeWithDone> proposeQueue;
+    private Disruptor<ProposalWithDone> proposeDisruptor;
+    private RingBuffer<ProposalWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
     /**
      * The instance of the Prepare phase has been executed.
@@ -95,9 +94,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.3);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
-        this.proposeDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
+        this.proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
-                .setEventFactory(ProposeWithDone::new)
+                .setEventFactory(ProposalWithDone::new)
                 .setThreadFactory(KleinThreadFactory.create("klein-paxos-propose-disruptor-", true)) //
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
@@ -134,9 +133,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             throw new ConsensusException("klein is shutting down.");
         }
 
-        final EventTranslator<ProposeWithDone> translator = (event, sequence) -> {
-            event.done = done;
-            event.data = data;
+        final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
+            event.setDone(done);
+            event.setData(data);
         };
         this.proposeQueue.publishEvent(translator);
     }
@@ -154,7 +153,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
                 ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                : ctxt.getDataWithCallback().stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList()));
+                : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getData).collect(Collectors.toList()));
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
@@ -348,43 +347,23 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     }
 
 
-    public static class ProposeWithDone extends DisruptorEvent {
-        private Object data;
-        private ProposeDone done;
-
-        public ProposeWithDone() {
-        }
-
-        public ProposeWithDone(Object data, ProposeDone done) {
-            this.data = data;
-            this.done = done;
-        }
-
-        public Object getData() {
-            return data;
-        }
-
-        public ProposeDone getDone() {
-            return done;
-        }
-    }
-
-    public class ProposeEventHandler extends AbstractBatchEventHandler<ProposeWithDone> {
+    public class ProposeEventHandler extends AbstractBatchEventHandler<ProposalWithDone> {
 
         public ProposeEventHandler(int batchSize) {
             super(batchSize);
         }
 
         @Override
-        protected void handle(List<ProposeWithDone> events) {
+        protected void handle(List<ProposalWithDone> events) {
             LOG.info("start negotiations, proposal size: {}", events.size());
 
-            final List<ProposeWithDone> finalEvents = ImmutableList.copyOf(events);
+            final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
             //
             ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents);
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
             }
+            accept(ctxt, new AcceptCallback());
         }
     }
 
@@ -407,8 +386,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             }
 
             ThreadExecutor.submit(() -> {
-                for (ProposeWithDone event : context.getDataWithCallback()) {
-                    event.done.negotiationDone(Result.State.UNKNOWN);
+                for (ProposalWithDone event : context.getDataWithCallback()) {
+                    event.getDone().negotiationDone(Result.State.UNKNOWN);
                 }
             });
         }
@@ -424,8 +403,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 // do confirm
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDataWithCallback());
 
-                for (ProposeWithDone event : context.getDataWithCallback()) {
-                    event.done.negotiationDone(Result.State.SUCCESS);
+                for (ProposalWithDone event : context.getDataWithCallback()) {
+                    event.getDone().negotiationDone(Result.State.SUCCESS);
                 }
             });
 
@@ -441,8 +420,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             });
 
             ThreadExecutor.submit(() -> {
-                for (ProposeWithDone event : context.getDataWithCallback()) {
-                    event.done.negotiationDone(Result.State.UNKNOWN);
+                for (ProposalWithDone event : context.getDataWithCallback()) {
+                    event.getDone().negotiationDone(Result.State.UNKNOWN);
                 }
             });
 

@@ -14,19 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.paxos.core;/**
+ * @author far.liu
+ */
 
-import java.io.Serializable;
-
-import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.common.disruptor.DisruptorEvent;
 
 /**
  * @author 释慧利
  */
-public interface ProposeDone {
-    void negotiationDone(Result.State result);
+public class ProposalWithDone extends DisruptorEvent {
+    private Object data;
+    private ProposeDone done;
 
-    default <D extends Serializable> void applyDone(D result) {
-        // for subclass
+    public ProposalWithDone() {
+    }
+
+    public ProposalWithDone(Object data, ProposeDone done) {
+        this.data = data;
+        this.done = done;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    public void setDone(ProposeDone done) {
+        this.done = done;
+    }
+
+    public Object getData() {
+        return data;
+    }
+
+    public ProposeDone getDone() {
+        return done;
     }
 }
