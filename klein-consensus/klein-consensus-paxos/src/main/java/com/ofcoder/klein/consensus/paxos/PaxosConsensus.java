@@ -23,6 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -49,6 +52,7 @@ import com.ofcoder.klein.storage.facade.StorageEngine;
  */
 @Join
 public class PaxosConsensus implements Consensus {
+    private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
     private PaxosNode self;
     private Proposer proposer;
     private Acceptor acceptor;
@@ -76,9 +80,9 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable> Result read(E data) {
+    public <E extends Serializable,D extends Serializable> Result<D> read(E data) {
         CountDownLatch completed = new CountDownLatch(2);
-        Result.Builder builder = Result.Builder.aResult();
+        Result.Builder<D> builder = Result.Builder.aResult();
         proposeAsync(data, new ProposeDone() {
             @Override
             public void negotiationDone(Result.State result) {
@@ -90,13 +94,15 @@ public class PaxosConsensus implements Consensus {
             }
 
             @Override
-            public void applyDone(Serializable result) {
-                builder.data(result);
+            public <A extends Serializable> void applyDone(A result) {
+                builder.data((D) result);
                 completed.countDown();
             }
         });
         try {
-            boolean await = completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+            if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
+                builder.state(Result.State.UNKNOWN);
+            }
         } catch (InterruptedException e) {
             throw new ConsensusException(e.getMessage(), e);
         }

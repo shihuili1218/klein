@@ -17,6 +17,7 @@
 package com.ofcoder.klein.example;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
@@ -34,8 +35,11 @@ public class Main1 {
         prop1.getRpcProp().setPort(1218);
 
         Klein instance1 = Klein.getInstance();
-        instance1.getCache().put("hello", "kleinz");
-
+        String key = "hello";
+        String value = "klein";
+        instance1.getCache().put(key, value);
+        Serializable hello = instance1.getCache().get(key);
+        assert value == hello;
         System.in.read();
     }
 }

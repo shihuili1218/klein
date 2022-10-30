@@ -22,7 +22,7 @@ public interface Consensus extends Lifecycle<ConsensusProp> {
      * @param data message
      * @return whether success
      */
-    <E extends Serializable> Result read(final E data);
+    <E extends Serializable, D extends Serializable> Result<D> read(final E data);
 
     void loadSM(SM sm);
 

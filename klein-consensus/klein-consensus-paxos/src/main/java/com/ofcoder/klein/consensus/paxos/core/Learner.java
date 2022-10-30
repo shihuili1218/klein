@@ -72,7 +72,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
     private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();
-    private final Map<Long, List<Proposer.ProposeWithDone>> applyCallback = new ConcurrentHashMap<>();
+    private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -135,7 +135,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         Object localValue = instance != null ? instance.getGrantedValue() : null;
         localValue = localValue == null ? Instance.Noop.DEFAULT : localValue;
         ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(
-                new Proposer.ProposeWithDone(localValue, result -> {
+                new ProposalWithDone(localValue, result -> {
                     if (Result.State.SUCCESS.equals(result)) {
 
                     } else {
@@ -221,11 +221,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
         if (applyCallback.containsKey(instanceId)) {
             // is self
-            List<Proposer.ProposeWithDone> proposeWithDones = applyCallback.get(instanceId);
-            for (Proposer.ProposeWithDone proposeWithDone : proposeWithDones) {
+            List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
+            for (ProposalWithDone proposalWithDone : proposalWithDones) {
                 try {
-                    Serializable result = sm.apply(proposeWithDone.getData());
-                    proposeWithDone.getDone().applyDone(result);
+                    Serializable result = sm.apply(proposalWithDone.getData());
+                    proposalWithDone.getDone().applyDone(result);
                 } catch (Exception e) {
                     LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
                 }
@@ -256,7 +256,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
      * @param dataWithDone data: data in instance
      *                     dones: apply callback
      */
-    public void confirm(long instanceId, final List<Proposer.ProposeWithDone> dataWithDone) {
+    public void confirm(long instanceId, final List<ProposalWithDone> dataWithDone) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         applyCallback.putIfAbsent(instanceId, dataWithDone);
@@ -265,7 +265,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .instanceId(instanceId)
-                .data(dataWithDone.stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList()))
+                .data(dataWithDone.stream().map(ProposalWithDone::getData).collect(Collectors.toList()))
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -277,7 +277,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.warn(err.getMessage());
+                    LOG.error(err.getMessage());
                     // do nothing
                 }
 

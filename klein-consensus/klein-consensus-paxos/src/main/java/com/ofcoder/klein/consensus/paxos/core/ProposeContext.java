@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -35,7 +34,7 @@ public class ProposeContext {
     /**
      * Origin data and callback
      */
-    private final List<Proposer.ProposeWithDone> dataWithCallback;
+    private final List<ProposalWithDone> dataWithCallback;
     /**
      * The data on which consensus was reached
      */
@@ -49,7 +48,7 @@ public class ProposeContext {
     private final Quorum acceptQuorum = PaxosQuorum.createInstance();
     private final AtomicBoolean acceptNexted = new AtomicBoolean(false);
 
-    public ProposeContext(long instanceId, List<Proposer.ProposeWithDone> events) {
+    public ProposeContext(long instanceId, List<ProposalWithDone> events) {
         this.instanceId = instanceId;
         this.dataWithCallback = ImmutableList.copyOf(events);
     }
@@ -62,7 +61,7 @@ public class ProposeContext {
         return instanceId;
     }
 
-    public List<Proposer.ProposeWithDone> getDataWithCallback() {
+    public List<ProposalWithDone> getDataWithCallback() {
         return dataWithCallback;
     }
 
