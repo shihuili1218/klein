@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.core.cache;
 
+import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,16 +35,8 @@ import com.ofcoder.klein.consensus.facade.SM;
 public class CacheSM implements SM {
     private static final Map<String, Object> CONTAINER = new ConcurrentHashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    /**
-     * 桶的范围
-     */
-    public final long expirationInterval = 1 * 60 * 1000;
+    private long checkPointInstanceId;
     private static ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(5, KleinThreadFactory.create("klein-cache-clear", true));
-    private static final Map<Long, Set<Object>> expiryMap = new ConcurrentHashMap<>();
-
-    private long roundToNextInterval(long time) {
-        return (time / expirationInterval + 1) * expirationInterval;
-    }
 
     private void clearExpire() {
         long now = System.currentTimeMillis();
@@ -51,11 +44,11 @@ public class CacheSM implements SM {
     }
 
     @Override
-    public void apply(Object data) {
+    public <E extends Serializable> E apply(Object data) {
         LOG.info("apply data: {}", data);
         if (!(data instanceof Message)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
-            return;
+            return null;
         }
         Message message = (Message) data;
         switch (message.getOp()) {
@@ -76,6 +69,7 @@ public class CacheSM implements SM {
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
                 break;
         }
+        return null;
     }
 
     @Override
@@ -88,8 +82,4 @@ public class CacheSM implements SM {
 
     }
 
-    @Override
-    public long lastApplyInstance() {
-        return 0;
-    }
 }

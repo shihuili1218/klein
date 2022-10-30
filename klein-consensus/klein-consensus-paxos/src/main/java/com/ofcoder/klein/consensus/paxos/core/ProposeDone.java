@@ -16,11 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.io.Serializable;
+
 import com.ofcoder.klein.consensus.facade.Result;
 
 /**
  * @author 释慧利
  */
 public interface ProposeDone {
-    void done(Result result);
+    void negotiationDone(Result.State result);
+
+    default void applyDone(Serializable result) {
+        // for subclass
+    }
 }

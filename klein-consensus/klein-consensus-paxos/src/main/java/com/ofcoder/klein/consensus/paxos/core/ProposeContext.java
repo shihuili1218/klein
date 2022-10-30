@@ -33,13 +33,9 @@ public class ProposeContext {
      */
     private final long instanceId;
     /**
-     * Origin data
+     * Origin data and callback
      */
-    private final Object data;
-    /**
-     * Client callback, type is {@link com.google.common.collect.ImmutableList}
-     */
-    private final List<ProposeDone> dones;
+    private final List<Proposer.ProposeWithDone> dataWithCallback;
     /**
      * The data on which consensus was reached
      */
@@ -54,14 +50,8 @@ public class ProposeContext {
     private final AtomicBoolean acceptNexted = new AtomicBoolean(false);
 
     public ProposeContext(long instanceId, List<Proposer.ProposeWithDone> events) {
-        this(instanceId, events.stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList())
-                , events.stream().map(Proposer.ProposeWithDone::getDone).collect(Collectors.toList()));
-    }
-
-    public ProposeContext(long instanceId, Object data, List<ProposeDone> dones) {
         this.instanceId = instanceId;
-        this.data = data;
-        this.dones = ImmutableList.copyOf(dones);
+        this.dataWithCallback = ImmutableList.copyOf(events);
     }
 
     public int getTimesAndIncrement() {
@@ -72,12 +62,8 @@ public class ProposeContext {
         return instanceId;
     }
 
-    public Object getData() {
-        return data;
-    }
-
-    public List<ProposeDone> getDones() {
-        return dones;
+    public List<Proposer.ProposeWithDone> getDataWithCallback() {
+        return dataWithCallback;
     }
 
     public Object getConsensusData() {
@@ -115,7 +101,7 @@ public class ProposeContext {
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
      */
     public ProposeContext createRef() {
-        ProposeContext target = new ProposeContext(this.instanceId, this.data, this.dones);
+        ProposeContext target = new ProposeContext(this.instanceId, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
         return target;

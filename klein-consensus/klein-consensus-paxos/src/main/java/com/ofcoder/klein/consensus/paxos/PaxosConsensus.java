@@ -16,6 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.io.Serializable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
+
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -37,13 +44,6 @@ import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicLong;
-
 /**
  * @author far.liu
  */
@@ -58,8 +58,8 @@ public class PaxosConsensus implements Consensus {
     @Override
     public <E extends Serializable> Result propose(E data) {
         final CompletableFuture<Result> future = new CompletableFuture<>();
-        proposeAsync(data, future::complete);
 
+        proposeAsync(data, result -> future.complete(Result.Builder.aResult().state(result).build()));
         try {
             return future.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
         } catch (final TimeoutException e) {
@@ -76,8 +76,31 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public Result read(ByteBuffer data) {
-        return null;
+    public <E extends Serializable> Result read(E data) {
+        CountDownLatch completed = new CountDownLatch(2);
+        Result.Builder builder = Result.Builder.aResult();
+        proposeAsync(data, new ProposeDone() {
+            @Override
+            public void negotiationDone(Result.State result) {
+                builder.state(result);
+                completed.countDown();
+                if (result == Result.State.UNKNOWN) {
+                    completed.countDown();
+                }
+            }
+
+            @Override
+            public void applyDone(Serializable result) {
+                builder.data(result);
+                completed.countDown();
+            }
+        });
+        try {
+            boolean await = completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new ConsensusException(e.getMessage(), e);
+        }
+        return builder.build();
     }
 
     @Override
