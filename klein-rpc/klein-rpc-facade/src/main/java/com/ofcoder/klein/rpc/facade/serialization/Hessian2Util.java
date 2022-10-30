@@ -54,7 +54,7 @@ public class Hessian2Util {
                 try {
                     hi.close();
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new SerializationException(e.getMessage(),e);
                 }
             }
             StreamUtil.close(bais);

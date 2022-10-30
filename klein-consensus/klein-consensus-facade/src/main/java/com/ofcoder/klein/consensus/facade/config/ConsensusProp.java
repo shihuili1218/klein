@@ -19,7 +19,7 @@ public class ConsensusProp {
     /**
      * timeout for single round.
      */
-    private long roundTimeout = 30000;
+    private long roundTimeout = 1000;
     /**
      * the number of proposals negotiated by the single round.
      */

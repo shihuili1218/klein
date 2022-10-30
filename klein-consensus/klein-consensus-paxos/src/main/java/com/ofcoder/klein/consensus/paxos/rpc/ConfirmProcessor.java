@@ -44,7 +44,7 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
             return;
         }
         RoleAccessor.getLearner().handleConfirmRequest(request);
-//        context.response();
+        context.response();
     }
 
 }

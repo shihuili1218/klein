@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public interface SM {
 
-    <E extends Serializable> E apply(Object data);
+    Object apply(Object data);
 
     void makeImage();
 

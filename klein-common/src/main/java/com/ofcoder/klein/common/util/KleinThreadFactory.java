@@ -20,11 +20,15 @@ package com.ofcoder.klein.common.util;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * @author yuanyuan.liu
  * @date: 2020/1/14 9:34
  */
 public final class KleinThreadFactory implements java.util.concurrent.ThreadFactory {
+    private static final Logger LOG = LoggerFactory.getLogger(KleinThreadFactory.class);
 
     private static final AtomicLong THREAD_NUMBER = new AtomicLong(1);
 
@@ -55,6 +59,7 @@ public final class KleinThreadFactory implements java.util.concurrent.ThreadFact
         Thread thread = new Thread(THREAD_GROUP, runnable,
                 THREAD_GROUP.getName() + "-" + namePrefix + "-" + THREAD_NUMBER.getAndIncrement());
         thread.setDaemon(daemon);
+        thread.setUncaughtExceptionHandler((t, e) -> LOG.error(e.getMessage(), e));
         if (thread.getPriority() != Thread.NORM_PRIORITY) {
             thread.setPriority(Thread.NORM_PRIORITY);
         }

@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.config.KleinProp;
@@ -14,7 +15,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 /**
  * @author 释慧利
  */
-public class KleinCacheImpl implements KleinCache{
+public class KleinCacheImpl implements KleinCache {
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected Consensus consensus;
     private static final CacheSM SM = new CacheSM();
@@ -30,8 +31,11 @@ public class KleinCacheImpl implements KleinCache{
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.EXIST);
-        Result result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result.getState());
+        Result<Boolean> result = consensus.propose(message, true);
+        if (!Result.State.SUCCESS.equals(result.getState())) {
+            throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
+        }
+        return result.getData();
     }
 
     @Override
@@ -57,24 +61,30 @@ public class KleinCacheImpl implements KleinCache{
     }
 
     @Override
-    public <D extends Serializable> boolean putIfPresent(String key, D data) {
+    public <D extends Serializable> D putIfPresent(String key, D data) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        Result result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result.getState());
+        Result<D> result = consensus.propose(message, true);
+        if (!Result.State.SUCCESS.equals(result.getState())) {
+            throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm. key: " + key);
+        }
+        return result.getData();
     }
 
     @Override
-    public <D extends Serializable> boolean putIfPresent(String key, D data, Long ttl, TimeUnit unit) {
+    public <D extends Serializable> D putIfPresent(String key, D data, Long ttl, TimeUnit unit) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
         message.setExpire(unit.toMicros(ttl));
-        Result result = consensus.propose(message);
-        return Result.State.SUCCESS.equals(result.getState());
+        Result<D> result = consensus.propose(message, true);
+        if (!Result.State.SUCCESS.equals(result.getState())) {
+            throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
+        }
+        return result.getData();
     }
 
     // todo
@@ -84,6 +94,9 @@ public class KleinCacheImpl implements KleinCache{
         message.setKey(key);
         message.setOp(Message.GET);
         Result<D> result = consensus.read(message);
+        if (!Result.State.SUCCESS.equals(result.getState())) {
+            throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
+        }
         return result.getData();
     }
 
