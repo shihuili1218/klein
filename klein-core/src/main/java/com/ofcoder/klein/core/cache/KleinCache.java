@@ -13,9 +13,9 @@ public interface KleinCache {
 
     <D extends Serializable> boolean put(String key, D data, Long ttl, TimeUnit unit);
 
-    <D extends Serializable> boolean putIfPresent(String key, D data);
+    <D extends Serializable> D putIfPresent(String key, D data);
 
-    <D extends Serializable> boolean putIfPresent(String key, D data, Long ttl, TimeUnit unit);
+    <D extends Serializable> D putIfPresent(String key, D data, Long ttl, TimeUnit unit);
 
     <D extends Serializable> D get(String key);
 

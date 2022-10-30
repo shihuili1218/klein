@@ -12,7 +12,18 @@ import com.ofcoder.klein.spi.SPI;
 @SPI
 public interface Consensus extends Lifecycle<ConsensusProp> {
 
-    <E extends Serializable> Result propose(final E data);
+    /**
+     * @param data  Client data, type is <E>
+     *              e.g. The input value of the state machine
+     * @param apply Whether you need to wait until the state machine is applied
+     *              If true, wait until the state machine is applied before returning
+     * @return whether success
+     */
+    <E extends Serializable, D extends Serializable> Result<D> propose(final E data, final boolean apply);
+
+    default <E extends Serializable> Result propose(final E data) {
+        return propose(data, false);
+    }
 
     /**
      * W + R > N

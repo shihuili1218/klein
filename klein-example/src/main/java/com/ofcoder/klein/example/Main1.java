@@ -17,7 +17,6 @@
 package com.ofcoder.klein.example;
 
 import java.io.IOException;
-import java.io.Serializable;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
@@ -37,9 +36,32 @@ public class Main1 {
         Klein instance1 = Klein.getInstance();
         String key = "hello";
         String value = "klein";
-        instance1.getCache().put(key, value);
-        Serializable hello = instance1.getCache().get(key);
-        assert value == hello;
+        long start = System.currentTimeMillis();
+        instance1.getCache().put("hello1", "klein1");
+        System.out.println("++++++++++first put: " + (System.currentTimeMillis() - start));
+
+        start = System.currentTimeMillis();
+        instance1.getCache().put("hello2", "klein2");
+        System.out.println("++++++++++second put: " + (System.currentTimeMillis() - start));
+
+        start = System.currentTimeMillis();
+        instance1.getCache().put("hello3", "klein3");
+        System.out.println("++++++++++third put: " + (System.currentTimeMillis() - start));
+
+
+        System.out.println("----------get hello3: " + instance1.getCache().get("hello3"));
+        System.out.println("----------get hello4: " + instance1.getCache().get("hello4"));
+        System.out.println("----------exist hello3: " + instance1.getCache().exist("hello3"));
+        System.out.println("----------exist hello4: " + instance1.getCache().exist("hello4"));
+        System.out.println("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));
+        System.out.println("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4.1"));
+        instance1.getCache().invalidate("hello3");
+        System.out.println("----------invalidate hello3");
+        System.out.println("----------get hello3: " + instance1.getCache().get("hello3"));
+        instance1.getCache().invalidateAll();
+        System.out.println("----------invalidateAll");
+        System.out.println("----------get hello1: " + instance1.getCache().get("hello1"));
+
         System.in.read();
     }
 }

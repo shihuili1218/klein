@@ -27,6 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -109,6 +110,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         try {
             shutdownLatch.await();
         } catch (InterruptedException e) {
+            LOG.warn(e.getMessage(), e);
         }
 
     }
@@ -146,8 +148,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
         RoleAccessor.getProposer().prepare(ctxt);
 
         try {
-            latch.wait(2000);
+            if (!latch.await(2000, TimeUnit.MILLISECONDS)) {
+                boost(instanceId);
+            }
         } catch (InterruptedException e) {
+            LOG.warn(e.getMessage(), e);
             boost(instanceId);
         }
         boostingLatch.remove(instanceId);
@@ -224,7 +229,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
             for (ProposalWithDone proposalWithDone : proposalWithDones) {
                 try {
-                    Serializable result = sm.apply(proposalWithDone.getData());
+                    Object result = sm.apply(proposalWithDone.getData());
                     proposalWithDone.getDone().applyDone(result);
                 } catch (Exception e) {
                     LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
@@ -277,13 +282,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage());
                     // do nothing
                 }
 
                 @Override
                 public void complete(PrepareRes result) {
-                    LOG.info("node-{} confirm result: {}", it.getId(), result);
                     // do nothing
                 }
             }, 1000);

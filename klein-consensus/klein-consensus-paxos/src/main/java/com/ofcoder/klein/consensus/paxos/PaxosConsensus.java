@@ -17,10 +17,8 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
@@ -42,7 +40,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
@@ -59,29 +56,16 @@ public class PaxosConsensus implements Consensus {
     private Learner learner;
     private ConsensusProp prop;
 
-    @Override
-    public <E extends Serializable> Result propose(E data) {
-        final CompletableFuture<Result> future = new CompletableFuture<>();
-
-        proposeAsync(data, result -> future.complete(Result.Builder.aResult().state(result).build()));
-        try {
-            return future.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-        } catch (final TimeoutException e) {
-            future.cancel(true);
-            throw new InvokeTimeoutException(e.getMessage(), e);
-        } catch (final Throwable t) {
-            future.cancel(true);
-            throw new ConsensusException(t.getMessage(), t);
-        }
-    }
-
     private <E extends Serializable> void proposeAsync(final E data, final ProposeDone done) {
         proposer.propose(data, done);
     }
 
+
     @Override
-    public <E extends Serializable,D extends Serializable> Result<D> read(E data) {
-        CountDownLatch completed = new CountDownLatch(2);
+    public <E extends Serializable, D extends Serializable> Result<D> propose(E data, final boolean apply) {
+        int count = apply ? 2 : 1;
+
+        CountDownLatch completed = new CountDownLatch(count);
         Result.Builder<D> builder = Result.Builder.aResult();
         proposeAsync(data, new ProposeDone() {
             @Override
@@ -94,7 +78,7 @@ public class PaxosConsensus implements Consensus {
             }
 
             @Override
-            public <A extends Serializable> void applyDone(A result) {
+            public  void applyDone(Object result) {
                 builder.data((D) result);
                 completed.countDown();
             }
@@ -107,6 +91,11 @@ public class PaxosConsensus implements Consensus {
             throw new ConsensusException(e.getMessage(), e);
         }
         return builder.build();
+    }
+
+    @Override
+    public <E extends Serializable, D extends Serializable> Result<D> read(E data) {
+        return propose(data, true);
     }
 
     @Override

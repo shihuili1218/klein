@@ -43,7 +43,7 @@ public class CacheSM implements SM {
     }
 
     @Override
-    public <E extends Serializable> E apply(Object data) {
+    public Object apply(Object data) {
         LOG.info("apply data: {}", data);
         if (!(data instanceof Message)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
@@ -55,15 +55,17 @@ public class CacheSM implements SM {
                 CONTAINER.put(message.getKey(), message.getData());
                 break;
             case Message.GET:
-                return (E) CONTAINER.getOrDefault(message.getKey(), null);
+                return CONTAINER.getOrDefault(message.getKey(), null);
             case Message.INVALIDATE:
+                CONTAINER.remove(message.getKey());
                 break;
             case Message.INVALIDATEALL:
+                CONTAINER.clear();
                 break;
             case Message.PUTIFPRESENT:
-                break;
+                return CONTAINER.putIfAbsent(message.getKey(), message.getData());
             case Message.EXIST:
-                break;
+                return CONTAINER.containsKey(message.getKey());
             default:
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
                 break;
