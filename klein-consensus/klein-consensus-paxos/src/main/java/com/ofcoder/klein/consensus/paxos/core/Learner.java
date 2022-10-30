@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +72,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
     private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();
+    private final Map<Long, List<Proposer.ProposeWithDone>> applyCallback = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -131,13 +134,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
         Instance instance = logManager.getInstance(instanceId);
         Object localValue = instance != null ? instance.getGrantedValue() : null;
         localValue = localValue == null ? Instance.Noop.DEFAULT : localValue;
-        ProposeContext ctxt = new ProposeContext(instanceId, localValue, Lists.newArrayList(result -> {
-            if (Result.SUCCESS.equals(result)) {
+        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(
+                new Proposer.ProposeWithDone(localValue, result -> {
+                    if (Result.State.SUCCESS.equals(result)) {
 
-            } else {
-                boost(instanceId);
-            }
-        }));
+                    } else {
+                        boost(instanceId);
+                    }
+                })));
+
         RoleAccessor.getProposer().prepare(ctxt);
 
         try {
@@ -214,37 +219,53 @@ public class Learner implements Lifecycle<ConsensusProp> {
             logManager.getLock().writeLock().unlock();
         }
 
-        if (localInstance.getGrantedValue() instanceof List) {
-            // input state machine
-            for (Object data : (List<Object>) localInstance.getGrantedValue()) {
+        if (applyCallback.containsKey(instanceId)) {
+            // is self
+            List<Proposer.ProposeWithDone> proposeWithDones = applyCallback.get(instanceId);
+            for (Proposer.ProposeWithDone proposeWithDone : proposeWithDones) {
                 try {
-                    sm.apply(data);
+                    Serializable result = sm.apply(proposeWithDone.getData());
+                    proposeWithDone.getDone().applyDone(result);
                 } catch (Exception e) {
                     LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
                 }
             }
-        } else if (localInstance.getGrantedValue() instanceof Instance.Noop) {
-            //do nothing
+
         } else {
-            LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
+            if (localInstance.getGrantedValue() instanceof List) {
+                // input state machine
+                for (Object data : (List<Object>) localInstance.getGrantedValue()) {
+                    try {
+                        sm.apply(data);
+                    } catch (Exception e) {
+                        LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
+                    }
+                }
+            } else if (localInstance.getGrantedValue() instanceof Instance.Noop) {
+                //do nothing
+            } else {
+                LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
+            }
         }
-
     }
-
 
     /**
      * Send confirm message.
      *
-     * @param instanceId id of the instance
-     * @param data      data in instance
+     * @param instanceId   id of the instance
+     * @param dataWithDone data: data in instance
+     *                     dones: apply callback
      */
-    public void confirm(long instanceId, Object data) {
+    public void confirm(long instanceId, final List<Proposer.ProposeWithDone> dataWithDone) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
+
+        applyCallback.putIfAbsent(instanceId, dataWithDone);
+
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .instanceId(instanceId)
-                .data(data)
+                .data(dataWithDone.stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList()))
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()

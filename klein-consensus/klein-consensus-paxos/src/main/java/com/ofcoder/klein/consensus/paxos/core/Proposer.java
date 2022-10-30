@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -146,14 +147,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
      * @param ctxt     Negotiation Context
      * @param callback Callback of accept phase,
      *                 if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
-     *                 if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#confirm(ProposeContext)}
+     *                 if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#confirm(ProposeContext, Endpoint)}
      */
     public void accept(final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
 
         ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
                 ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                : ctxt.getData());
+                : ctxt.getDataWithCallback().stream().map(Proposer.ProposeWithDone::getData).collect(Collectors.toList()));
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
@@ -178,7 +179,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
 
                         skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                        prepare(ctxt, new PrepareCallback());
+                        ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
                     }
                 }
 
@@ -220,7 +221,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
                 skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                prepare(ctxt, new PrepareCallback());
+                ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
             }
         }
     }
@@ -299,7 +300,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        forcePrepare(ctxt, callback);
+                        ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
                     }
                 }
 
@@ -341,7 +342,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                forcePrepare(ctxt, callback);
+                ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
             }
         }
     }
@@ -350,6 +351,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     public static class ProposeWithDone extends DisruptorEvent {
         private Object data;
         private ProposeDone done;
+
+        public ProposeWithDone() {
+        }
+
+        public ProposeWithDone(Object data, ProposeDone done) {
+            this.data = data;
+            this.done = done;
+        }
 
         public Object getData() {
             return data;
@@ -387,7 +396,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                 skipPrepare.notifyAll();
             }
-            accept(context, new AcceptCallback());
+            ThreadExecutor.submit(() -> accept(context, new AcceptCallback()));
         }
 
         @Override
@@ -398,8 +407,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             }
 
             ThreadExecutor.submit(() -> {
-                for (ProposeDone event : context.getDones()) {
-                    event.done(Result.FAILURE);
+                for (ProposeWithDone event : context.getDataWithCallback()) {
+                    event.done.negotiationDone(Result.State.UNKNOWN);
                 }
             });
         }
@@ -413,10 +422,10 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             ThreadExecutor.submit(() -> {
                 // do confirm
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getData());
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDataWithCallback());
 
-                for (ProposeDone event : context.getDones()) {
-                    event.done(Result.SUCCESS);
+                for (ProposeWithDone event : context.getDataWithCallback()) {
+                    event.done.negotiationDone(Result.State.SUCCESS);
                 }
             });
 
@@ -432,8 +441,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             });
 
             ThreadExecutor.submit(() -> {
-                for (ProposeDone event : context.getDones()) {
-                    event.done(Result.UNKNOWN);
+                for (ProposeWithDone event : context.getDataWithCallback()) {
+                    event.done.negotiationDone(Result.State.UNKNOWN);
                 }
             });
 
