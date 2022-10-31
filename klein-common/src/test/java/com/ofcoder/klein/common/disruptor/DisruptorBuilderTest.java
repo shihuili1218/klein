@@ -32,7 +32,7 @@ public class DisruptorBuilderTest extends TestCase {
         this.applyDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
                 .setRingBufferSize(16384)
                 .setEventFactory(new ProposeEventFactory())
-                .setThreadFactory(KleinThreadFactory.create("klein-paxos-propose-disruptor-", true)) //
+                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();

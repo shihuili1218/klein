@@ -69,7 +69,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private LogManager logManager;
     private SM sm;
     private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
-    private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("klein-apply", true));
+    private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private ConsensusProp prop;
     private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();

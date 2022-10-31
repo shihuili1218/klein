@@ -34,13 +34,6 @@ import com.ofcoder.klein.consensus.facade.SM;
 public class CacheSM implements SM {
     private static final Map<String, Object> CONTAINER = new ConcurrentHashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private long checkPointInstanceId;
-    private static ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(5, KleinThreadFactory.create("klein-cache-clear", true));
-
-    private void clearExpire() {
-        long now = System.currentTimeMillis();
-
-    }
 
     @Override
     public Object apply(Object data) {
