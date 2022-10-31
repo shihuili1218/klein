@@ -16,22 +16,19 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.util.KleinThreadFactory;
-import com.ofcoder.klein.consensus.facade.SM;
+import com.google.common.collect.ImmutableMap;
+import com.ofcoder.klein.consensus.facade.AbstractSM;
 
 /**
  * @author 释慧利
  */
-public class CacheSM implements SM {
+public class CacheSM extends AbstractSM {
     private static final Map<String, Object> CONTAINER = new ConcurrentHashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
@@ -67,13 +64,14 @@ public class CacheSM implements SM {
     }
 
     @Override
-    public void makeImage() {
-
+    public Object makeImage() {
+        return ImmutableMap.copyOf(CONTAINER);
     }
 
     @Override
-    public void loadImage() {
-
+    public void loadImage(Object snap) {
+        CONTAINER.clear();
+        CONTAINER.putAll((Map<? extends String, ?>) snap);
     }
 
 }

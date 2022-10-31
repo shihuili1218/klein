@@ -1,17 +1,18 @@
 package com.ofcoder.klein.consensus.facade;
 
-import java.io.Serializable;
+import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author 释慧利
  */
-public interface SM {
+public interface SM extends Lifecycle {
 
-    Object apply(Object data);
+    Object apply(long instanceId, Object data);
 
-    void makeImage();
+    Snap snapshot();
 
-    void loadImage();
-
+    void loadSnap(Snap snap);
 
 }

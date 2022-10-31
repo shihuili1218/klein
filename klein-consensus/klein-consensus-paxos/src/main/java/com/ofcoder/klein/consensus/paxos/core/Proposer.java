@@ -193,7 +193,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback, final AcceptRes result
             , final Endpoint it) {
-        LOG.info("handling node-{}'s accept response", result.getNodeId());
+        LOG.info("handling node-{}'s accept response, instanceId: {}", result.getNodeId(), result.getInstanceId());
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
             callback.confirm(ctxt, it);

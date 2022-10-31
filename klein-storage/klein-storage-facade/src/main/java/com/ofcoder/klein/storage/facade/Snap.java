@@ -14,35 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.jvm;
-
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.SMManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
+package com.ofcoder.klein.storage.facade;
 
 /**
- * @author 释慧利
+ * @author: 释慧利
  */
-@Join
-public class JvmSMManager implements SMManager {
-    @Override
-    public void init(StorageProp op) {
+public
+class Snap {
+    private long checkpoint;
+    private Object snap;
 
+    public Snap() {
     }
 
-    @Override
-    public void shutdown() {
-
+    public Snap(long checkpoint, Object snap) {
+        this.checkpoint = checkpoint;
+        this.snap = snap;
     }
 
-    @Override
-    public void saveSnap(Snap snap) {
-
+    public long getCheckpoint() {
+        return checkpoint;
     }
 
-    @Override
-    public Snap getLastSnap() {
-        return null;
+    public void setCheckpoint(long checkpoint) {
+        this.checkpoint = checkpoint;
+    }
+
+    public Object getSnap() {
+        return snap;
+    }
+
+    public void setSnap(Object snap) {
+        this.snap = snap;
     }
 }

@@ -19,7 +19,7 @@ public class ConsensusProp {
     /**
      * timeout for single round.
      */
-    private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 1000);
+    private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 3000);
     /**
      * the number of proposals negotiated by the single round.
      */
