@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 
@@ -28,7 +27,7 @@ import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 
 /**
  * @author 释慧利

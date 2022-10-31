@@ -2,11 +2,8 @@ package com.ofcoder.klein.consensus.facade;
 
 import java.nio.ByteBuffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
-import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 
 /**
  * @author far.liu

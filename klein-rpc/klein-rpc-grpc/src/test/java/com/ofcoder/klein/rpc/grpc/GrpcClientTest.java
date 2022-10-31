@@ -7,7 +7,7 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
-import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.rpc.grpc.ext.HelloProcessor;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import org.junit.After;

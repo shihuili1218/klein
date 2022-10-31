@@ -17,32 +17,13 @@
 package com.ofcoder.klein.storage.jvm;
 
 import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.SMManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.FileSMManager;
 
 /**
  * @author 释慧利
  */
 @Join
-public class JvmSMManager implements SMManager {
-    @Override
-    public void init(StorageProp op) {
+public class JvmSMManager extends FileSMManager {
 
-    }
 
-    @Override
-    public void shutdown() {
-
-    }
-
-    @Override
-    public void saveSnap(Snap snap) {
-
-    }
-
-    @Override
-    public Snap getLastSnap() {
-        return null;
-    }
 }

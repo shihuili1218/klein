@@ -16,11 +16,12 @@
  */
 package com.ofcoder.klein.storage.facade;
 
+import java.io.Serializable;
+
 /**
  * @author: 释慧利
  */
-public
-class Snap {
+public class Snap implements Serializable {
     private long checkpoint;
     private Object snap;
 
