@@ -15,7 +15,7 @@ public class ConsensusEngine {
     private static Consensus consensus;
 
     public static void startup(String algorithm, ConsensusProp prop) {
-        LOG.debug("start consensus engine");
+        LOG.info("start consensus engine");
 
         consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(algorithm);
         consensus.init(prop);

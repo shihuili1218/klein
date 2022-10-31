@@ -16,18 +16,30 @@
  */
 package com.ofcoder.klein.storage.jvm;
 
-import com.google.common.collect.Lists;
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+
+import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.StreamUtil;
+import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
+import com.ofcoder.klein.storage.facade.exception.StorageException;
 
 /**
  * @author 释慧利
@@ -38,13 +50,21 @@ public class JvmLogManager implements LogManager {
     private ConcurrentMap<Long, Instance> runningInstances;
     private ConcurrentMap<Long, Instance> confirmedInstances;
     private ReentrantReadWriteLock lock;
-    private long maxConfirmInstanceId = 0;
+    private MateData mateData;
+    private static final String PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
+    private static final String MATE = PATH + File.separator + "mate";
 
     @Override
     public void init(StorageProp op) {
+        File file = new File(PATH);
+        if (!file.exists()) {
+            boolean mkdir = file.mkdir();
+        }
+
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
         lock = new ReentrantReadWriteLock(true);
+        loadMateData();
     }
 
     @Override
@@ -79,11 +99,13 @@ public class JvmLogManager implements LogManager {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
+        this.mateData.setMaxProposalNo(Math.max(this.mateData.getMaxProposalNo(), instance.getProposalNo()));
+        this.mateData.setMaxInstanceId(Math.max(this.mateData.getMaxInstanceId(), instance.getInstanceId()));
         if (instance.getState() == Instance.State.CONFIRMED) {
             confirmedInstances.put(instance.getInstanceId(), instance);
             runningInstances.remove(instance.getInstanceId());
-            if (instance.getInstanceId() < maxConfirmInstanceId) {
-                maxConfirmInstanceId = instance.getInstanceId();
+            if (instance.getApplied().get()) {
+                this.mateData.setMaxAppliedInstanceId(Math.max(this.mateData.getMaxAppliedInstanceId(), instance.getInstanceId()));
             }
         } else {
             runningInstances.put(instance.getInstanceId(), instance);
@@ -92,18 +114,93 @@ public class JvmLogManager implements LogManager {
 
     @Override
     public long maxInstanceId() {
-        long running = runningInstances.keySet().stream().max(Long::compareTo).orElse(0L);
-        long confirmed = confirmedInstances.keySet().stream().max(Long::compareTo).orElse(0L);
-        return Math.max(running, confirmed);
+        return this.mateData.getMaxInstanceId();
     }
 
     @Override
     public long maxProposalNo() {
-        return 0;
+        return this.mateData.getMaxProposalNo();
     }
 
     @Override
     public long maxAppliedInstanceId() {
-        return maxConfirmInstanceId;
+        return this.mateData.getMaxAppliedInstanceId();
     }
+
+    @Override
+    public void saveSnap(Snap snap) {
+        File file = new File(PATH + File.separator + snap.getCheckpoint());
+        if (file.exists()) {
+            return;
+        }
+        this.mateData.setLastSnap(new MateData.SnapMate(snap.getCheckpoint(), file.getPath()));
+        FileOutputStream snapOut = null;
+        FileOutputStream lastOut = null;
+        try {
+            lastOut = new FileOutputStream(MATE);
+            snapOut = new FileOutputStream(file);
+            IOUtils.write(Hessian2Util.serialize(snap), snapOut);
+            IOUtils.write(Hessian2Util.serialize(this.mateData), lastOut);
+        } catch (IOException e) {
+            throw new StorageException("save snap, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(snapOut);
+            StreamUtil.close(lastOut);
+        }
+
+        truncCheckpoint(snap.getCheckpoint());
+    }
+
+    private void truncCheckpoint(long checkpoint) {
+        Set<Long> removeKeys = confirmedInstances.keySet().stream().filter(it -> it > checkpoint).collect(Collectors.toSet());
+        removeKeys.forEach(confirmedInstances::remove);
+    }
+
+    @Override
+    public Snap getLastSnap() {
+        File file = new File(MATE);
+        if (!file.exists()) {
+            return null;
+        }
+
+        Snap lastSnap;
+        FileInputStream lastIn = null;
+        FileInputStream snapIn = null;
+        try {
+            lastIn = new FileInputStream(file);
+            MateData deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            snapIn = new FileInputStream(deserialize.getLastSnap().getPath());
+            lastSnap = Hessian2Util.deserialize(IOUtils.toByteArray(snapIn));
+            return lastSnap;
+        } catch (IOException e) {
+            throw new StorageException("get last snap, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(lastIn);
+            StreamUtil.close(snapIn);
+        }
+    }
+
+    private void loadMateData() {
+        this.mateData = MateData.Builder.aMateData()
+                .maxInstanceId(0)
+                .maxProposalNo(0)
+                .maxAppliedInstanceId(0)
+                .lastSnap(null).build();
+        File file = new File(MATE);
+        if (!file.exists()) {
+            return;
+        }
+
+        FileInputStream lastIn = null;
+        try {
+            lastIn = new FileInputStream(file);
+            this.mateData = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+        } catch (IOException e) {
+            throw new StorageException("get checkpoint, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(lastIn);
+        }
+    }
+
+
 }

@@ -8,7 +8,7 @@ import org.junit.Test;
 
 import junit.framework.TestCase;
 
-public class FileSMManagerTest extends TestCase {
+public class FileSnapLogManagerTest extends TestCase {
 
 
     @Test

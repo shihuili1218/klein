@@ -85,19 +85,5 @@ public abstract class AbstractSM implements SM {
 
     protected abstract void loadImage(Object snap);
 
-
-    @Override
-    public void init(final Object op) {
-        Snap lastSnap = StorageEngine.getSmManager().getLastSnap();
-        if (lastSnap != null) {
-            loadSnap(lastSnap);
-        }
-    }
-
-    @Override
-    public void shutdown() {
-        Snap snapshot = snapshot();
-        StorageEngine.getSmManager().saveSnap(snapshot);
-    }
 }
 

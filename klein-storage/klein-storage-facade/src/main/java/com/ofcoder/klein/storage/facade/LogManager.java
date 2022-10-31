@@ -44,4 +44,9 @@ public interface LogManager extends Lifecycle<StorageProp> {
 
     long maxAppliedInstanceId();
 
+    void saveSnap(Snap snap);
+
+    Snap getLastSnap();
+
+
 }

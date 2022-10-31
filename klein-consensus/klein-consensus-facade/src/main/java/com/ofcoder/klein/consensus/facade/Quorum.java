@@ -16,9 +16,8 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -28,11 +27,13 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public abstract class Quorum {
     private Set<Endpoint> allMembers = new HashSet<>();
-    private Set<Endpoint> grantedMembers = new HashSet<>();
-    private Set<Endpoint> failedMembers = new HashSet<>();
+
+    private Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
+    private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
     private int threshold;
 
     public Quorum(final Set<Endpoint> allMembers) {
+
         this.allMembers = allMembers;
         this.threshold = allMembers.size() / 2 + 1;
     }
