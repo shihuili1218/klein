@@ -2,7 +2,6 @@ package com.ofcoder.klein.consensus.facade;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author 释慧利

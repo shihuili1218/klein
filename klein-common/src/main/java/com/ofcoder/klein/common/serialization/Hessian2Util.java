@@ -1,4 +1,4 @@
-package com.ofcoder.klein.rpc.facade.serialization;
+package com.ofcoder.klein.common.serialization;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -7,7 +7,7 @@ import java.io.IOException;
 import com.caucho.hessian.io.Hessian2Input;
 import com.caucho.hessian.io.Hessian2Output;
 import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.rpc.facade.exception.SerializationException;
+import com.ofcoder.klein.common.exception.SerializationException;
 
 /**
  * @author far.liu

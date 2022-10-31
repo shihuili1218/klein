@@ -57,7 +57,7 @@ import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**

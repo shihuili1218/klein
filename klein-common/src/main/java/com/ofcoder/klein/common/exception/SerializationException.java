@@ -1,9 +1,9 @@
-package com.ofcoder.klein.rpc.facade.exception;
+package com.ofcoder.klein.common.exception;
 
 /**
  * @author far.liu
  */
-public class SerializationException extends RpcException {
+public class SerializationException extends KleinException {
     public SerializationException(String message) {
         super(message);
     }
