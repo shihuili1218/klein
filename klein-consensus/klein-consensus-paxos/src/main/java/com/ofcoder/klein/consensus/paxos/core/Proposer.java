@@ -97,7 +97,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
                 .setEventFactory(ProposalWithDone::new)
-                .setThreadFactory(KleinThreadFactory.create("klein-paxos-propose-disruptor-", true)) //
+                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();
