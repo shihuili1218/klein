@@ -39,6 +39,7 @@ import com.ofcoder.klein.common.disruptor.AbstractBatchEventHandler;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -57,7 +58,6 @@ import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**
@@ -249,6 +249,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
+                    LOG.info("waiting prepare phase.");
                     skipPrepare.wait();
                 } catch (InterruptedException e) {
                     throw new ConsensusException(e.getMessage(), e);
@@ -313,7 +314,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     private void handlePrepareResponse(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
             , final Endpoint it) {
-        LOG.info("handling node-{}'s prepare response", result.getNodeId());
+        LOG.info("handling node-{}'s prepare response, result: {}", result.getNodeId(), result.getResult());
         for (Instance instance : result.getInstances()) {
             if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), null) != instance) {
                 Instance prepared = preparedInstanceMap.get(instance.getInstanceId());
@@ -325,6 +326,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         if (result.getResult()) {
             ctxt.getPrepareQuorum().grant(it);
+            LOG.info("handling node-{}'s granted prepare phase, is granted: {}.", result.getNodeId(), ctxt.getPrepareQuorum().isGranted());
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.PASS
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 // do accept phase.
@@ -358,12 +360,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
-            //
             ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents);
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
+            } else {
+                accept(ctxt, new AcceptCallback());
             }
-            accept(ctxt, new AcceptCallback());
         }
     }
 
@@ -371,18 +373,22 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         @Override
         public void granted(ProposeContext context) {
+            LOG.info("prepare granted.");
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                 skipPrepare.notifyAll();
+                LOG.info("notify prepare phase.");
             }
             ThreadExecutor.submit(() -> accept(context, new AcceptCallback()));
         }
 
         @Override
         public void refused(ProposeContext context) {
+            LOG.info("prepare refuse.");
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                 skipPrepare.notifyAll();
+                LOG.info("notify prepare phase.");
             }
 
             ThreadExecutor.submit(() -> {

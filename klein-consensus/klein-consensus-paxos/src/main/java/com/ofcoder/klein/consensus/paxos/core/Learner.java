@@ -36,6 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -53,10 +54,9 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.SMManager;
+import com.ofcoder.klein.storage.facade.Snap;
 import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
@@ -67,7 +67,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private RpcClient client;
     private final PaxosNode self;
     private LogManager logManager;
-    private SMManager smManager;
     private SM sm;
     private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
@@ -84,7 +83,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
     public void init(ConsensusProp op) {
         this.prop = op;
         logManager = StorageEngine.getLogManager();
-        smManager = StorageEngine.getSmManager();
         this.client = RpcEngine.getClient();
 
         applyExecutor.execute(() -> {
@@ -104,7 +102,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         shutdownLatch = new CountDownLatch(1);
         ThreadExecutor.submit(() -> {
             try {
-                sm.shutdown();
+                generateSnap();
             } finally {
                 shutdownLatch.countDown();
             }
@@ -114,12 +112,20 @@ public class Learner implements Lifecycle<ConsensusProp> {
         } catch (InterruptedException e) {
             LOG.warn(e.getMessage(), e);
         }
+    }
 
+    private void generateSnap() {
+        Snap snapshot = sm.snapshot();
+        logManager.saveSnap(snapshot);
     }
 
     public void loadSM(SM sm) {
         this.sm = sm;
-        this.sm.init(prop);
+        Snap lastSnap = logManager.getLastSnap();
+        if (lastSnap != null) {
+            this.sm.loadSnap(lastSnap);
+        }
+
     }
 
     private void apply(long instanceId) {

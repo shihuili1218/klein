@@ -15,7 +15,7 @@ public class RpcEngine {
     private static RpcClient client;
 
     public static void startup(String rpc, RpcProp prop) {
-        LOG.debug("start rpc engine");
+        LOG.info("start rpc engine");
         Requires.requireTrue(prop.getPort() > 0 && prop.getPort() < 0xFFFF, "port out of range:" + prop.getPort());
 
         server = ExtensionLoader.getExtensionLoader(RpcServer.class).getJoin(rpc);

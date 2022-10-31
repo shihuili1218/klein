@@ -58,9 +58,6 @@ public class Main1 {
         instance1.getCache().invalidate("hello3");
         System.out.println("----------invalidate hello3");
         System.out.println("----------get hello3: " + instance1.getCache().get("hello3"));
-        instance1.getCache().invalidateAll();
-        System.out.println("----------invalidateAll");
-        System.out.println("----------get hello1: " + instance1.getCache().get("hello1"));
 
         System.in.read();
     }

@@ -85,7 +85,7 @@ public class PaxosConsensus implements Consensus {
         });
         try {
             if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
-                LOG.warn("******** negotiation timeout, apply: {}. ********", apply);
+                LOG.warn("******** negotiation timeout, data: {}. ********", data);
                 builder.state(Result.State.UNKNOWN);
             }
         } catch (InterruptedException e) {
@@ -124,6 +124,7 @@ public class PaxosConsensus implements Consensus {
                 .curInstanceId(new AtomicLong(logManager.maxInstanceId()))
                 .curProposalNo(new AtomicLong(logManager.maxProposalNo()))
                 .build();
+        LOG.info("load node: {}", self);
     }
 
     private void registerProcessor() {
