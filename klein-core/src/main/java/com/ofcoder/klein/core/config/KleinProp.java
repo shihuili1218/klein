@@ -1,22 +1,18 @@
 package com.ofcoder.klein.core.config;
 
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 
 /**
- * klein:
- * storage: jvm
- * consensus: paxos
- * rpc: grpc
- * max-size:
  *
  * @author 释慧利
  */
 public class KleinProp {
-    private String storage = "jvm";
-    private String consensus = "paxos";
-    private String rpc = "grpc";
+    private String storage = SystemPropertyUtil.get("klein.storage", "jvm");
+    private String consensus = SystemPropertyUtil.get("klein.consensus", "paxos");
+    private String rpc = SystemPropertyUtil.get("klein.rpc", "grpc");
     private ConsensusProp consensusProp = new ConsensusProp();
     private StorageProp storageProp = new StorageProp();
     private RpcProp rpcProp = new RpcProp();

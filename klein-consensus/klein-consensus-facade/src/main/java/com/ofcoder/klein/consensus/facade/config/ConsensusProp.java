@@ -1,9 +1,9 @@
 package com.ofcoder.klein.consensus.facade.config;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
@@ -19,16 +19,16 @@ public class ConsensusProp {
     /**
      * timeout for single round.
      */
-    private long roundTimeout = 1000;
+    private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 1000);
     /**
      * the number of proposals negotiated by the single round.
      */
-    private int batchSize = 3;
+    private int batchSize = SystemPropertyUtil.getInt("klein.consensus.batch-size", 3);
     /**
      * negotiation failed, number of retry times.
      * if set 2, then runs 3 times
      */
-    private int retry = 2;
+    private int retry = SystemPropertyUtil.getInt("klein.consensus.retry", 2);
 
     public Endpoint getSelf() {
         return self;
