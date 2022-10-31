@@ -85,6 +85,7 @@ public class PaxosConsensus implements Consensus {
         });
         try {
             if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
+                LOG.warn("******** negotiation timeout, apply: {}. ********", apply);
                 builder.state(Result.State.UNKNOWN);
             }
         } catch (InterruptedException e) {

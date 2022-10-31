@@ -10,4 +10,9 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 @SPI
 
 public interface SMManager extends Lifecycle<StorageProp> {
+
+    void saveSnap(Snap snap);
+
+    Snap getLastSnap();
+
 }

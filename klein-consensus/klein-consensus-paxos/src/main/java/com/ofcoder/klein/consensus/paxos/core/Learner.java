@@ -47,7 +47,6 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
@@ -57,6 +56,7 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.SMManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
@@ -67,6 +67,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private RpcClient client;
     private final PaxosNode self;
     private LogManager logManager;
+    private SMManager smManager;
     private SM sm;
     private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
@@ -83,6 +84,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     public void init(ConsensusProp op) {
         this.prop = op;
         logManager = StorageEngine.getLogManager();
+        smManager = StorageEngine.getSmManager();
         this.client = RpcEngine.getClient();
 
         applyExecutor.execute(() -> {
@@ -102,7 +104,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         shutdownLatch = new CountDownLatch(1);
         ThreadExecutor.submit(() -> {
             try {
-                sm.makeImage();
+                sm.shutdown();
             } finally {
                 shutdownLatch.countDown();
             }
@@ -117,6 +119,78 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     public void loadSM(SM sm) {
         this.sm = sm;
+        this.sm.init(prop);
+    }
+
+    private void apply(long instanceId) {
+        LOG.info("start apply, instanceId: {}", instanceId);
+
+        if (instanceId <= logManager.maxAppliedInstanceId()) {
+            // the instance has been applied.
+            return;
+        }
+        long exceptConfirmId = logManager.maxAppliedInstanceId() + 1;
+        if (instanceId > exceptConfirmId) {
+            long pre = instanceId - 1;
+            Instance preInstance = logManager.getInstance(pre);
+            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
+                apply(pre);
+            } else {
+                boost(pre);
+                apply(pre);
+            }
+        }
+
+        // update log to applied.
+        Instance localInstance;
+        try {
+            logManager.getLock().writeLock().lock();
+
+            localInstance = logManager.getInstance(instanceId);
+            if (!localInstance.getApplied().compareAndSet(false, true)) {
+                // the instance has been applied.
+                return;
+            }
+            logManager.updateInstance(localInstance);
+        } finally {
+            logManager.getLock().writeLock().unlock();
+        }
+
+        if (applyCallback.containsKey(instanceId)) {
+            // is self
+            List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
+            for (ProposalWithDone proposalWithDone : proposalWithDones) {
+                Object result = this._apply(instanceId, proposalWithDone.getData());
+                try {
+                    proposalWithDone.getDone().applyDone(result);
+                } catch (Exception e) {
+                    LOG.warn(String.format("apply instance[%s] to sm, call apply done occur exception. %s", instanceId, e.getMessage()), e);
+                }
+            }
+
+        } else {
+            if (localInstance.getGrantedValue() instanceof List) {
+                // input state machine
+                for (Object data : (List<Object>) localInstance.getGrantedValue()) {
+                    this._apply(localInstance.getInstanceId(), data);
+                }
+            } else {
+                LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
+            }
+        }
+    }
+
+    private Object _apply(long instance, Object data) {
+        if (data instanceof Instance.Noop) {
+            //do nothing
+            return null;
+        }
+        try {
+            return sm.apply(instance, data);
+        } catch (Exception e) {
+            LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+            return null;
+        }
     }
 
 
@@ -191,69 +265,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
         }, 1000);
     }
 
-
-    private void apply(long instanceId) {
-        if (instanceId <= logManager.maxAppliedInstanceId()) {
-            // the instance has been applied.
-            return;
-        }
-        long exceptConfirmId = logManager.maxAppliedInstanceId() + 1;
-        if (instanceId > exceptConfirmId) {
-            long pre = instanceId - 1;
-            Instance preInstance = logManager.getInstance(pre);
-            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
-                apply(pre);
-            } else {
-                boost(pre);
-                apply(pre);
-            }
-        }
-
-        // update log to applied.
-        Instance localInstance;
-        try {
-            logManager.getLock().writeLock().lock();
-
-            localInstance = logManager.getInstance(instanceId);
-            if (!localInstance.getApplied().compareAndSet(false, true)) {
-                // the instance has been applied.
-                return;
-            }
-            logManager.updateInstance(localInstance);
-        } finally {
-            logManager.getLock().writeLock().unlock();
-        }
-
-        if (applyCallback.containsKey(instanceId)) {
-            // is self
-            List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
-            for (ProposalWithDone proposalWithDone : proposalWithDones) {
-                try {
-                    Object result = sm.apply(proposalWithDone.getData());
-                    proposalWithDone.getDone().applyDone(result);
-                } catch (Exception e) {
-                    LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
-                }
-            }
-
-        } else {
-            if (localInstance.getGrantedValue() instanceof List) {
-                // input state machine
-                for (Object data : (List<Object>) localInstance.getGrantedValue()) {
-                    try {
-                        sm.apply(data);
-                    } catch (Exception e) {
-                        LOG.warn(String.format("apply instance[%s] to sm, %s", instanceId, e.getMessage()), e);
-                    }
-                }
-            } else if (localInstance.getGrantedValue() instanceof Instance.Noop) {
-                //do nothing
-            } else {
-                LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
-            }
-        }
-    }
-
     /**
      * Send confirm message.
      *
@@ -279,14 +290,16 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         MemberManager.getAllMembers().forEach(it -> {
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
+            client.sendRequestAsync(it, param, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
+                    LOG.error(err.getMessage(), err);
                     // do nothing
                 }
 
                 @Override
-                public void complete(PrepareRes result) {
+                public void complete(Serializable result) {
+                    LOG.info("handling node-{}'s confirm response, instanceId: {}", it.getId(), req.getInstanceId());
                     // do nothing
                 }
             }, 1000);
@@ -299,6 +312,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
      * @param req message
      */
     public void handleConfirmRequest(ConfirmReq req) {
+        LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
         try {
             logManager.getLock().writeLock().lock();
@@ -319,6 +333,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             }
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
+                LOG.info("the instance: {} is confirmed", localInstance.getInstanceId());
                 return;
             }
             localInstance.setState(Instance.State.CONFIRMED);
@@ -328,6 +343,9 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
             // apply statemachine
             applyQueue.offer(req.getInstanceId());
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
+            throw e;
         } finally {
             logManager.getLock().writeLock().unlock();
         }
@@ -342,6 +360,4 @@ public class Learner implements Lifecycle<ConsensusProp> {
         LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
-
-
 }

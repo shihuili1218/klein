@@ -56,7 +56,7 @@ public class GrpcServer implements RpcServer {
 
                         @Override
                         public void response() {
-//                            responseObserver.onCompleted();
+                            responseObserver.onCompleted();
                         }
 
                         @Override

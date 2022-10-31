@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
+import com.ofcoder.klein.core.cache.CacheSM;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.cache.KleinCacheImpl;
 import com.ofcoder.klein.core.config.KleinProp;
@@ -38,6 +39,7 @@ public class Klein {
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
         StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
+        ConsensusEngine.loadSM(new CacheSM());
 
         this.cache = new KleinCacheImpl();
         this.lock = new KleinLockImpl();

@@ -18,12 +18,10 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 public class KleinCacheImpl implements KleinCache {
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected Consensus consensus;
-    private static final CacheSM SM = new CacheSM();
 
     public KleinCacheImpl() {
         KleinProp kleinProp = KleinProp.loadIfPresent();
         this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
-        consensus.loadSM(SM);
     }
 
     @Override
