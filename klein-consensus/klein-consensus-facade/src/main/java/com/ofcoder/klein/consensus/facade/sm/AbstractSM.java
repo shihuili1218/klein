@@ -14,17 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.sm;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
 import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public abstract class AbstractSM implements SM {
     private static final AtomicBoolean SNAP = new AtomicBoolean(false);

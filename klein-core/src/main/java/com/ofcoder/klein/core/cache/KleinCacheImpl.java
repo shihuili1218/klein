@@ -22,6 +22,7 @@ public class KleinCacheImpl implements KleinCache {
     public KleinCacheImpl() {
         KleinProp kleinProp = KleinProp.loadIfPresent();
         this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
+        this.consensus.loadSM(new CacheSM());
     }
 
     @Override

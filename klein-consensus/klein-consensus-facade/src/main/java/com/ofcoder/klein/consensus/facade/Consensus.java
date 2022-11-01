@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.spi.SPI;
 
 /**
