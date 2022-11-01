@@ -1,6 +1,9 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
+import java.util.List;
+
+import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * @author far.liu
@@ -9,7 +12,7 @@ public class AcceptReq implements Serializable {
     private String nodeId;
     private long instanceId;
     private long proposalNo;
-    private Object data;
+    private List<Proposal> data;
 
     public String getNodeId() {
         return nodeId;
@@ -23,7 +26,7 @@ public class AcceptReq implements Serializable {
         return proposalNo;
     }
 
-    public Object getData() {
+    public List<Proposal> getData() {
         return data;
     }
 
@@ -31,7 +34,7 @@ public class AcceptReq implements Serializable {
         private String nodeId;
         private long instanceId;
         private long proposalNo;
-        private Object data;
+        private List<Proposal> data;
 
         private Builder() {
         }
@@ -55,7 +58,7 @@ public class AcceptReq implements Serializable {
             return this;
         }
 
-        public Builder data(Object data) {
+        public Builder data(List<Proposal> data) {
             this.data = data;
             return this;
         }

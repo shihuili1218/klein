@@ -19,35 +19,28 @@ package com.ofcoder.klein.consensus.paxos.core;/**
  */
 
 import com.ofcoder.klein.common.disruptor.DisruptorEvent;
+import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * @author 释慧利
  */
 public class ProposalWithDone extends DisruptorEvent {
-    private Object data;
+    private Proposal proposal;
     private ProposeDone done;
 
-    public ProposalWithDone() {
+    public Proposal getProposal() {
+        return proposal;
     }
 
-    public ProposalWithDone(Object data, ProposeDone done) {
-        this.data = data;
-        this.done = done;
-    }
-
-    public void setData(Object data) {
-        this.data = data;
-    }
-
-    public void setDone(ProposeDone done) {
-        this.done = done;
-    }
-
-    public Object getData() {
-        return data;
+    public void setProposal(Proposal proposal) {
+        this.proposal = proposal;
     }
 
     public ProposeDone getDone() {
         return done;
+    }
+
+    public void setDone(ProposeDone done) {
+        this.done = done;
     }
 }

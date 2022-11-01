@@ -9,20 +9,17 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.core.GroupWrapper;
 
 /**
  * @author 释慧利
  */
 public class KleinCacheImpl implements KleinCache {
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
-    protected Consensus consensus;
+    protected GroupWrapper consensus;
 
     public KleinCacheImpl() {
-        KleinProp kleinProp = KleinProp.loadIfPresent();
-        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
-        this.consensus.loadSM(new CacheSM());
+        this.consensus = new GroupWrapper("cache", new CacheSM());
     }
 
     @Override
@@ -86,7 +83,6 @@ public class KleinCacheImpl implements KleinCache {
         return result.getData();
     }
 
-    // todo
     @Override
     public <D extends Serializable> D get(String key) {
         Message message = new Message();

@@ -17,16 +17,17 @@
 package com.ofcoder.klein.storage.facade;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author 释慧利
  */
-public class Instance implements Serializable {
+public class Instance<D extends Serializable> implements Serializable {
 
     private long instanceId;
     private long proposalNo;
-    private Object grantedValue;
+    private List<D> grantedValue;
     private State state = State.PREPARED;
     private AtomicBoolean applied = new AtomicBoolean(false);
 
@@ -46,11 +47,11 @@ public class Instance implements Serializable {
         this.proposalNo = proposalNo;
     }
 
-    public Object getGrantedValue() {
+    public List<D> getGrantedValue() {
         return grantedValue;
     }
 
-    public void setGrantedValue(Object grantedValue) {
+    public void setGrantedValue(List<D> grantedValue) {
         this.grantedValue = grantedValue;
     }
 
@@ -74,10 +75,10 @@ public class Instance implements Serializable {
         PREPARED, ACCEPTED, CONFIRMED;
     }
 
-    public static final class Builder {
+    public static final class Builder<B extends Serializable> {
         private long instanceId;
         private long proposalNo;
-        private Object grantedValue;
+        private List<B> grantedValue;
         private State state;
         private AtomicBoolean applied;
 
@@ -85,36 +86,36 @@ public class Instance implements Serializable {
         }
 
         public static Builder anInstance() {
-            return new Builder();
+            return new Builder<>();
         }
 
-        public Builder instanceId(long instanceId) {
+        public Builder<B> instanceId(long instanceId) {
             this.instanceId = instanceId;
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        public Builder<B> proposalNo(long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder grantedValue(Object grantedValue) {
+        public Builder<B> grantedValue(List<B> grantedValue) {
             this.grantedValue = grantedValue;
             return this;
         }
 
-        public Builder state(State state) {
+        public Builder<B> state(State state) {
             this.state = state;
             return this;
         }
 
-        public Builder applied(AtomicBoolean applied) {
+        public Builder<B> applied(AtomicBoolean applied) {
             this.applied = applied;
             return this;
         }
 
-        public Instance build() {
-            Instance instance = new Instance();
+        public Instance<B> build() {
+            Instance<B> instance = new Instance<>();
             instance.setInstanceId(instanceId);
             instance.setProposalNo(proposalNo);
             instance.setGrantedValue(grantedValue);
@@ -122,6 +123,7 @@ public class Instance implements Serializable {
             instance.setApplied(applied);
             return instance;
         }
+
     }
 
     /**
@@ -129,5 +131,6 @@ public class Instance implements Serializable {
      */
     public static class Noop implements Serializable {
         public static final Noop DEFAULT = new Noop();
+        public static final String GROUP = "NOOP";
     }
 }

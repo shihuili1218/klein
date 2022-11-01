@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,9 +43,10 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -67,7 +69,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private RpcClient client;
     private final PaxosNode self;
     private LogManager logManager;
-    private SM sm;
+    private ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
     private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
@@ -115,15 +117,20 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
     private void generateSnap() {
-        Snap snapshot = sm.snapshot();
-        logManager.saveSnap(snapshot);
+        for (Map.Entry<String, SM> entry : sms.entrySet()) {
+            Snap snapshot = entry.getValue().snapshot();
+            logManager.saveSnap(entry.getKey(), snapshot);
+        }
     }
 
-    public void loadSM(SM sm) {
-        this.sm = sm;
-        Snap lastSnap = logManager.getLastSnap();
+    public void loadSM(final String group, final SM sm) {
+        if (sms.putIfAbsent(group, sm) != null) {
+            LOG.error("the group[{}] has been loaded with sm.", group);
+            return;
+        }
+        Snap lastSnap = logManager.getLastSnap(group);
         if (lastSnap != null) {
-            this.sm.loadSnap(lastSnap);
+            sm.loadSnap(lastSnap);
         }
 
     }
@@ -138,7 +145,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         long exceptConfirmId = logManager.maxAppliedInstanceId() + 1;
         if (instanceId > exceptConfirmId) {
             long pre = instanceId - 1;
-            Instance preInstance = logManager.getInstance(pre);
+            Instance<Proposal> preInstance = logManager.getInstance(pre);
             if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
                 apply(pre);
             } else {
@@ -148,7 +155,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         }
 
         // update log to applied.
-        Instance localInstance;
+        Instance<Proposal> localInstance;
         try {
             logManager.getLock().writeLock().lock();
 
@@ -166,7 +173,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             // is self
             List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
             for (ProposalWithDone proposalWithDone : proposalWithDones) {
-                Object result = this._apply(instanceId, proposalWithDone.getData());
+                Object result = this._apply(instanceId, proposalWithDone.getProposal());
                 try {
                     proposalWithDone.getDone().applyDone(result);
                 } catch (Exception e) {
@@ -175,28 +182,32 @@ public class Learner implements Lifecycle<ConsensusProp> {
             }
 
         } else {
-            if (localInstance.getGrantedValue() instanceof List) {
-                // input state machine
-                for (Object data : (List<Object>) localInstance.getGrantedValue()) {
-                    this._apply(localInstance.getInstanceId(), data);
-                }
-            } else {
-                LOG.error("apply instance[{}] to sm, UNKNOWN PARAMETER TYPE", instanceId);
+            // input state machine
+            for (Proposal data : localInstance.getGrantedValue()) {
+                this._apply(localInstance.getInstanceId(), data);
             }
         }
     }
 
-    private Object _apply(long instance, Object data) {
-        if (data instanceof Instance.Noop) {
+    private Object _apply(long instance, Proposal data) {
+        if (data.getData() instanceof Instance.Noop) {
             //do nothing
             return null;
         }
-        try {
-            return sm.apply(instance, data);
-        } catch (Exception e) {
-            LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+
+        if (sms.containsKey(data.getGroup())) {
+            SM sm = sms.get(data.getGroup());
+            try {
+                return sm.apply(instance, data.getData());
+            } catch (Exception e) {
+                LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+                return null;
+            }
+        } else {
+            LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
             return null;
         }
+
     }
 
 
@@ -213,18 +224,25 @@ public class Learner implements Lifecycle<ConsensusProp> {
             latch = boostingLatch.get(instanceId);
         }
 
-        Instance instance = logManager.getInstance(instanceId);
-        Object localValue = instance != null ? instance.getGrantedValue() : null;
-        localValue = localValue == null ? Instance.Noop.DEFAULT : localValue;
-        ProposeContext ctxt = new ProposeContext(instanceId, Lists.newArrayList(
-                new ProposalWithDone(localValue, result -> {
-                    if (Result.State.SUCCESS.equals(result)) {
+        Instance<Proposal> instance = logManager.getInstance(instanceId);
+        List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
+        localValue = localValue == null
+                ? Lists.newArrayList(new Proposal(Instance.Noop.GROUP,Instance.Noop.DEFAULT))
+                : localValue;
+        List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
+            ProposalWithDone done = new ProposalWithDone();
+            done.setProposal(it);
+            done.setDone(result -> {
+                if (Result.State.SUCCESS.equals(result)) {
 
-                    } else {
-                        boost(instanceId);
-                    }
-                })));
+                } else {
+                    boost(instanceId);
+                }
+            });
+            return done;
+        }).collect(Collectors.toList());
 
+        ProposeContext ctxt = new ProposeContext(instanceId, proposalWithDones);
         RoleAccessor.getProposer().prepare(ctxt);
 
         try {
@@ -287,7 +305,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .instanceId(instanceId)
-                .data(dataWithDone.stream().map(ProposalWithDone::getData).collect(Collectors.toList()))
+                .data(dataWithDone.stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()))
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -323,7 +341,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
         try {
             logManager.getLock().writeLock().lock();
 
-            Instance localInstance = logManager.getInstance(req.getInstanceId());
+            Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 // the prepare message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.

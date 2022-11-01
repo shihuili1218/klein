@@ -16,46 +16,36 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 
 /**
  * @author 释慧利
  */
-public class Proposal {
-    private long proposalNo;
-    private ByteBuffer data = ByteBuffer.wrap(new byte[0]);
-    private PaxosQuorum quorum;
+public class Proposal implements Serializable {
+    private String group;
+    private Object data;
 
-    public long getProposalNo() {
-        return proposalNo;
+    public Proposal() {
     }
 
-    public void setProposalNo(long proposalNo) {
-        this.proposalNo = proposalNo;
-    }
-
-    public ByteBuffer getData() {
-        return data;
-    }
-
-    public void setData(ByteBuffer data) {
+    public Proposal(String group, Object data) {
+        this.group = group;
         this.data = data;
     }
 
-    public PaxosQuorum getQuorum() {
-        return quorum;
+    public String getGroup() {
+        return group;
     }
 
-    public void setQuorum(PaxosQuorum quorum) {
-        this.quorum = quorum;
+    public void setGroup(String group) {
+        this.group = group;
     }
 
-    @Override
-    public String toString() {
-        return "Proposal{" +
-                "proposalNo=" + proposalNo +
-                ", data=" + data +
-                ", quorum=" + quorum +
-                '}';
+    public Object getData() {
+        return data;
+    }
+
+    public void setData(Object data) {
+        this.data = data;
     }
 }
