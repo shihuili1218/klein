@@ -27,7 +27,6 @@ public class MateData implements Serializable {
     private long maxInstanceId;
     private long maxAppliedInstanceId;
     private long maxProposalNo;
-    private SnapMate lastSnap;
 
     public long getMaxInstanceId() {
         return maxInstanceId;
@@ -53,49 +52,11 @@ public class MateData implements Serializable {
         this.maxProposalNo = maxProposalNo;
     }
 
-    public SnapMate getLastSnap() {
-        return lastSnap;
-    }
-
-    public void setLastSnap(SnapMate lastSnap) {
-        this.lastSnap = lastSnap;
-    }
-
-
-    public static final class SnapMate implements Serializable {
-        private long checkpoint;
-        private String path;
-
-        public SnapMate() {
-        }
-
-        public SnapMate(long checkpoint, String path) {
-            this.checkpoint = checkpoint;
-            this.path = path;
-        }
-
-        public long getCheckpoint() {
-            return checkpoint;
-        }
-
-        public void setCheckpoint(long checkpoint) {
-            this.checkpoint = checkpoint;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public void setPath(String path) {
-            this.path = path;
-        }
-    }
 
     public static final class Builder {
         private long maxInstanceId;
         private long maxAppliedInstanceId;
         private long maxProposalNo;
-        private SnapMate lastSnap;
 
         private Builder() {
         }
@@ -119,17 +80,11 @@ public class MateData implements Serializable {
             return this;
         }
 
-        public Builder lastSnap(SnapMate lastSnap) {
-            this.lastSnap = lastSnap;
-            return this;
-        }
-
         public MateData build() {
             MateData mateData = new MateData();
             mateData.setMaxInstanceId(maxInstanceId);
             mateData.setMaxAppliedInstanceId(maxAppliedInstanceId);
             mateData.setMaxProposalNo(maxProposalNo);
-            mateData.setLastSnap(lastSnap);
             return mateData;
         }
     }

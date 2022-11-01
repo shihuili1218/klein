@@ -1,9 +1,9 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.List;
 
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**
@@ -13,7 +13,7 @@ public class PrepareRes implements Serializable {
     private String nodeId;
     private boolean result;
     private long proposalNo;
-    private List<Instance> instances;
+    private List<Instance<Proposal>> instances;
 
     public String getNodeId() {
         return nodeId;
@@ -39,11 +39,11 @@ public class PrepareRes implements Serializable {
         this.proposalNo = proposalNo;
     }
 
-    public List<Instance> getInstances() {
+    public List<Instance<Proposal>> getInstances() {
         return instances;
     }
 
-    public void setInstances(List<Instance> instances) {
+    public void setInstances(List<Instance<Proposal>> instances) {
         this.instances = instances;
     }
 
@@ -51,7 +51,7 @@ public class PrepareRes implements Serializable {
         private String nodeId;
         private boolean result;
         private long proposalNo;
-        private List<Instance> instances;
+        private List<Instance<Proposal>> instances;
 
         private Builder() {
         }
@@ -75,7 +75,7 @@ public class PrepareRes implements Serializable {
             return this;
         }
 
-        public Builder instances(List<Instance> instances) {
+        public Builder instances(List<Instance<Proposal>> instances) {
             this.instances = instances;
             return this;
         }

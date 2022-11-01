@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,9 +30,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
 
-import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.spi.Join;
@@ -45,18 +45,18 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  * @author 释慧利
  */
 @Join
-public class JvmLogManager implements LogManager {
+public class JvmLogManager<P extends Serializable> implements LogManager<P> {
 
-    private ConcurrentMap<Long, Instance> runningInstances;
-    private ConcurrentMap<Long, Instance> confirmedInstances;
+    private ConcurrentMap<Long, Instance<P>> runningInstances;
+    private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ReentrantReadWriteLock lock;
     private MateData mateData;
-    private static final String PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
-    private static final String MATE = PATH + File.separator + "mate";
+    private static final String SNAP_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
+    private static final String MATE_PATH = SNAP_PATH + File.separator + "mate";
 
     @Override
     public void init(StorageProp op) {
-        File file = new File(PATH);
+        File file = new File(SNAP_PATH);
         if (!file.exists()) {
             boolean mkdir = file.mkdir();
         }
@@ -79,7 +79,7 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
-    public Instance getInstance(long id) {
+    public Instance<P> getInstance(long id) {
         if (runningInstances.containsKey(id)) {
             return runningInstances.get(id);
         }
@@ -90,12 +90,12 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
-    public List<Instance> getInstanceNoConfirm() {
-        return Lists.newArrayList(runningInstances.values());
+    public List<Instance<P>> getInstanceNoConfirm() {
+        return new ArrayList<>(runningInstances.values());
     }
 
     @Override
-    public void updateInstance(Instance instance) {
+    public void updateInstance(Instance<P> instance) {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
@@ -128,19 +128,27 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
-    public void saveSnap(Snap snap) {
-        File file = new File(PATH + File.separator + snap.getCheckpoint());
-        if (file.exists()) {
+    public void saveSnap(String group, Snap snap) {
+        String bastPath = SNAP_PATH + File.separator + group + File.separator;
+        File snapFile = new File(bastPath + snap.getCheckpoint());
+        if (snapFile.exists()) {
             return;
         }
-        this.mateData.setLastSnap(new MateData.SnapMate(snap.getCheckpoint(), file.getPath()));
+        File baseDir = new File(bastPath);
+        if (!baseDir.exists()) {
+            boolean mkdir = baseDir.mkdir();
+        }
+
+        File lastFile = new File(bastPath + "last");
+
         FileOutputStream snapOut = null;
         FileOutputStream lastOut = null;
         try {
-            lastOut = new FileOutputStream(MATE);
-            snapOut = new FileOutputStream(file);
+            lastOut = new FileOutputStream(lastFile);
+            snapOut = new FileOutputStream(snapFile);
             IOUtils.write(Hessian2Util.serialize(snap), snapOut);
-            IOUtils.write(Hessian2Util.serialize(this.mateData), lastOut);
+            IOUtils.write(Hessian2Util.serialize(snapFile.getPath()), lastOut);
+            saveMateData();
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -157,8 +165,9 @@ public class JvmLogManager implements LogManager {
     }
 
     @Override
-    public Snap getLastSnap() {
-        File file = new File(MATE);
+    public Snap getLastSnap(String group) {
+        String bastPath = SNAP_PATH + File.separator + group + File.separator;
+        File file = new File(bastPath + "last");
         if (!file.exists()) {
             return null;
         }
@@ -168,8 +177,8 @@ public class JvmLogManager implements LogManager {
         FileInputStream snapIn = null;
         try {
             lastIn = new FileInputStream(file);
-            MateData deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
-            snapIn = new FileInputStream(deserialize.getLastSnap().getPath());
+            String deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            snapIn = new FileInputStream(deserialize);
             lastSnap = Hessian2Util.deserialize(IOUtils.toByteArray(snapIn));
             return lastSnap;
         } catch (IOException e) {
@@ -180,13 +189,25 @@ public class JvmLogManager implements LogManager {
         }
     }
 
+    private void saveMateData() {
+        FileOutputStream mateOut = null;
+        try {
+            mateOut = new FileOutputStream(MATE_PATH);
+            IOUtils.write(Hessian2Util.serialize(this.mateData), mateOut);
+        } catch (IOException e) {
+            throw new StorageException("save snap, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(mateOut);
+        }
+    }
+
     private void loadMateData() {
         this.mateData = MateData.Builder.aMateData()
                 .maxInstanceId(0)
                 .maxProposalNo(0)
                 .maxAppliedInstanceId(0)
-                .lastSnap(null).build();
-        File file = new File(MATE);
+                .build();
+        File file = new File(MATE_PATH);
         if (!file.exists()) {
             return;
         }

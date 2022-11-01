@@ -27,9 +27,9 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.core.Acceptor;
 import com.ofcoder.klein.consensus.paxos.core.Learner;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
@@ -56,18 +56,17 @@ public class PaxosConsensus implements Consensus {
     private Learner learner;
     private ConsensusProp prop;
 
-    private <E extends Serializable> void proposeAsync(final E data, final ProposeDone done) {
-        proposer.propose(data, done);
+    private <E extends Serializable> void proposeAsync(final String group, final E data, final ProposeDone done) {
+        proposer.propose(group, data, done);
     }
 
-
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> propose(E data, final boolean apply) {
+    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
         int count = apply ? 2 : 1;
 
         CountDownLatch completed = new CountDownLatch(count);
         Result.Builder<D> builder = Result.Builder.aResult();
-        proposeAsync(data, new ProposeDone() {
+        proposeAsync(group, data, new ProposeDone() {
             @Override
             public void negotiationDone(Result.State result) {
                 builder.state(result);
@@ -78,7 +77,7 @@ public class PaxosConsensus implements Consensus {
             }
 
             @Override
-            public  void applyDone(Object result) {
+            public void applyDone(Object result) {
                 builder.data((D) result);
                 completed.countDown();
             }
@@ -95,13 +94,13 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> read(E data) {
-        return propose(data, true);
+    public <E extends Serializable, D extends Serializable> Result<D> read(final String group, E data) {
+        return propose(group, data, true);
     }
 
     @Override
-    public void loadSM(SM sm) {
-        learner.loadSM(sm);
+    public void loadSM(final String group, SM sm) {
+        learner.loadSM(group, sm);
     }
 
     @Override

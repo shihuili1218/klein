@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
@@ -68,12 +69,12 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                     .nodeId(self.getSelf().getId())
                     .proposalNo(selfProposalNo);
 
-            Instance localInstance = logManager.getInstance(req.getInstanceId());
+            Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 localInstance = Instance.Builder.anInstance()
+                        .grantedValue(req.getData())
                         .instanceId(req.getInstanceId())
                         .proposalNo(req.getProposalNo())
-                        .grantedValue(req.getData())
                         .state(Instance.State.ACCEPTED)
                         .applied(new AtomicBoolean(false))
                         .build();
@@ -134,7 +135,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                 resBuilder.proposalNo(selfProposalNo);
             }
 
-            List<Instance> instances = logManager.getInstanceNoConfirm();
+            List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
             resBuilder.instances(instances);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
         } finally {

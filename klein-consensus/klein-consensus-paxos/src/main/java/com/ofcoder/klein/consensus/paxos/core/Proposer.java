@@ -49,6 +49,7 @@ import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
@@ -81,7 +82,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     /**
      * The instance of the Prepare phase has been executed.
      */
-    private final ConcurrentMap<Long, Instance> preparedInstanceMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
 
     public Proposer(PaxosNode self) {
         this.self = self;
@@ -128,14 +129,14 @@ public class Proposer implements Lifecycle<ConsensusProp> {
      * @param done client's callbck
      * @param <E>  client's data type, extend Serializable
      */
-    public <E extends Serializable> void propose(final E data, final ProposeDone done) {
+    public <E extends Serializable> void propose(final String group, final E data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
 
         final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
+            event.setProposal(new Proposal(group, data));
             event.setDone(done);
-            event.setData(data);
         };
         this.proposeQueue.publishEvent(translator);
     }
@@ -153,7 +154,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
                 ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getData).collect(Collectors.toList()));
+                : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
@@ -312,14 +313,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         });
     }
 
-    private void handlePrepareResponse(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback, final PrepareRes result
-            , final Endpoint it) {
+    private void handlePrepareResponse(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
+            , final PrepareRes result, final Endpoint it) {
         LOG.info("handling node-{}'s prepare response, result: {}", result.getNodeId(), result.getResult());
-        for (Instance instance : result.getInstances()) {
-            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), null) != instance) {
-                Instance prepared = preparedInstanceMap.get(instance.getInstanceId());
-                if (instance.getProposalNo() > prepared.getProposalNo()) {
-                    preparedInstanceMap.put(instance.getInstanceId(), instance);
+        for (Instance<Proposal> instance : result.getInstances()) {
+            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != null) {
+                synchronized (preparedInstanceMap){
+                    Instance<Proposal> prepared = preparedInstanceMap.get(instance.getInstanceId());
+                    if (instance.getProposalNo() > prepared.getProposalNo()) {
+                        preparedInstanceMap.put(instance.getInstanceId(), instance);
+                    }
                 }
             }
         }

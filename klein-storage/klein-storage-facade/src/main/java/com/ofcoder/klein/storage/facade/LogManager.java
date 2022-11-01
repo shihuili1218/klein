@@ -1,5 +1,6 @@
 package com.ofcoder.klein.storage.facade;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -11,7 +12,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author 释慧利
  */
 @SPI
-public interface LogManager extends Lifecycle<StorageProp> {
+public interface LogManager<P extends Serializable> extends Lifecycle<StorageProp> {
 
     ReentrantReadWriteLock getLock();
 
@@ -21,14 +22,14 @@ public interface LogManager extends Lifecycle<StorageProp> {
      * @param id the index of instance
      * @return the instance with {@code id}
      */
-    Instance getInstance(final long id);
+    Instance<P> getInstance(final long id);
 
     /**
      * Get instance without consensus.
      *
      * @return all instance for no confirm, state in (PREPARED, ACCEPTED)
      */
-    List<Instance> getInstanceNoConfirm();
+    List<Instance<P>> getInstanceNoConfirm();
 
     /**
      * Persisting the Instance.
@@ -37,16 +38,16 @@ public interface LogManager extends Lifecycle<StorageProp> {
      *
      * @param instance data
      */
-    void updateInstance(final Instance instance);
+    void updateInstance(final Instance<P> instance);
 
     long maxInstanceId();
     long maxProposalNo();
 
     long maxAppliedInstanceId();
 
-    void saveSnap(Snap snap);
+    void saveSnap(String group, Snap snap);
 
-    Snap getLastSnap();
+    Snap getLastSnap(String group);
 
 
 }
