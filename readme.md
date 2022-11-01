@@ -31,5 +31,11 @@ paxos, grpc, h2
 - [ ] TTL自动过期
 
 # 章解
-- 批量协商（队列），减少Prepare阶段，减少RPC交互
-- 拆分group
+[Paxos](klein-consensus/klein-consensus-paxos/readme.md)
+- 是否真的能支持并行协商？
+- 到底哪个提案会达成共识？
+- Confirm阶段（应用状态转移）是否真的可以异步执行？
+- 如何为一个运行的系统创建快照？
+- Group的拆分是否有必要完全隔离？
+- 优化Prepare阶段
+- 批量协商（队列），减少RPC交互
