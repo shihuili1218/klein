@@ -11,7 +11,11 @@ import com.ofcoder.klein.rpc.facade.util.RpcUtil;
  * @author far.liu
  */
 public class ConsensusProp {
-    private Endpoint self = new Endpoint("1", RpcUtil.getLocalIp(), 1218);
+    private Endpoint self = new Endpoint(
+            SystemPropertyUtil.get("klein.consensus.self-id", "1"),
+            RpcUtil.getLocalIp(),
+            SystemPropertyUtil.getInt("klein.consensus.self-port", 1218)
+    );
     /**
      * all member, include self.
      */

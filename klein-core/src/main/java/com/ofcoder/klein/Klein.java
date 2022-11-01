@@ -39,7 +39,6 @@ public class Klein {
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
         StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
-        ConsensusEngine.loadSM(new CacheSM());
 
         this.cache = new KleinCacheImpl();
         this.lock = new KleinLockImpl();

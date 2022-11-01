@@ -1,4 +1,4 @@
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.sm;
 
 import com.ofcoder.klein.storage.facade.Snap;
 
