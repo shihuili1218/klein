@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade.sm;
+package com.ofcoder.klein.consensus.paxos.sm;
 
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
