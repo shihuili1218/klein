@@ -85,7 +85,7 @@ public class Instance<D extends Serializable> implements Serializable {
         private Builder() {
         }
 
-        public static Builder anInstance() {
+        public static <B extends Serializable> Builder<B> anInstance() {
             return new Builder<>();
         }
 

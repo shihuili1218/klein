@@ -345,7 +345,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             if (localInstance == null) {
                 // the prepare message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
-                localInstance = Instance.Builder.anInstance()
+                localInstance = Instance.Builder.<Proposal> anInstance()
                         .instanceId(req.getInstanceId())
                         .applied(new AtomicBoolean(false))
                         .build();

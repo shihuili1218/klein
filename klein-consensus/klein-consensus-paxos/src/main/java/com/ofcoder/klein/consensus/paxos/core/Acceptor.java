@@ -71,7 +71,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
-                localInstance = Instance.Builder.anInstance()
+                localInstance = Instance.Builder.<Proposal>anInstance()
                         .grantedValue(req.getData())
                         .instanceId(req.getInstanceId())
                         .proposalNo(req.getProposalNo())
