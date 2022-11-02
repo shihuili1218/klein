@@ -88,7 +88,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     public void init(ConsensusProp op) {
         this.prop = op;
         this.client = RpcEngine.getClient();
-        this.prepareTimeout = (long) (op.getRoundTimeout() * 0.3);
+        this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
         // Disruptor to run propose.

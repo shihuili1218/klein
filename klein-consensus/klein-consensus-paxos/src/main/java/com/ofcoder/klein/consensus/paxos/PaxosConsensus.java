@@ -32,6 +32,7 @@ import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.core.Acceptor;
 import com.ofcoder.klein.consensus.paxos.core.Learner;
+import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.Proposer;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
@@ -54,6 +55,7 @@ public class PaxosConsensus implements Consensus {
     private Proposer proposer;
     private Acceptor acceptor;
     private Learner learner;
+    private  Master master;
     private ConsensusProp prop;
 
     private <E extends Serializable> void proposeAsync(final String group, final E data, final ProposeDone done) {
@@ -112,6 +114,7 @@ public class PaxosConsensus implements Consensus {
         this.proposer = RoleAccessor.getProposer();
         this.acceptor = RoleAccessor.getAcceptor();
         this.learner = RoleAccessor.getLearner();
+        this.master = RoleAccessor.getMaster();
         registerProcessor();
     }
 
