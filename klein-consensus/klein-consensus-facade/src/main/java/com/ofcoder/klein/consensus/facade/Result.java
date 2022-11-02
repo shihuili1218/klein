@@ -54,7 +54,7 @@ public class Result<D extends Serializable> implements Serializable {
         private Builder() {
         }
 
-        public static Builder aResult() {
+        public static <D extends Serializable> Builder<D> aResult() {
             return new Builder<>();
         }
 
@@ -69,7 +69,7 @@ public class Result<D extends Serializable> implements Serializable {
         }
 
         public Result<D> build() {
-            Result result = new Result();
+            Result<D> result = new Result<>();
             result.setState(state);
             result.setData(data);
             return result;

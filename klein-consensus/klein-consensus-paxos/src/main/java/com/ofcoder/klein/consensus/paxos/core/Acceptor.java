@@ -16,7 +16,15 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -25,16 +33,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author far.liu
@@ -43,7 +44,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Acceptor.class);
 
     private final PaxosNode self;
-    private LogManager logManager;
+    private LogManager<Proposal> logManager;
 
     public Acceptor(PaxosNode self) {
         this.self = self;
@@ -51,7 +52,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     @Override
     public void init(ConsensusProp op) {
-        logManager = StorageEngine.getLogManager();
+        logManager = StorageEngine.<Proposal>getInstance().getLogManager();
     }
 
     @Override
