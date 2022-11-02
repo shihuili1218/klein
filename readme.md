@@ -17,7 +17,7 @@ paxos, grpc, h2
 - [x] 批量协商
 - [x] 优化prepare阶段
 - [x] 快照
-- [ ] 拆分Group，proposer等角色无须隔离，只需隔离instance
+- [x] 拆分Group，proposer等角色无须隔离，只需隔离instance
 - [ ] 增加Master：成员变更、优化读请求
 - [ ] 成员自动发现(调研)
 - [ ] 数据对齐：成员上线、落后成员对齐
