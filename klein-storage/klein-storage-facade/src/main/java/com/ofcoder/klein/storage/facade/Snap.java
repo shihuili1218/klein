@@ -19,7 +19,7 @@ package com.ofcoder.klein.storage.facade;
 import java.io.Serializable;
 
 /**
- * @author: 释慧利
+ * @author 释慧利
  */
 public class Snap implements Serializable {
     private long checkpoint;
