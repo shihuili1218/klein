@@ -117,7 +117,7 @@ public class PaxosConsensus implements Consensus {
 
     private void loadNode() {
         // reload self information from storage.
-        LogManager logManager = StorageEngine.getLogManager();
+        LogManager<Proposal> logManager = StorageEngine.<Proposal>getInstance().getLogManager();
         this.self = PaxosNode.Builder.aPaxosNode()
                 .self(prop.getSelf())
                 .curInstanceId(new AtomicLong(logManager.maxInstanceId()))

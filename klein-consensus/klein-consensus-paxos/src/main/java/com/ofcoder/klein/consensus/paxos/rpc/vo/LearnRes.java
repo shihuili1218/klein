@@ -20,6 +20,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;/**
 
 import java.io.Serializable;
 
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**
@@ -27,7 +28,7 @@ import com.ofcoder.klein.storage.facade.Instance;
  */
 public class LearnRes implements Serializable {
     private String nodeId;
-    private Instance instance;
+    private Instance<Proposal> instance;
 
     public String getNodeId() {
         return nodeId;
@@ -37,17 +38,17 @@ public class LearnRes implements Serializable {
         this.nodeId = nodeId;
     }
 
-    public Instance getInstance() {
+    public Instance<Proposal> getInstance() {
         return instance;
     }
 
-    public void setInstance(Instance instance) {
+    public void setInstance(Instance<Proposal> instance) {
         this.instance = instance;
     }
 
     public static final class Builder {
         private String nodeId;
-        private Instance instance;
+        private Instance<Proposal> instance;
 
         private Builder() {
         }
@@ -61,7 +62,7 @@ public class LearnRes implements Serializable {
             return this;
         }
 
-        public Builder instance(Instance instance) {
+        public Builder instance(Instance<Proposal> instance) {
             this.instance = instance;
             return this;
         }

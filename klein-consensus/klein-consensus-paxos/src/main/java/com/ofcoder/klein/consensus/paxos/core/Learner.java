@@ -68,12 +68,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Learner.class);
     private RpcClient client;
     private final PaxosNode self;
-    private LogManager logManager;
-    private ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
-    private BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
-    private ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
+    private LogManager<Proposal> logManager;
+    private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
+    private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
+    private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
-    private ConsensusProp prop;
     private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();
     private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
 
@@ -83,8 +82,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
     @Override
     public void init(ConsensusProp op) {
-        this.prop = op;
-        logManager = StorageEngine.getLogManager();
+        logManager = StorageEngine.<Proposal>getInstance().getLogManager();
         this.client = RpcEngine.getClient();
 
         applyExecutor.execute(() -> {
@@ -227,17 +225,16 @@ public class Learner implements Lifecycle<ConsensusProp> {
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
         localValue = localValue == null
-                ? Lists.newArrayList(new Proposal(Instance.Noop.GROUP,Instance.Noop.DEFAULT))
+                ? Lists.newArrayList(new Proposal(Instance.Noop.GROUP, Instance.Noop.DEFAULT))
                 : localValue;
         List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
             ProposalWithDone done = new ProposalWithDone();
             done.setProposal(it);
             done.setDone(result -> {
-                if (Result.State.SUCCESS.equals(result)) {
-
-                } else {
+                if (!Result.State.SUCCESS.equals(result)) {
                     boost(instanceId);
                 }
+                // else: nothing to do
             });
             return done;
         }).collect(Collectors.toList());
@@ -345,7 +342,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             if (localInstance == null) {
                 // the prepare message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
-                localInstance = Instance.Builder.<Proposal> anInstance()
+                localInstance = Instance.Builder.<Proposal>anInstance()
                         .instanceId(req.getInstanceId())
                         .applied(new AtomicBoolean(false))
                         .build();
@@ -366,7 +363,9 @@ public class Learner implements Lifecycle<ConsensusProp> {
             logManager.updateInstance(localInstance);
 
             // apply statemachine
-            applyQueue.offer(req.getInstanceId());
+            if (!applyQueue.offer(req.getInstanceId())) {
+                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+            }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             throw e;
@@ -380,7 +379,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
     public void handleLearnRequest(LearnReq request, RpcContext context) {
-        Instance instance = logManager.getInstance(request.getInstanceId());
+        Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
         LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }

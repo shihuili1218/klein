@@ -73,10 +73,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     private final PaxosNode self;
     private long prepareTimeout;
     private long acceptTimeout;
-    /**
-     * Disruptor to run propose.
-     */
-    private Disruptor<ProposalWithDone> proposeDisruptor;
     private RingBuffer<ProposalWithDone> proposeQueue;
     private CountDownLatch shutdownLatch;
     /**
@@ -95,16 +91,17 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.3);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
-        this.proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
+        // Disruptor to run propose.
+        Disruptor<ProposalWithDone> proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
                 .setEventFactory(ProposalWithDone::new)
                 .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();
-        this.proposeDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
-        this.proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
-        this.proposeQueue = this.proposeDisruptor.start();
+        proposeDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
+        proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
+        this.proposeQueue = proposeDisruptor.start();
     }
 
     @Override
