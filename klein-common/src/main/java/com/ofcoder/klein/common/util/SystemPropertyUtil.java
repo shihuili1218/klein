@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 /**
  * A collection of utility methods to retrieve and
  * parse the values of the Java system properties.
- *
+ * Forked from <a href="https://github.com/sofastack/sofa-jraft">sofa-jraft</a>.
  */
 public final class SystemPropertyUtil {
 
@@ -170,7 +170,7 @@ public final class SystemPropertyUtil {
         }
 
         LOG.warn("Unable to parse the long integer system property '{}':{} - using the default value: {}.", key, value,
-            def);
+                def);
 
         return def;
     }

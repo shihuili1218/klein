@@ -19,8 +19,8 @@ package com.ofcoder.klein.common.util;
 /**
  * Simple static methods to be called at the start of your own methods to verify
  * correct arguments and state.
- *
- * @author jiachun.fjc
+ * <p>
+ * Forked from <a href="https://github.com/sofastack/sofa-jraft">sofa-jraft</a>.
  */
 public final class Requires {
 

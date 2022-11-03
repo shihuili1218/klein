@@ -16,18 +16,38 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.common.util.RepeatedTimer;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.common.util.timer.RepeatedTimer;
+import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.ElectionReq;
+import com.ofcoder.klein.rpc.facade.InvokeParam;
+import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 /**
  * @author 释慧利
  */
 public class Master implements Lifecycle<ConsensusProp> {
+    private static final Logger LOG = LoggerFactory.getLogger(Master.class);
     private PaxosNode self;
+    private RepeatedTimer electTimer;
+    private RepeatedTimer heartbeatTimer;
+    private RpcClient client;
 
     public Master(PaxosNode self) {
         this.self = self;
@@ -35,8 +55,10 @@ public class Master implements Lifecycle<ConsensusProp> {
 
     @Override
     public void init(ConsensusProp op) {
+        this.client = RpcEngine.getClient();
+
         // first run after 1 second, because the system may not be started
-        RepeatedTimer timer = new RepeatedTimer("elect-master", 1000) {
+        electTimer = new RepeatedTimer("elect-master", 1000) {
             @Override
             protected void onTrigger() {
                 election();
@@ -47,19 +69,36 @@ public class Master implements Lifecycle<ConsensusProp> {
                 return ThreadLocalRandom.current().nextInt(200, 500);
             }
         };
+
+        heartbeatTimer = new RepeatedTimer("master-heartbeat", 100) {
+            @Override
+            protected void onTrigger() {
+                heartbeat();
+            }
+        };
+
+        electTimer.start();
     }
 
     @Override
     public void shutdown() {
-
+        if (electTimer != null) {
+            electTimer.destroy();
+        }
+        if (heartbeatTimer != null) {
+            heartbeatTimer.destroy();
+        }
     }
 
 
     private void election() {
 
+
+
     }
 
-    private int randomTimeout(final int timeoutMs) {
-        return ThreadLocalRandom.current().nextInt(timeoutMs, timeoutMs + 300);
+    private void heartbeat() {
+
     }
+
 }
