@@ -20,5 +20,6 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
  * @author 释慧利
  */
 public class ElectionReq {
-    private
+    private String nodeId;
+
 }

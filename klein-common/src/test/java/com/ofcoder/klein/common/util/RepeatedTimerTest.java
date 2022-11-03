@@ -1,12 +1,12 @@
 package com.ofcoder.klein.common.util;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import junit.framework.TestCase;
 
 public class RepeatedTimerTest extends TestCase {
@@ -19,7 +19,11 @@ public class RepeatedTimerTest extends TestCase {
             @Override
             protected void onTrigger() {
                 LOG.info("==============run==============");
-
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
                 latch.countDown();
             }
         };
@@ -44,7 +48,6 @@ public class RepeatedTimerTest extends TestCase {
         timer.restart();
         latch.await();
     }
-
 
 
 }
