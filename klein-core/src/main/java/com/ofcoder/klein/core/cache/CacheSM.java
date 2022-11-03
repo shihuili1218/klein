@@ -29,6 +29,8 @@ import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
  * @author 释慧利
  */
 public class CacheSM extends AbstractSM {
+    public static final String GROUP = "cache";
+
     private static final Map<String, Object> CONTAINER = new ConcurrentHashMap<>();
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 

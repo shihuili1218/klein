@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
@@ -44,14 +45,20 @@ public class ProposeContext {
      * Current retry times
      */
     private int times = 0;
-    private final Quorum prepareQuorum = PaxosQuorum.createInstance();
-    private final AtomicBoolean prepareNexted = new AtomicBoolean(false);
-    private final Quorum acceptQuorum = PaxosQuorum.createInstance();
-    private final AtomicBoolean acceptNexted = new AtomicBoolean(false);
+    private final PaxosMemberConfiguration memberConfiguration;
+    private final Quorum prepareQuorum;
+    private final AtomicBoolean prepareNexted;
+    private final Quorum acceptQuorum;
+    private final AtomicBoolean acceptNexted;
 
-    public ProposeContext(long instanceId, List<ProposalWithDone> events) {
+    public ProposeContext(PaxosMemberConfiguration memberConfiguration, long instanceId, List<ProposalWithDone> events) {
+        this.memberConfiguration = memberConfiguration;
         this.instanceId = instanceId;
         this.dataWithCallback = ImmutableList.copyOf(events);
+        this.prepareQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.prepareNexted = new AtomicBoolean(false);
+        this.acceptQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.acceptNexted = new AtomicBoolean(false);
     }
 
     public int getTimesAndIncrement() {
@@ -94,6 +101,10 @@ public class ProposeContext {
         return acceptNexted;
     }
 
+    public PaxosMemberConfiguration getMemberConfiguration() {
+        return memberConfiguration;
+    }
+
     /**
      * Creating a new reference
      * Keep news of the last round's lateness from clouding this round's decision-making
@@ -101,7 +112,7 @@ public class ProposeContext {
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
      */
     public ProposeContext createRef() {
-        ProposeContext target = new ProposeContext(this.instanceId, this.dataWithCallback);
+        ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceId, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
         return target;

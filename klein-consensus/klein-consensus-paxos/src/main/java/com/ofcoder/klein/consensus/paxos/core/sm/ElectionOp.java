@@ -14,24 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;
+package com.ofcoder.klein.consensus.paxos.core.sm;
 
-import java.util.Set;
-
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 
 /**
  * @author 释慧利
  */
-public class PaxosQuorum extends Quorum {
+public class ElectionOp implements SystemOp {
+    private String nodeId;
+    private int memberVersion;
 
-    private PaxosQuorum(Set<Endpoint> allMembers) {
-        super(allMembers);
+    public String getNodeId() {
+        return nodeId;
     }
 
-    public static PaxosQuorum createInstance(PaxosMemberConfiguration memberConfiguration){
-        return new PaxosQuorum(memberConfiguration.getAllMembers());
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public int getMemberVersion() {
+        return memberVersion;
+    }
+
+    public void setMemberVersion(int memberVersion) {
+        this.memberVersion = memberVersion;
     }
 }

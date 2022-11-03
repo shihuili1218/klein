@@ -16,28 +16,23 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
-import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.MemberManager;
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ElectionReq;
-import com.ofcoder.klein.rpc.facade.InvokeParam;
+import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
+import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 /**
  * @author 释慧利
@@ -90,15 +85,45 @@ public class Master implements Lifecycle<ConsensusProp> {
         }
     }
 
-
     private void election() {
+        LOG.info("start electing master.");
+        ElectionOp req = new ElectionOp();
+        req.setNodeId(self.getSelf().getId());
+        req.setMemberVersion(self.getMemberConfiguration().incrementVersion());
 
+        CountDownLatch latch = new CountDownLatch(1);
+        RoleAccessor.getProposer().propose(MasterSM.GROUP, req, new ProposeDone() {
+            @Override
+            public void negotiationDone(Result.State result) {
+                if (result == Result.State.UNKNOWN) {
+                    latch.countDown();
+                }
+            }
 
+            @Override
+            public void applyDone(Object result) {
+                latch.countDown();
+                electTimer.stop();
+                heartbeatTimer.start();
+            }
+        });
 
+        try {
+            boolean await = latch.await(1L, TimeUnit.SECONDS);
+            if (self.getMemberConfiguration().getMaster() != null) {
+                electTimer.stop();
+                if (self.getMemberConfiguration().getMaster() == self.getSelf()) {
+                    heartbeatTimer.start();
+                }
+            }
+        } catch (InterruptedException e) {
+            LOG.warn("electing master timeout");
+        }
     }
 
     private void heartbeat() {
-
+        // 这里是发送心跳。
+        // 另外，规定时间内，没有收到心跳，重新选举Master
     }
 
 }

@@ -46,10 +46,10 @@ public class RoleAccessor {
     }
 
     public static void create(ConsensusProp prop, PaxosNode self) {
+        initMaster(prop, self);
         initLearner(prop, self);
         initAcceptor(prop, self);
         initProposer(prop, self);
-        initMaster(prop, self);
     }
     private static void initMaster(ConsensusProp prop, PaxosNode self) {
         master = new Master(self);

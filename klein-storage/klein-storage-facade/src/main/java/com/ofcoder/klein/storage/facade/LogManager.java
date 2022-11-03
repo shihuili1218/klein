@@ -40,10 +40,11 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     void updateInstance(final Instance<P> instance);
 
-    long maxInstanceId();
-    long maxProposalNo();
-
     long maxAppliedInstanceId();
+
+    void updateConfiguration(List<Member> members, int version);
+
+    MateData getMateData();
 
     void saveSnap(String group, Snap snap);
 
