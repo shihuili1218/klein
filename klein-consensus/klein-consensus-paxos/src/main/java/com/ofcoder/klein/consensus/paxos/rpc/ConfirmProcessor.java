@@ -23,7 +23,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -34,7 +35,11 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
  */
 public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
     private static final Logger LOG = LoggerFactory.getLogger(ConfirmProcessor.class);
+    private final PaxosNode self;
 
+    public ConfirmProcessor(PaxosNode self) {
+        this.self = self;
+    }
     @Override
     public String service() {
         return ConfirmReq.class.getSimpleName();
@@ -42,7 +47,7 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
 
     @Override
     public void handleRequest(ConfirmReq request, RpcContext context) {
-        if (!MemberManager.isValid(request.getNodeId())) {
+        if (!self.getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: confirm, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
             return;

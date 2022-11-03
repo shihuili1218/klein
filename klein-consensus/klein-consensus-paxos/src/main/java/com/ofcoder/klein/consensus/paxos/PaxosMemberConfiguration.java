@@ -14,12 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.rpc.vo;
+package com.ofcoder.klein.consensus.paxos;/**
+ * @author far.liu
+ */
+
+import java.util.List;
+
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author 释慧利
  */
-public class ElectionReq {
-    private String nodeId;
+public class PaxosMemberConfiguration extends MemberConfiguration {
+    private volatile Endpoint master;
+
+    public Endpoint getMaster() {
+        return master;
+    }
+
+    public boolean changeMaster(String nodeId) {
+        if (isValid(nodeId)) {
+            master = allMembers.get(nodeId);
+            version.incrementAndGet();
+            return true;
+        } else {
+            return false;
+        }
+    }
 
 }
