@@ -43,7 +43,7 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -165,7 +165,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        MemberManager.getAllMembers().forEach(it -> {
+        self.getMemberConfiguration().getAllMembers().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -290,7 +290,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         // fixme exclude self
-        MemberManager.getAllMembers().forEach(it -> {
+        self.getMemberConfiguration().getAllMembers().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -360,7 +360,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
-            ProposeContext ctxt = new ProposeContext(self.incrementInstanceId(), finalEvents);
+            ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration(), self.incrementInstanceId(), finalEvents);
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
             } else {

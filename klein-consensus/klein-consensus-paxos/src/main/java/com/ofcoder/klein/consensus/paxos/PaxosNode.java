@@ -29,6 +29,7 @@ public class PaxosNode extends Node {
     private AtomicLong curInstanceId;
     private AtomicLong curProposalNo;
     private Endpoint self;
+    private PaxosMemberConfiguration memberConfiguration;
 
     public long incrementProposalNo() {
         return addProposalNo(1);
@@ -59,25 +60,30 @@ public class PaxosNode extends Node {
         return self;
     }
 
+    public PaxosMemberConfiguration getMemberConfiguration() {
+        return memberConfiguration;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PaxosNode paxosNode = (PaxosNode) o;
-        return getCurInstanceId() == paxosNode.getCurInstanceId() && getCurProposalNo() == paxosNode.getCurProposalNo() && Objects.equals(getSelf(), paxosNode.getSelf());
+        return Objects.equals(getCurInstanceId(), paxosNode.getCurInstanceId()) && Objects.equals(getCurProposalNo(), paxosNode.getCurProposalNo()) && Objects.equals(getSelf(), paxosNode.getSelf()) && Objects.equals(memberConfiguration, paxosNode.memberConfiguration);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCurInstanceId(), getCurProposalNo(), getSelf());
+        return Objects.hash(getCurInstanceId(), getCurProposalNo(), getSelf(), memberConfiguration);
     }
 
     @Override
     public String toString() {
         return "PaxosNode{" +
-                "nextInstanceId=" + curInstanceId +
-                ", nextProposalNo=" + curProposalNo +
+                "curInstanceId=" + curInstanceId +
+                ", curProposalNo=" + curProposalNo +
                 ", self=" + self +
+                ", memberConfiguration=" + memberConfiguration +
                 "} " + super.toString();
     }
 
@@ -85,6 +91,7 @@ public class PaxosNode extends Node {
         private AtomicLong curInstanceId;
         private AtomicLong curProposalNo;
         private Endpoint self;
+        private PaxosMemberConfiguration memberConfiguration;
 
         private Builder() {
         }
@@ -93,13 +100,13 @@ public class PaxosNode extends Node {
             return new Builder();
         }
 
-        public Builder curInstanceId(AtomicLong nextInstanceId) {
-            this.curInstanceId = nextInstanceId;
+        public Builder curInstanceId(AtomicLong curInstanceId) {
+            this.curInstanceId = curInstanceId;
             return this;
         }
 
-        public Builder curProposalNo(AtomicLong nextProposalNo) {
-            this.curProposalNo = nextProposalNo;
+        public Builder curProposalNo(AtomicLong curProposalNo) {
+            this.curProposalNo = curProposalNo;
             return this;
         }
 
@@ -108,11 +115,17 @@ public class PaxosNode extends Node {
             return this;
         }
 
+        public Builder memberConfiguration(PaxosMemberConfiguration memberConfiguration) {
+            this.memberConfiguration = memberConfiguration;
+            return this;
+        }
+
         public PaxosNode build() {
             PaxosNode paxosNode = new PaxosNode();
-            paxosNode.curInstanceId = curInstanceId;
-            paxosNode.curProposalNo = curProposalNo;
-            paxosNode.self = self;
+            paxosNode.curProposalNo = this.curProposalNo;
+            paxosNode.curInstanceId = this.curInstanceId;
+            paxosNode.self = this.self;
+            paxosNode.memberConfiguration = this.memberConfiguration;
             return paxosNode;
         }
     }

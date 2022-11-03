@@ -14,27 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.sm;
+package com.ofcoder.klein.storage.facade;/**
+ * @author far.liu
+ */
 
-import com.ofcoder.klein.consensus.facade.sm.SM;
-import com.ofcoder.klein.storage.facade.Snap;
+import java.io.Serializable;
 
 /**
  * @author 释慧利
  */
-public class MasterSM implements SM {
-    @Override
-    public Object apply(long instanceId, Object data) {
-        return null;
+public class Member implements Serializable {
+    private String ip;
+    private int port;
+    private String id;
+
+    public String getIp() {
+        return ip;
     }
 
-    @Override
-    public Snap snapshot() {
-        return null;
+    public void setIp(String ip) {
+        this.ip = ip;
     }
 
-    @Override
-    public void loadSnap(Snap snap) {
+    public int getPort() {
+        return port;
+    }
 
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

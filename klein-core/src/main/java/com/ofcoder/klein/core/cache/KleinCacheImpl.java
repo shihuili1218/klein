@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.exception.KleinException;
-import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.GroupWrapper;
 
@@ -19,7 +18,7 @@ public class KleinCacheImpl implements KleinCache {
     protected GroupWrapper consensus;
 
     public KleinCacheImpl() {
-        this.consensus = new GroupWrapper("cache", new CacheSM());
+        this.consensus = new GroupWrapper(CacheSM.GROUP, new CacheSM());
     }
 
     @Override

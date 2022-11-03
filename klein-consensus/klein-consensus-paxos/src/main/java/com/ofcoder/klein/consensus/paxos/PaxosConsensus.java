@@ -20,12 +20,13 @@ import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
-import com.ofcoder.klein.consensus.facade.MemberManager;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
@@ -36,13 +37,17 @@ import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.Proposer;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.MateData;
+import com.ofcoder.klein.storage.facade.Member;
 import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
@@ -55,7 +60,7 @@ public class PaxosConsensus implements Consensus {
     private Proposer proposer;
     private Acceptor acceptor;
     private Learner learner;
-    private  Master master;
+    private Master master;
     private ConsensusProp prop;
 
     private <E extends Serializable> void proposeAsync(final String group, final E data, final ProposeDone done) {
@@ -108,37 +113,64 @@ public class PaxosConsensus implements Consensus {
     @Override
     public void init(ConsensusProp op) {
         this.prop = op;
-        MemberManager.writeOn(op.getMembers(), this.prop.getSelf());
         loadNode();
         RoleAccessor.create(prop, self);
         this.proposer = RoleAccessor.getProposer();
         this.acceptor = RoleAccessor.getAcceptor();
         this.learner = RoleAccessor.getLearner();
         this.master = RoleAccessor.getMaster();
+        loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfiguration()));
+
         registerProcessor();
+
     }
 
     private void loadNode() {
         // reload self information from storage.
         LogManager<Proposal> logManager = StorageEngine.<Proposal>getInstance().getLogManager();
+        MateData mateData = logManager.getMateData();
+        PaxosMemberConfiguration configuration;
+        if (CollectionUtils.isNotEmpty(mateData.getMembers())) {
+            configuration = new PaxosMemberConfiguration();
+            configuration.writeOn(prop.getMembers(), this.prop.getSelf());
+        } else {
+            configuration = new PaxosMemberConfiguration();
+            configuration.writeOn(
+                    mateData.getMembers().stream().map(it -> new Endpoint(it.getId(), it.getIp(), it.getPort())).collect(Collectors.toList())
+                    , this.prop.getSelf()
+            );
+        }
+
         this.self = PaxosNode.Builder.aPaxosNode()
                 .self(prop.getSelf())
-                .curInstanceId(new AtomicLong(logManager.maxInstanceId()))
-                .curProposalNo(new AtomicLong(logManager.maxProposalNo()))
+                .curInstanceId(new AtomicLong(mateData.getMaxInstanceId()))
+                .curProposalNo(new AtomicLong(mateData.getMaxProposalNo()))
+                .memberConfiguration(configuration)
                 .build();
         LOG.info("load node: {}", self);
     }
 
+
     private void registerProcessor() {
-        RpcEngine.registerProcessor(new PrepareProcessor());
-        RpcEngine.registerProcessor(new AcceptProcessor());
-        RpcEngine.registerProcessor(new ConfirmProcessor());
-        RpcEngine.registerProcessor(new LearnProcessor());
+        RpcEngine.registerProcessor(new PrepareProcessor(this.self));
+        RpcEngine.registerProcessor(new AcceptProcessor(this.self));
+        RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
+        RpcEngine.registerProcessor(new LearnProcessor(this.self));
     }
 
 
     @Override
     public void shutdown() {
+        LogManager<Proposal> logManager = StorageEngine.<Proposal>getInstance().getLogManager();
+        logManager.updateConfiguration(self.getMemberConfiguration().getAllMembers().stream().map(
+                it -> {
+                    Member member = new Member();
+                    member.setId(it.getId());
+                    member.setIp(it.getIp());
+                    member.setPort(it.getPort());
+                    return member;
+                }
+        ).collect(Collectors.toList()), self.getMemberConfiguration().getVersion());
         if (proposer != null) {
             proposer.shutdown();
         }

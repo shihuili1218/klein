@@ -14,24 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;
+package com.ofcoder.klein.consensus.facade.sm;/**
+ * @author far.liu
+ */
 
-import java.util.Set;
-
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import java.io.Serializable;
 
 /**
  * @author 释慧利
  */
-public class PaxosQuorum extends Quorum {
-
-    private PaxosQuorum(Set<Endpoint> allMembers) {
-        super(allMembers);
-    }
-
-    public static PaxosQuorum createInstance(PaxosMemberConfiguration memberConfiguration){
-        return new PaxosQuorum(memberConfiguration.getAllMembers());
-    }
+public interface SystemOp extends Serializable {
 }

@@ -21,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,8 @@ import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.MateData;
+import com.ofcoder.klein.storage.facade.Member;
 import com.ofcoder.klein.storage.facade.Snap;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
@@ -113,18 +116,21 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public long maxInstanceId() {
-        return this.mateData.getMaxInstanceId();
-    }
-
-    @Override
-    public long maxProposalNo() {
-        return this.mateData.getMaxProposalNo();
+    public void updateConfiguration(List<Member> members, int version) {
+        this.mateData.setMembers(members);
+        this.mateData.setMemberVersion(version);
+        saveMateData();
     }
 
     @Override
     public long maxAppliedInstanceId() {
         return this.mateData.getMaxAppliedInstanceId();
+    }
+
+    @Override
+    public MateData getMateData() {
+        // todo save member info
+        return this.mateData;
     }
 
     @Override
@@ -206,6 +212,8 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
                 .maxInstanceId(0)
                 .maxProposalNo(0)
                 .maxAppliedInstanceId(0)
+                .members(new ArrayList<>())
+                .memberVersion(0)
                 .build();
         File file = new File(MATE_PATH);
         if (!file.exists()) {

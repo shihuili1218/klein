@@ -41,7 +41,7 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.MemberManager;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -239,7 +239,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             return done;
         }).collect(Collectors.toList());
 
-        ProposeContext ctxt = new ProposeContext(instanceId, proposalWithDones);
+        ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration(), instanceId, proposalWithDones);
         RoleAccessor.getProposer().prepare(ctxt);
 
         try {
@@ -310,7 +310,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        MemberManager.getAllMembers().forEach(it -> {
+        self.getMemberConfiguration().getAllMembers().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {

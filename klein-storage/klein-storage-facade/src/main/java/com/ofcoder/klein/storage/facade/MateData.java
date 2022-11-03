@@ -14,11 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.jvm;/**
+package com.ofcoder.klein.storage.facade;/**
  * @author far.liu
  */
 
 import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  * @author 释慧利
@@ -27,6 +29,9 @@ public class MateData implements Serializable {
     private long maxInstanceId;
     private long maxAppliedInstanceId;
     private long maxProposalNo;
+    private List<Member> members;
+    private int memberVersion;
+
 
     public long getMaxInstanceId() {
         return maxInstanceId;
@@ -52,11 +57,28 @@ public class MateData implements Serializable {
         this.maxProposalNo = maxProposalNo;
     }
 
+    public List<Member> getMembers() {
+        return members;
+    }
+
+    public void setMembers(List<Member> members) {
+        this.members = members;
+    }
+
+    public int getMemberVersion() {
+        return memberVersion;
+    }
+
+    public void setMemberVersion(int memberVersion) {
+        this.memberVersion = memberVersion;
+    }
 
     public static final class Builder {
         private long maxInstanceId;
         private long maxAppliedInstanceId;
         private long maxProposalNo;
+        private List<Member> members;
+        private int memberVersion;
 
         private Builder() {
         }
@@ -80,11 +102,23 @@ public class MateData implements Serializable {
             return this;
         }
 
+        public Builder members(List<Member> members) {
+            this.members = members;
+            return this;
+        }
+
+        public Builder memberVersion(int memberVersion) {
+            this.memberVersion = memberVersion;
+            return this;
+        }
+
         public MateData build() {
             MateData mateData = new MateData();
             mateData.setMaxInstanceId(maxInstanceId);
             mateData.setMaxAppliedInstanceId(maxAppliedInstanceId);
             mateData.setMaxProposalNo(maxProposalNo);
+            mateData.setMembers(members);
+            mateData.setMemberVersion(memberVersion);
             return mateData;
         }
     }
