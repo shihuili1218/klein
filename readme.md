@@ -1,14 +1,17 @@
 
 # 介绍
-klein是一个分布式基于本地的k-v存储项目，它可以不依赖任何中间件，保证各个成员之间的缓存一致
+Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、缓存。
+
+你可以独立部署Klein，像使用Redis一样使用它；但是仅仅是这样的话，也太没有新意了，它有趣的地方在于：Klein可以内嵌入你的项目中，你可以不依赖任何中间件，保证各个成员之间的数据一致。
+
+基于此，你可以有无限多的想法，例如用Klein来实现KV存储，或者用它来实现分布式缓存，甚至用它来实现分布式锁，etc anything.
 
 ## 缓存/K-V存储
 - 最大存储的大小（LRU）
 - TTL自动过期
 ## 锁
 
-# 技术点
-paxos, grpc, h2
+# 里程map
 
 ## 进度
 ### paxos
@@ -29,6 +32,11 @@ paxos, grpc, h2
 - [x] 读、写、等基础功能
 - [ ] 配合持久化实现LRU
 - [ ] TTL自动过期
+
+### 待优化
+- LogManager行锁
+- 监控协商效率
+- 监控线程池指标(DefaultTimer, ThreadExecutor)
 
 # 章解
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)
