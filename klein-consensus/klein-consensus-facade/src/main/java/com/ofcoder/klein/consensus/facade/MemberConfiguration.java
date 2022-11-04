@@ -19,10 +19,11 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 /**
  * @author far.liu
  */
-public class MemberConfiguration implements Serializable {
+public abstract class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
     protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();
+    protected volatile Endpoint self;
 
     public int getVersion() {
         return version.get();
@@ -46,7 +47,9 @@ public class MemberConfiguration implements Serializable {
             return;
         }
         allMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.self = self;
         version.incrementAndGet();
+
     }
 
     public void writeOff(Endpoint node) {
@@ -54,4 +57,5 @@ public class MemberConfiguration implements Serializable {
         version.incrementAndGet();
     }
 
+    public abstract MemberConfiguration createRef();
 }
