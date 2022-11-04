@@ -17,7 +17,6 @@
 package com.ofcoder.klein.storage.facade;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.List;
 
 /**

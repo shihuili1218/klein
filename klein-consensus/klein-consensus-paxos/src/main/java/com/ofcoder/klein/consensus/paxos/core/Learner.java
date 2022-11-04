@@ -135,11 +135,12 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private void apply(long instanceId) {
         LOG.info("start apply, instanceId: {}", instanceId);
 
-        if (instanceId <= logManager.maxAppliedInstanceId()) {
+        final long maxAppliedInstanceId = logManager.maxAppliedInstanceId();
+        if (instanceId <= maxAppliedInstanceId) {
             // the instance has been applied.
             return;
         }
-        long exceptConfirmId = logManager.maxAppliedInstanceId() + 1;
+        long exceptConfirmId = maxAppliedInstanceId + 1;
         if (instanceId > exceptConfirmId) {
             long pre = instanceId - 1;
             Instance<Proposal> preInstance = logManager.getInstance(pre);
