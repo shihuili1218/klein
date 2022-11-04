@@ -25,14 +25,11 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
-import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcEngine;
 
 /**
  * @author 释慧利
@@ -42,7 +39,6 @@ public class Master implements Lifecycle<ConsensusProp> {
     private PaxosNode self;
     private RepeatedTimer electTimer;
     private RepeatedTimer heartbeatTimer;
-    private RpcClient client;
 
     public Master(PaxosNode self) {
         this.self = self;
@@ -50,7 +46,6 @@ public class Master implements Lifecycle<ConsensusProp> {
 
     @Override
     public void init(ConsensusProp op) {
-        this.client = RpcEngine.getClient();
 
         // first run after 1 second, because the system may not be started
         electTimer = new RepeatedTimer("elect-master", 1000) {
@@ -89,7 +84,6 @@ public class Master implements Lifecycle<ConsensusProp> {
         LOG.info("start electing master.");
         ElectionOp req = new ElectionOp();
         req.setNodeId(self.getSelf().getId());
-        req.setMemberVersion(self.getMemberConfiguration().incrementVersion());
 
         CountDownLatch latch = new CountDownLatch(1);
         RoleAccessor.getProposer().propose(MasterSM.GROUP, req, new ProposeDone() {
@@ -103,19 +97,11 @@ public class Master implements Lifecycle<ConsensusProp> {
             @Override
             public void applyDone(Object result) {
                 latch.countDown();
-                electTimer.stop();
-                heartbeatTimer.start();
             }
         });
 
         try {
-            boolean await = latch.await(1L, TimeUnit.SECONDS);
-            if (self.getMemberConfiguration().getMaster() != null) {
-                electTimer.stop();
-                if (self.getMemberConfiguration().getMaster() == self.getSelf()) {
-                    heartbeatTimer.start();
-                }
-            }
+            latch.await(1L, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             LOG.warn("electing master timeout");
         }
@@ -124,6 +110,20 @@ public class Master implements Lifecycle<ConsensusProp> {
     private void heartbeat() {
         // 这里是发送心跳。
         // 另外，规定时间内，没有收到心跳，重新选举Master
+        if (self.getMemberConfiguration().getMaster() == self.getSelf()) {
+
+        } else {
+            electTimer.restart();
+        }
     }
+
+
+    public void onChangeMaster() {
+        electTimer.stop();
+        if (self.getMemberConfiguration().getMaster() == self.getSelf()) {
+            heartbeatTimer.start();
+        }
+    }
+
 
 }

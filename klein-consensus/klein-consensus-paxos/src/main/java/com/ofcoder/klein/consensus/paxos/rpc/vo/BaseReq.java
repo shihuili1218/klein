@@ -14,39 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade;
+package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
 
 /**
  * @author 释慧利
  */
-public class Member implements Serializable {
-    private String ip;
-    private int port;
-    private String id;
+public class BaseReq implements Serializable {
+    private String nodeId;
+    private long proposalNo;
+    private int memberConfigurationVersion;
 
-    public String getIp() {
-        return ip;
+    public String getNodeId() {
+        return nodeId;
     }
 
-    public void setIp(String ip) {
-        this.ip = ip;
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 
-    public int getPort() {
-        return port;
+    public long getProposalNo() {
+        return proposalNo;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setProposalNo(long proposalNo) {
+        this.proposalNo = proposalNo;
     }
 
-    public String getId() {
-        return id;
+    public int getMemberConfigurationVersion() {
+        return memberConfigurationVersion;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setMemberConfigurationVersion(int memberConfigurationVersion) {
+        this.memberConfigurationVersion = memberConfigurationVersion;
     }
 }

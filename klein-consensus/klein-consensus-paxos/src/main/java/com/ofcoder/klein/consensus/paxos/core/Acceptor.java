@@ -30,6 +30,7 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.BaseReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -62,54 +63,56 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     public void handleAcceptRequest(AcceptReq req, RpcContext context) {
         LOG.info("processing the accept message from node-{}", req.getNodeId());
+
+        long diffId = req.getInstanceId() - self.getCurInstanceId();
+        if (diffId > 0) {
+            self.addInstanceId(diffId);
+        }
+
         try {
             logManager.getLock().writeLock().lock();
+
             final long selfProposalNo = self.getCurProposalNo();
-
-            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
-                    .nodeId(self.getSelf().getId())
-                    .proposalNo(selfProposalNo);
-
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 localInstance = Instance.Builder.<Proposal>anInstance()
-                        .grantedValue(req.getData())
                         .instanceId(req.getInstanceId())
                         .proposalNo(req.getProposalNo())
-                        .state(Instance.State.ACCEPTED)
+                        .state(Instance.State.PREPARED)
                         .applied(new AtomicBoolean(false))
                         .build();
-                long diffId = req.getInstanceId() - self.getCurInstanceId();
-                if (diffId > 0) {
-                    self.addInstanceId(diffId);
-                }
             }
+
+            if (!checkAcceptReqValidity(req)) {
+                AcceptRes res = AcceptRes.Builder.anAcceptRes()
+                        .nodeId(self.getSelf().getId())
+                        .result(false)
+                        .proposalNo(selfProposalNo)
+                        .instanceId(req.getInstanceId())
+                        .instanceState(localInstance.getState())
+                        .build();
+                logManager.updateInstance(localInstance);
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+                return;
+            }
+
+            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
+                    .nodeId(self.getSelf().getId())
+                    .instanceId(localInstance.getInstanceId())
+                    .proposalNo(selfProposalNo);
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 resBuilder.result(false)
-                        .instanceState(localInstance.getState())
-                        .instanceId(localInstance.getInstanceId());
+                        .instanceState(localInstance.getState());
             } else {
-                long diff = req.getProposalNo() - selfProposalNo;
-                if (diff >= 0) {
-                    if (diff > 0) {
-                        self.addProposalNo(diff);
-                    }
+                localInstance.setState(Instance.State.ACCEPTED);
+                localInstance.setProposalNo(req.getProposalNo());
+                localInstance.setGrantedValue(req.getData());
+                logManager.updateInstance(localInstance);
 
-                    localInstance.setState(Instance.State.ACCEPTED);
-                    localInstance.setProposalNo(req.getProposalNo());
-                    localInstance.setGrantedValue(req.getData());
-
-                    resBuilder.result(true)
-                            .instanceState(localInstance.getState())
-                            .instanceId(localInstance.getInstanceId());
-                } else {
-                    resBuilder.result(false)
-                            .instanceState(localInstance.getState())
-                            .instanceId(localInstance.getInstanceId());
-                }
+                resBuilder.result(true)
+                        .instanceState(localInstance.getState());
             }
-            logManager.updateInstance(localInstance);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
         } finally {
             logManager.getLock().writeLock().unlock();
@@ -118,30 +121,53 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     public void handlePrepareRequest(PrepareReq req, RpcContext context) {
         LOG.info("processing the prepare message from node-{}", req.getNodeId());
-
         try {
             logManager.getLock().writeLock().lock();
-
-            PrepareRes.Builder resBuilder = PrepareRes.Builder.aPrepareRes()
-                    .nodeId(self.getSelf().getId());
-
-            final long selfProposalNo = self.getCurProposalNo();
-            long diff = req.getProposalNo() - selfProposalNo;
-            if (diff > 0) {
-                resBuilder.result(true);
-                resBuilder.proposalNo(req.getProposalNo());
-                self.addProposalNo(diff);
+            if (!checkPrepareReqValidity(req)) {
+                PrepareRes res = PrepareRes.Builder.aPrepareRes()
+                        .nodeId(self.getSelf().getId())
+                        .result(false)
+                        .proposalNo(self.getCurProposalNo())
+                        .instances(null).build();
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
             } else {
-                resBuilder.result(false);
-                resBuilder.proposalNo(selfProposalNo);
-            }
+                List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+                PrepareRes res = PrepareRes.Builder.aPrepareRes()
+                        .nodeId(self.getSelf().getId())
+                        .result(true)
+                        .proposalNo(self.getCurProposalNo())
+                        .instances(instances).build();
 
-            List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
-            resBuilder.instances(instances);
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+            }
         } finally {
             logManager.getLock().writeLock().unlock();
         }
+    }
+
+    private boolean checkPrepareReqValidity(BaseReq req) {
+        long selfProposalNo = self.getCurProposalNo();
+        if (!self.getMemberConfiguration().isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < self.getMemberConfiguration().getVersion()
+                || req.getProposalNo() <= selfProposalNo) {
+            return false;
+        }
+        self.setCurProposalNo(req.getProposalNo());
+        return true;
+    }
+
+
+    private boolean checkAcceptReqValidity(BaseReq req) {
+        long selfProposalNo = self.getCurProposalNo();
+        if (!self.getMemberConfiguration().isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < self.getMemberConfiguration().getVersion()
+                || req.getProposalNo() < selfProposalNo) {
+            return false;
+        }
+        if (req.getProposalNo() > selfProposalNo) {
+            self.setCurProposalNo(req.getProposalNo());
+        }
+        return true;
     }
 
 }

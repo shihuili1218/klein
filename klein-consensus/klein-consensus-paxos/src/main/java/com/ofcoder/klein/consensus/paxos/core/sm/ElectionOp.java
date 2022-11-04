@@ -23,7 +23,6 @@ import com.ofcoder.klein.consensus.facade.sm.SystemOp;
  */
 public class ElectionOp implements SystemOp {
     private String nodeId;
-    private int memberVersion;
 
     public String getNodeId() {
         return nodeId;
@@ -33,11 +32,4 @@ public class ElectionOp implements SystemOp {
         this.nodeId = nodeId;
     }
 
-    public int getMemberVersion() {
-        return memberVersion;
-    }
-
-    public void setMemberVersion(int memberVersion) {
-        this.memberVersion = memberVersion;
-    }
 }

@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.paxos.core;
 
 /**
  * @author 释慧利

@@ -22,6 +22,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface IMaster {
+    // 成员变更后，需要协商一个NOOP提案，
     void addMember(Endpoint endpoint);
     void removeMember(Endpoint endpoint);
 }

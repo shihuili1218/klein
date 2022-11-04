@@ -43,7 +43,6 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -158,6 +157,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(self.getCurProposalNo())
                 .data(ctxt.getConsensusData())
+                .memberConfigurationVersion(self.getMemberConfiguration().getVersion())
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -208,10 +208,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         } else {
             ctxt.getAcceptQuorum().refuse(it);
 
-            final long selfProposalNo = self.getCurProposalNo();
-            long diff = result.getProposalNo() - selfProposalNo;
-            if (diff > 0) {
-                self.addProposalNo(diff);
+            if (result.getProposalNo() > self.getCurProposalNo()) {
+                self.setCurProposalNo(result.getProposalNo());
             }
 
             // do prepare phase
@@ -277,11 +275,12 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         final ProposeContext ctxt = context.createRef();
 
-        long proposalNo = self.incrementProposalNo();
+        long proposalNo = self.generateNextProposalNo();
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(proposalNo)
+                .memberConfigurationVersion(self.getMemberConfiguration().getVersion())
                 .build();
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -334,10 +333,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             }
         } else {
             ctxt.getPrepareQuorum().refuse(it);
-            final long selfProposalNo = self.getCurProposalNo();
-            long diff = result.getProposalNo() - selfProposalNo;
-            if (diff > 0) {
-                self.addProposalNo(diff);
+            if (result.getProposalNo() > self.getCurProposalNo()) {
+                self.setCurProposalNo(result.getProposalNo());
             }
 
             // do prepare phase
