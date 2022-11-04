@@ -1,6 +1,5 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
-import java.io.Serializable;
 import java.util.List;
 
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -8,22 +7,12 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 /**
  * @author far.liu
  */
-public class AcceptReq implements Serializable {
-    private String nodeId;
+public class AcceptReq extends BaseReq {
     private long instanceId;
-    private long proposalNo;
     private List<Proposal> data;
-
-    public String getNodeId() {
-        return nodeId;
-    }
 
     public long getInstanceId() {
         return instanceId;
-    }
-
-    public long getProposalNo() {
-        return proposalNo;
     }
 
     public List<Proposal> getData() {
@@ -31,10 +20,11 @@ public class AcceptReq implements Serializable {
     }
 
     public static final class Builder {
-        private String nodeId;
         private long instanceId;
-        private long proposalNo;
         private List<Proposal> data;
+        private String nodeId;
+        private long proposalNo;
+        private int memberConfigurationVersion;
 
         private Builder() {
         }
@@ -43,18 +33,8 @@ public class AcceptReq implements Serializable {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
-            this.nodeId = nodeId;
-            return this;
-        }
-
         public Builder instanceId(long instanceId) {
             this.instanceId = instanceId;
-            return this;
-        }
-
-        public Builder proposalNo(long proposalNo) {
-            this.proposalNo = proposalNo;
             return this;
         }
 
@@ -63,12 +43,28 @@ public class AcceptReq implements Serializable {
             return this;
         }
 
+        public Builder nodeId(String nodeId) {
+            this.nodeId = nodeId;
+            return this;
+        }
+
+        public Builder proposalNo(long proposalNo) {
+            this.proposalNo = proposalNo;
+            return this;
+        }
+
+        public Builder memberConfigurationVersion(int memberConfigurationVersion) {
+            this.memberConfigurationVersion = memberConfigurationVersion;
+            return this;
+        }
+
         public AcceptReq build() {
             AcceptReq acceptReq = new AcceptReq();
-            acceptReq.data = this.data;
-            acceptReq.nodeId = this.nodeId;
-            acceptReq.proposalNo = this.proposalNo;
+            acceptReq.setNodeId(nodeId);
+            acceptReq.setProposalNo(proposalNo);
+            acceptReq.setMemberConfigurationVersion(memberConfigurationVersion);
             acceptReq.instanceId = this.instanceId;
+            acceptReq.data = this.data;
             return acceptReq;
         }
     }

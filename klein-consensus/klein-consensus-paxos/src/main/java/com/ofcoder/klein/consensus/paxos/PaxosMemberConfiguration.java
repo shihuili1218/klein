@@ -14,11 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;/**
- * @author far.liu
- */
-
-import java.util.List;
+package com.ofcoder.klein.consensus.paxos;
 
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;

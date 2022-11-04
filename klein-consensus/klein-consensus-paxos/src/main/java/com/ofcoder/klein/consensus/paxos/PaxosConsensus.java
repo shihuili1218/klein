@@ -144,7 +144,7 @@ public class PaxosConsensus implements Consensus {
         this.self = PaxosNode.Builder.aPaxosNode()
                 .self(prop.getSelf())
                 .curInstanceId(new AtomicLong(mateData.getMaxInstanceId()))
-                .curProposalNo(new AtomicLong(mateData.getMaxProposalNo()))
+                .curProposalNo(mateData.getMaxProposalNo())
                 .memberConfiguration(configuration)
                 .build();
         LOG.info("load node: {}", self);
