@@ -16,6 +16,18 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
 
     ReentrantReadWriteLock getLock();
 
+
+    /**
+     * Persisting the Instance.
+     * <p>
+     * NOTICE: It needs to be called in a synchronous method.
+     *
+     * @param instance data
+     */
+    void updateInstance(final Instance<P> instance);
+
+    void updateConfiguration(List<Member> members, int version);
+
     /**
      * Get the instance by id.
      *
@@ -31,18 +43,7 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     List<Instance<P>> getInstanceNoConfirm();
 
-    /**
-     * Persisting the Instance.
-     * <p>
-     * NOTICE: It needs to be called in a synchronous method.
-     *
-     * @param instance data
-     */
-    void updateInstance(final Instance<P> instance);
-
     long maxAppliedInstanceId();
-
-    void updateConfiguration(List<Member> members, int version);
 
     MateData getMateData();
 

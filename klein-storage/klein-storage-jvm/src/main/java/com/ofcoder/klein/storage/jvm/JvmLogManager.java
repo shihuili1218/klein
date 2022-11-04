@@ -128,7 +128,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public MateData getMateData() {
-        // todo save member info
         return this.mateData;
     }
 
