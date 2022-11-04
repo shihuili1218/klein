@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 
 /**
  * @author 释慧利
@@ -41,7 +42,11 @@ public class MasterSM extends AbstractSM {
             return false;
         }
         ElectionOp op = (ElectionOp) data;
-        return configuration.changeMaster(op.getNodeId());
+        boolean changed = configuration.changeMaster(op.getNodeId());
+        if (changed) {
+            RoleAccessor.getMaster().onChangeMaster();
+        }
+        return changed;
     }
 
     @Override

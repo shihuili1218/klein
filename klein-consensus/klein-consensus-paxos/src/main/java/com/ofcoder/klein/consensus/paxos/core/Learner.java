@@ -41,7 +41,6 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -335,6 +334,11 @@ public class Learner implements Lifecycle<ConsensusProp> {
     public void handleConfirmRequest(ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
+        long diffId = req.getInstanceId() - self.getCurInstanceId();
+        if (diffId > 0) {
+            self.addInstanceId(diffId);
+        }
+
         try {
             logManager.getLock().writeLock().lock();
 
@@ -346,11 +350,10 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .instanceId(req.getInstanceId())
                         .applied(new AtomicBoolean(false))
                         .build();
+            }
 
-                long diffId = req.getInstanceId() - self.getCurInstanceId();
-                if (diffId > 0) {
-                    self.addInstanceId(diffId);
-                }
+            if (req.getProposalNo() > self.getCurProposalNo()) {
+                self.setCurProposalNo(req.getProposalNo());
             }
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.

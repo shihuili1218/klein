@@ -14,39 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade;
+package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
 
 /**
  * @author 释慧利
  */
-public class Member implements Serializable {
-    private String ip;
-    private int port;
-    private String id;
-
-    public String getIp() {
-        return ip;
-    }
-
-    public void setIp(String ip) {
-        this.ip = ip;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
+public class Heartbeat implements Serializable {
 }

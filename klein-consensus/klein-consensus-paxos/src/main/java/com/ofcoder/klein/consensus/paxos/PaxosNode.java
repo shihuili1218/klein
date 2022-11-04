@@ -27,16 +27,28 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class PaxosNode extends Node {
     private AtomicLong curInstanceId;
-    private AtomicLong curProposalNo;
+    private long curProposalNo;
     private Endpoint self;
     private PaxosMemberConfiguration memberConfiguration;
 
-    public long incrementProposalNo() {
-        return addProposalNo(1);
+    /**
+     * nextProposalNo = N * J + I
+     * N: Total number of members, J: local self increasing integer, I: member id
+     *
+     * @return next proposalNo
+     */
+    public long generateNextProposalNo() {
+        long cur = this.curProposalNo;
+        int n = memberConfiguration.getAllMembers().size();
+        long j = cur / n;
+        if (cur % n > 0){
+            j = j + 1;
+        }
+        return n * j + Integer.parseInt(self.getId());
     }
 
-    public long addProposalNo(long v) {
-        return curProposalNo.addAndGet(v);
+    public void setCurProposalNo(long proposalNo) {
+        curProposalNo = Math.max(curProposalNo, proposalNo);
     }
 
     public long incrementInstanceId() {
@@ -53,7 +65,7 @@ public class PaxosNode extends Node {
     }
 
     public long getCurProposalNo() {
-        return curProposalNo.get();
+        return curProposalNo;
     }
 
     public Endpoint getSelf() {
@@ -89,7 +101,7 @@ public class PaxosNode extends Node {
 
     public static final class Builder {
         private AtomicLong curInstanceId;
-        private AtomicLong curProposalNo;
+        private long curProposalNo;
         private Endpoint self;
         private PaxosMemberConfiguration memberConfiguration;
 
@@ -105,7 +117,7 @@ public class PaxosNode extends Node {
             return this;
         }
 
-        public Builder curProposalNo(AtomicLong curProposalNo) {
+        public Builder curProposalNo(long curProposalNo) {
             this.curProposalNo = curProposalNo;
             return this;
         }
