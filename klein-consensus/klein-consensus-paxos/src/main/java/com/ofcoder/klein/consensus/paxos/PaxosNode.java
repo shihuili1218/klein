@@ -26,8 +26,10 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class PaxosNode extends Node {
-    private AtomicLong curInstanceId;
-    private long curProposalNo;
+    private long curInstanceId = 0;
+    private final Object instanceIdLock = new Object();
+    private long curProposalNo = 0;
+    private final Object proposalNoLock = new Object();
     private Endpoint self;
     private PaxosMemberConfiguration memberConfiguration;
 
@@ -41,31 +43,47 @@ public class PaxosNode extends Node {
         long cur = this.curProposalNo;
         int n = memberConfiguration.getAllMembers().size();
         long j = cur / n;
-        if (cur % n > 0){
+        if (cur % n > 0) {
             j = j + 1;
         }
-        return n * j + Integer.parseInt(self.getId());
+        long next = n * j + Integer.parseInt(self.getId());
+        setCurProposalNo(next);
+        return this.curInstanceId;
     }
 
+
+    /**
+     * This is a synchronous method, Double-Check-Lock
+     *
+     * @param proposalNo target value
+     */
     public void setCurProposalNo(long proposalNo) {
-        curProposalNo = Math.max(curProposalNo, proposalNo);
-    }
-
-    public long incrementInstanceId() {
-        return addInstanceId(1);
-    }
-
-    public long addInstanceId(long v) {
-        return curInstanceId.addAndGet(v);
-    }
-
-
-    public long getCurInstanceId() {
-        return curInstanceId.get();
+        if (curProposalNo < proposalNo) {
+            synchronized (proposalNoLock) {
+                this.curProposalNo = Math.max(curProposalNo, proposalNo);
+            }
+        }
     }
 
     public long getCurProposalNo() {
         return curProposalNo;
+    }
+
+    public long incrementInstanceId() {
+        setCurInstanceId(curInstanceId + 1);
+        return this.curInstanceId;
+    }
+
+    public void setCurInstanceId(long instanceId) {
+        if (curProposalNo < instanceId) {
+            synchronized (instanceIdLock) {
+                this.curInstanceId = Math.max(curInstanceId, instanceId);
+            }
+        }
+    }
+
+    public long getCurInstanceId() {
+        return curInstanceId;
     }
 
     public Endpoint getSelf() {
@@ -100,7 +118,7 @@ public class PaxosNode extends Node {
     }
 
     public static final class Builder {
-        private AtomicLong curInstanceId;
+        private long curInstanceId;
         private long curProposalNo;
         private Endpoint self;
         private PaxosMemberConfiguration memberConfiguration;
@@ -112,7 +130,7 @@ public class PaxosNode extends Node {
             return new Builder();
         }
 
-        public Builder curInstanceId(AtomicLong curInstanceId) {
+        public Builder curInstanceId(long curInstanceId) {
             this.curInstanceId = curInstanceId;
             return this;
         }

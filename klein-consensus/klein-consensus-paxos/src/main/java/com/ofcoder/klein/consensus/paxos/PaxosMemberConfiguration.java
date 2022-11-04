@@ -16,7 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.ArrayList;
+
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.ProposeContext;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -39,4 +42,11 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         }
     }
 
+    @Override
+    public PaxosMemberConfiguration createRef() {
+        PaxosMemberConfiguration target = new PaxosMemberConfiguration();
+        target.writeOn(new ArrayList<>(this.allMembers.values()),this.self);
+        target.master = this.master;
+        return target;
+    }
 }
