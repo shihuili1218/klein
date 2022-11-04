@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
@@ -64,15 +65,13 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
     public void handleAcceptRequest(AcceptReq req, RpcContext context) {
         LOG.info("processing the accept message from node-{}", req.getNodeId());
 
-        long diffId = req.getInstanceId() - self.getCurInstanceId();
-        if (diffId > 0) {
-            self.addInstanceId(diffId);
-        }
+        self.setCurInstanceId(req.getInstanceId());
 
         try {
             logManager.getLock().writeLock().lock();
 
             final long selfProposalNo = self.getCurProposalNo();
+            final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 localInstance = Instance.Builder.<Proposal>anInstance()
@@ -83,7 +82,12 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                         .build();
             }
 
-            if (!checkAcceptReqValidity(req)) {
+            // This check logic must be in the synchronized block to avoid the following situations
+            // T1: acc<proposalNo = 1> check result of true                  ---- wait
+            // T2: pre<proposalNo = 2>                                       ---- granted
+            // T2: acc<proposalNo = 2> check result is true                  ---- granted
+            // T1: overwrites the accept request from T2
+            if (!checkAcceptReqValidity(memberConfiguration, selfProposalNo, req)) {
                 AcceptRes res = AcceptRes.Builder.anAcceptRes()
                         .nodeId(self.getSelf().getId())
                         .result(false)
@@ -121,34 +125,31 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     public void handlePrepareRequest(PrepareReq req, RpcContext context) {
         LOG.info("processing the prepare message from node-{}", req.getNodeId());
-        try {
-            logManager.getLock().writeLock().lock();
-            if (!checkPrepareReqValidity(req)) {
-                PrepareRes res = PrepareRes.Builder.aPrepareRes()
-                        .nodeId(self.getSelf().getId())
-                        .result(false)
-                        .proposalNo(self.getCurProposalNo())
-                        .instances(null).build();
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
-            } else {
-                List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
-                PrepareRes res = PrepareRes.Builder.aPrepareRes()
-                        .nodeId(self.getSelf().getId())
-                        .result(true)
-                        .proposalNo(self.getCurProposalNo())
-                        .instances(instances).build();
+        final long curProposalNo = self.getCurProposalNo();
+        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
 
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
-            }
-        } finally {
-            logManager.getLock().writeLock().unlock();
+        if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req)) {
+            PrepareRes res = PrepareRes.Builder.aPrepareRes()
+                    .nodeId(self.getSelf().getId())
+                    .result(false)
+                    .proposalNo(curProposalNo)
+                    .instances(null).build();
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+        } else {
+            List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+            PrepareRes res = PrepareRes.Builder.aPrepareRes()
+                    .nodeId(self.getSelf().getId())
+                    .result(true)
+                    .proposalNo(curProposalNo)
+                    .instances(instances).build();
+
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
         }
     }
 
-    private boolean checkPrepareReqValidity(BaseReq req) {
-        long selfProposalNo = self.getCurProposalNo();
-        if (!self.getMemberConfiguration().isValid(req.getNodeId())
-                || req.getMemberConfigurationVersion() < self.getMemberConfiguration().getVersion()
+    private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, BaseReq req) {
+        if (!paxosMemberConfiguration.isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() <= selfProposalNo) {
             return false;
         }
@@ -157,16 +158,13 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
     }
 
 
-    private boolean checkAcceptReqValidity(BaseReq req) {
-        long selfProposalNo = self.getCurProposalNo();
-        if (!self.getMemberConfiguration().isValid(req.getNodeId())
-                || req.getMemberConfigurationVersion() < self.getMemberConfiguration().getVersion()
+    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, BaseReq req) {
+        if (!paxosMemberConfiguration.isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() < selfProposalNo) {
             return false;
         }
-        if (req.getProposalNo() > selfProposalNo) {
-            self.setCurProposalNo(req.getProposalNo());
-        }
+        self.setCurProposalNo(req.getProposalNo());
         return true;
     }
 

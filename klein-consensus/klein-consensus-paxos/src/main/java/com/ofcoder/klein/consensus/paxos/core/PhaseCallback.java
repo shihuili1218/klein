@@ -25,7 +25,7 @@ import com.ofcoder.klein.storage.facade.Instance;
 public interface PhaseCallback {
 
     interface PreparePhaseCallback {
-        void granted(ProposeContext context);
+        void granted(long grantedProposalNo, ProposeContext context);
 
         void refused(ProposeContext context);
     }

@@ -297,9 +297,14 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
         applyCallback.putIfAbsent(instanceId, dataWithDone);
 
+        // A proposalNo here does not have to use the proposalNo of the accept phase,
+        // because the proposal is already in the confirm phase and it will not change.
+        // Instead, using self.proposalNo allows you to more quickly advance a proposalNo for another member
+        long curProposalNo = self.getCurProposalNo();
+
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
-                .proposalNo(self.getCurProposalNo())
+                .proposalNo(curProposalNo)
                 .instanceId(instanceId)
                 .data(dataWithDone.stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()))
                 .build();
@@ -334,17 +339,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
     public void handleConfirmRequest(ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
-        long diffId = req.getInstanceId() - self.getCurInstanceId();
-        if (diffId > 0) {
-            self.addInstanceId(diffId);
-        }
+        self.setCurInstanceId(req.getInstanceId());
+        self.setCurProposalNo(req.getProposalNo());
 
         try {
             logManager.getLock().writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
-                // the prepare message is not received, the confirm message is received.
+                // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 localInstance = Instance.Builder.<Proposal>anInstance()
                         .instanceId(req.getInstanceId())
@@ -352,9 +355,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
                         .build();
             }
 
-            if (req.getProposalNo() > self.getCurProposalNo()) {
-                self.setCurProposalNo(req.getProposalNo());
-            }
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
                 LOG.info("the instance: {} is confirmed", localInstance.getInstanceId());

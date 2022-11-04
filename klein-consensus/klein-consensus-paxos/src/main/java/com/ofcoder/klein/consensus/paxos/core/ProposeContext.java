@@ -42,6 +42,10 @@ public class ProposeContext {
      */
     private List<Proposal> consensusData;
     /**
+     * This is a proposalNo that has executed the prepare phase;
+     */
+    private long grantedProposalNo;
+    /**
      * Current retry times
      */
     private int times = 0;
@@ -51,7 +55,7 @@ public class ProposeContext {
     private final Quorum acceptQuorum;
     private final AtomicBoolean acceptNexted;
 
-    public ProposeContext(PaxosMemberConfiguration memberConfiguration, long instanceId, List<ProposalWithDone> events) {
+    public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final long instanceId, final List<ProposalWithDone> events) {
         this.memberConfiguration = memberConfiguration;
         this.instanceId = instanceId;
         this.dataWithCallback = ImmutableList.copyOf(events);
@@ -79,6 +83,14 @@ public class ProposeContext {
 
     public void setConsensusData(List<Proposal> consensusData) {
         this.consensusData = consensusData;
+    }
+
+    public long getGrantedProposalNo() {
+        return grantedProposalNo;
+    }
+
+    public void setGrantedProposalNo(long grantedProposalNo) {
+        this.grantedProposalNo = grantedProposalNo;
     }
 
     public int getTimes() {
@@ -111,10 +123,11 @@ public class ProposeContext {
      *
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
      */
-    public ProposeContext createRef() {
+    public ProposeContext createUntappedRef() {
         ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceId, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
+        target.grantedProposalNo = 0;
         return target;
     }
 }
