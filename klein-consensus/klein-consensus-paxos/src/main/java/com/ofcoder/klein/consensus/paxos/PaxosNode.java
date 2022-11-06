@@ -48,7 +48,7 @@ public class PaxosNode extends Node {
         }
         long next = n * j + Integer.parseInt(self.getId());
         setCurProposalNo(next);
-        return this.curInstanceId;
+        return this.curProposalNo;
     }
 
 

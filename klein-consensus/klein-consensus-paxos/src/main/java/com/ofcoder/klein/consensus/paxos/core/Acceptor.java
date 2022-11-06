@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -133,7 +134,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                     .nodeId(self.getSelf().getId())
                     .result(false)
                     .proposalNo(curProposalNo)
-                    .instances(null).build();
+                    .instances(new ArrayList<>()).build();
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
         } else {
             List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();

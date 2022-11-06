@@ -280,7 +280,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
     }
 
     private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {
-        LOG.info("start prepare phase, the {} retry", context.getTimes());
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
         if (context.getTimesAndIncrement() >= this.prop.getRetry()) {
             callback.refused(context);
@@ -290,6 +289,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+
+        LOG.info("start prepare phase, the {} retry, proposalNo: {}", context.getTimes(), proposalNo);
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
                 .nodeId(self.getSelf().getId())
@@ -339,7 +340,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         if (result.getResult()) {
             ctxt.getPrepareQuorum().grant(it);
-            LOG.info("handling node-{}'s granted prepare phase, is granted: {}.", result.getNodeId(), ctxt.getPrepareQuorum().isGranted());
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.PASS
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 // do accept phase.
@@ -370,7 +370,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
             ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration().createRef(), self.incrementInstanceId(), finalEvents);
-            
+
             long curProposalNo = self.getCurProposalNo();
             if (Proposer.this.skipPrepare.get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
