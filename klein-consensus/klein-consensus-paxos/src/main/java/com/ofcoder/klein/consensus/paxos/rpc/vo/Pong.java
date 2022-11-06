@@ -21,5 +21,5 @@ import java.io.Serializable;
 /**
  * @author 释慧利
  */
-public class Heartbeat implements Serializable {
+public class Pong implements Serializable {
 }
