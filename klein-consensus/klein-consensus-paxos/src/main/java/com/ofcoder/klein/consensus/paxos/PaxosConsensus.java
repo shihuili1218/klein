@@ -19,7 +19,6 @@ package com.ofcoder.klein.consensus.paxos;
 import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -42,7 +41,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -135,9 +133,7 @@ public class PaxosConsensus implements Consensus {
             configuration.writeOn(prop.getMembers(), this.prop.getSelf());
         } else {
             configuration = new PaxosMemberConfiguration();
-            configuration.writeOn(
-                    mateData.getMembers().stream().map(it -> new Endpoint(it.getId(), it.getIp(), it.getPort())).collect(Collectors.toList())
-                    , this.prop.getSelf()
+            configuration.writeOn(this.prop.getMembers(), this.prop.getSelf()
             );
         }
 
