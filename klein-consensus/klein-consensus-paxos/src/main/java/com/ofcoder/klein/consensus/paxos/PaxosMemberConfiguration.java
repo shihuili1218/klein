@@ -18,14 +18,20 @@ package com.ofcoder.klein.consensus.paxos;
 
 import java.util.ArrayList;
 
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.ProposeContext;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author 释慧利
  */
 public class PaxosMemberConfiguration extends MemberConfiguration {
+    private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
+    public static final String NULL_MASTER = "NULL";
     private volatile Endpoint master;
 
     public Endpoint getMaster() {
@@ -33,9 +39,11 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     }
 
     public boolean changeMaster(String nodeId) {
-        if (isValid(nodeId)) {
-            master = allMembers.get(nodeId);
+        if (isValid(nodeId) || StringUtils.equals(nodeId, NULL_MASTER)) {
+            LOG.info("node-{} was promoted to master", nodeId);
+            master = allMembers.getOrDefault(nodeId, null);
             version.incrementAndGet();
+            RoleAccessor.getMaster().onChangeMaster();
             return true;
         } else {
             return false;
@@ -45,7 +53,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     @Override
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.writeOn(new ArrayList<>(this.allMembers.values()),this.self);
+        target.writeOn(new ArrayList<>(this.allMembers.values()), this.self);
         target.master = this.master;
         return target;
     }

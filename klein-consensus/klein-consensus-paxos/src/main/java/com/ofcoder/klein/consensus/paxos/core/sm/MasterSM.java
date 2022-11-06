@@ -43,9 +43,7 @@ public class MasterSM extends AbstractSM {
         }
         ElectionOp op = (ElectionOp) data;
         boolean changed = configuration.changeMaster(op.getNodeId());
-        if (changed) {
-            RoleAccessor.getMaster().onChangeMaster();
-        }
+
         return changed;
     }
 
