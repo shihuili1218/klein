@@ -43,7 +43,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
             LOG.info("node-{} was promoted to master", nodeId);
             master = allMembers.getOrDefault(nodeId, null);
             version.incrementAndGet();
-            RoleAccessor.getMaster().onChangeMaster();
+            RoleAccessor.getMaster().onChangeMaster(nodeId);
             return true;
         } else {
             return false;
@@ -55,6 +55,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
         target.writeOn(new ArrayList<>(this.allMembers.values()), this.self);
         target.master = this.master;
+        target.version = this.version;
         return target;
     }
 

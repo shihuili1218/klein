@@ -74,6 +74,7 @@ public abstract class RepeatedTimer {
      * @return timeout millis
      */
     protected int adjustTimeout(final int timeoutMs) {
+        this.timeoutMs = timeoutMs;
         return timeoutMs;
     }
 
