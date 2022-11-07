@@ -39,10 +39,8 @@ import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
@@ -53,9 +51,8 @@ public class Master implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Master.class);
     private PaxosNode self;
     private RepeatedTimer electTimer;
-    private RepeatedTimer heartbeatTimer;
+    private RepeatedTimer sendHeartbeatTimer;
     private RpcClient client;
-    private long lastPongTimestamp = 0;
     private ConsensusProp prop;
 
     public Master(PaxosNode self) {
@@ -80,15 +77,10 @@ public class Master implements Lifecycle<ConsensusProp> {
             }
         };
 
-        heartbeatTimer = new RepeatedTimer("master-heartbeat", 100) {
+        sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", 100) {
             @Override
             protected void onTrigger() {
-                heartbeat();
-            }
-
-            @Override
-            protected int adjustTimeout(int timeoutMs) {
-                return ThreadLocalRandom.current().nextInt(200, 500);
+                sendHeartbeat();
             }
         };
 
@@ -100,8 +92,8 @@ public class Master implements Lifecycle<ConsensusProp> {
         if (electTimer != null) {
             electTimer.destroy();
         }
-        if (heartbeatTimer != null) {
-            heartbeatTimer.destroy();
+        if (sendHeartbeatTimer != null) {
+            sendHeartbeatTimer.destroy();
         }
     }
 
@@ -129,23 +121,7 @@ public class Master implements Lifecycle<ConsensusProp> {
             boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
             // do nothing for await's result, stop this timer in {@link #onChangeMaster}
         } catch (InterruptedException e) {
-            LOG.warn("electing master timeout");
-        }
-    }
-
-    private void heartbeat() {
-        Endpoint master = self.getMemberConfiguration().getMaster();
-        LOG.info("heartbeat, master is node-{}", master.getId());
-        if (master == self.getSelf()) {
-            // for master
-            sendHeartbeat();
-        } else {
-            // for other member
-            if (lastPongTimestamp + heartbeatTimer.getTimeoutMs() < System.currentTimeMillis()) {
-                electTimer.restart();
-                heartbeatTimer.stop();
-            }
-            // else do nothing.
+            LOG.debug("electing master timeout");
         }
     }
 
@@ -159,21 +135,23 @@ public class Master implements Lifecycle<ConsensusProp> {
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
+        // for self
+        onReceiveHeartbeat(req, true);
+
+        // for other members
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(Ping.class.getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
-
-        memberConfiguration.getAllMembers().forEach(it -> {
+        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage(), err);
+                    LOG.debug("node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
                         latch.countDown();
-                        lastPongTimestamp = 0L;
-                        self.getMemberConfiguration().changeMaster(PaxosMemberConfiguration.NULL_MASTER);
+                        restartElect();
                     }
                 }
 
@@ -189,29 +167,40 @@ public class Master implements Lifecycle<ConsensusProp> {
         });
         try {
             if (!latch.await(110L, TimeUnit.MICROSECONDS)) {
-                lastPongTimestamp = 0L;
-                self.getMemberConfiguration().changeMaster(PaxosMemberConfiguration.NULL_MASTER);
+                restartElect();
             }
         } catch (InterruptedException err) {
-            LOG.error(err.getMessage(), err);
+            LOG.error(err.getMessage());
         }
     }
 
-    public void onReceiveHeartbeat(Ping request, RpcContext context) {
+    public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         LOG.info("receive heartbeat from node-{}", request.getNodeId());
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
-        if (StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
+        if (memberConfiguration.getMaster() != null
+                && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() == memberConfiguration.getVersion()) {
-            // check and update instance
-
-            lastPongTimestamp = System.currentTimeMillis();
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Pong())));
+            // todo: check and update instance
+            if (!isSelf) {
+                restartElect();
+            }
+            return true;
+        } else {
+            return false;
         }
-        // else: ignore
     }
 
-    public void onChangeMaster() {
-        electTimer.stop();
-        heartbeatTimer.restart();
+    private void restartElect() {
+        electTimer.reset(ThreadLocalRandom.current().nextInt(200, 500));
+    }
+
+    public void onChangeMaster(final String newMaster) {
+        if (StringUtils.equals(newMaster, self.getSelf().getId())) {
+            electTimer.stop();
+            sendHeartbeatTimer.restart();
+        } else {
+            sendHeartbeatTimer.stop();
+            electTimer.restart();
+        }
     }
 }

@@ -16,14 +16,18 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import java.nio.ByteBuffer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
@@ -49,7 +53,9 @@ public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
                     request.getNodeId());
             return;
         }
-        RoleAccessor.getAcceptor().handleAcceptRequest(request, context);
+        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(request);
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+
     }
 
 

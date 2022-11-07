@@ -39,6 +39,7 @@ import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
@@ -152,6 +153,7 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new AcceptProcessor(this.self));
         RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
         RpcEngine.registerProcessor(new LearnProcessor(this.self));
+        RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
     }
 
 

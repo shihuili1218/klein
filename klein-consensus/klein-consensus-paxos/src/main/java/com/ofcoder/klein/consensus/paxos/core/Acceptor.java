@@ -63,7 +63,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
 
     }
 
-    public void handleAcceptRequest(AcceptReq req, RpcContext context) {
+    public AcceptRes handleAcceptRequest(AcceptReq req) {
         LOG.info("processing the accept message from node-{}", req.getNodeId());
 
         self.setCurInstanceId(req.getInstanceId());
@@ -97,8 +97,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                         .instanceState(localInstance.getState())
                         .build();
                 logManager.updateInstance(localInstance);
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
-                return;
+                return res;
             }
 
             AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
@@ -118,7 +117,7 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                 resBuilder.result(true)
                         .instanceState(localInstance.getState());
             }
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(resBuilder.build())));
+            return resBuilder.build();
         } finally {
             logManager.getLock().writeLock().unlock();
         }
