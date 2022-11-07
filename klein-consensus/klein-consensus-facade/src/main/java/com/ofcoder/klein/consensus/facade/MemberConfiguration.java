@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +38,11 @@ public abstract class MemberConfiguration implements Serializable {
         return new HashSet<>(allMembers.values());
     }
 
+    public Set<Endpoint> getMembersWithoutSelf() {
+        final String  selfId= self.getId();
+        return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId())).collect(Collectors.toSet());
+    }
+
 
     public boolean isValid(String nodeId) {
         return allMembers.containsKey(nodeId);
@@ -58,4 +64,13 @@ public abstract class MemberConfiguration implements Serializable {
     }
 
     public abstract MemberConfiguration createRef();
+
+    @Override
+    public String toString() {
+        return "MemberConfiguration{" +
+                "version=" + version +
+                ", allMembers=" + allMembers +
+                ", self=" + self +
+                '}';
+    }
 }

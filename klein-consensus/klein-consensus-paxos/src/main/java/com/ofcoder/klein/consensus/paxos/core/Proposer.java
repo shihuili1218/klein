@@ -183,7 +183,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage(), err);
+                    LOG.error(err.getMessage());
 
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
@@ -285,7 +285,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             callback.refused(context);
             return;
         }
-
         final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
@@ -298,17 +297,20 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
+        // for self
+        PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(req, true);
+        handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
+
+        // for other members
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(PrepareReq.class.getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
-
-        // fixme exclude self
-        memberConfiguration.getAllMembers().forEach(it -> {
+        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-//                    LOG.error(err.getMessage(), err);
+                    LOG.error(err.getMessage());
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
@@ -322,6 +324,8 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 }
             }, prepareTimeout);
         });
+
+
     }
 
     private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback

@@ -75,7 +75,7 @@ public class PaxosNode extends Node {
     }
 
     public void setCurInstanceId(long instanceId) {
-        if (curProposalNo < instanceId) {
+        if (curInstanceId < instanceId) {
             synchronized (instanceIdLock) {
                 this.curInstanceId = Math.max(curInstanceId, instanceId);
             }

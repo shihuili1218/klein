@@ -124,18 +124,18 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
         }
     }
 
-    public void handlePrepareRequest(PrepareReq req, RpcContext context) {
+    public PrepareRes handlePrepareRequest(PrepareReq req, boolean isSelf) {
         LOG.info("processing the prepare message from node-{}", req.getNodeId());
         final long curProposalNo = self.getCurProposalNo();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
 
-        if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req)) {
+        if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
             PrepareRes res = PrepareRes.Builder.aPrepareRes()
                     .nodeId(self.getSelf().getId())
                     .result(false)
                     .proposalNo(curProposalNo)
                     .instances(new ArrayList<>()).build();
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+            return res;
         } else {
             List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
             PrepareRes res = PrepareRes.Builder.aPrepareRes()
@@ -143,15 +143,16 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
                     .result(true)
                     .proposalNo(curProposalNo)
                     .instances(instances).build();
-
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+            return res;
         }
     }
 
-    private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, BaseReq req) {
+    private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo
+            , final BaseReq req, final boolean isSelf) {
+        boolean checkProposalNo = isSelf ? req.getProposalNo() < selfProposalNo : req.getProposalNo() <= selfProposalNo;
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
-                || req.getProposalNo() <= selfProposalNo) {
+                || checkProposalNo) {
             return false;
         }
         self.setCurProposalNo(req.getProposalNo());
