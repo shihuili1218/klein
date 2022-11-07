@@ -271,7 +271,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
             @Override
             public void complete(LearnRes result) {
-                LOG.info("node-{} learn result: {}", target.getId(), result);
                 if (result.getInstance() == null) {
                     LOG.info("learn instance: {} from node-{}, but result.instance is null", instanceId, target.getId());
                     return;
@@ -319,7 +318,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage(), err);
+                    LOG.error(err.getMessage());
                     // do nothing
                 }
 

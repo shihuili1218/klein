@@ -57,4 +57,14 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         target.master = this.master;
         return target;
     }
+
+    @Override
+    public String toString() {
+        return "PaxosMemberConfiguration{" +
+                "master=" + master +
+                ", version=" + version +
+                ", allMembers=" + allMembers +
+                ", self=" + self +
+                '}';
+    }
 }
