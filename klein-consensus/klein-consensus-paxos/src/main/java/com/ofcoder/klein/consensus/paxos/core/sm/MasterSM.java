@@ -37,6 +37,7 @@ public class MasterSM extends AbstractSM {
 
     @Override
     protected Object apply(Object data) {
+        LOG.info("master statemachine apply, {}", data);
         if (!(data instanceof ElectionOp)) {
             LOG.debug("applying MasterSM, found unknown parameter types, data.type: {}", data != null ? data.getClass().getName() : null);
             return false;

@@ -39,6 +39,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -133,7 +134,9 @@ public class Master implements Lifecycle<ConsensusProp> {
     }
 
     private void heartbeat() {
-        if (self.getMemberConfiguration().getMaster() == self.getSelf()) {
+        Endpoint master = self.getMemberConfiguration().getMaster();
+        LOG.info("heartbeat, master is node-{}", master.getId());
+        if (master == self.getSelf()) {
             // for master
             sendHeartbeat();
         } else {
@@ -195,6 +198,7 @@ public class Master implements Lifecycle<ConsensusProp> {
     }
 
     public void onReceiveHeartbeat(Ping request, RpcContext context) {
+        LOG.info("receive heartbeat from node-{}", request.getNodeId());
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
         if (StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() == memberConfiguration.getVersion()) {
