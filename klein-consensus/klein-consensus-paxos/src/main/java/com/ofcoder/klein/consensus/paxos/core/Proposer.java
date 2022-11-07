@@ -174,12 +174,16 @@ public class Proposer implements Lifecycle<ConsensusProp> {
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
+        // for self
+        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req);
+        handleAcceptResponse(ctxt, callback, res, self.getSelf());
+
+        // for other members
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(AcceptReq.class.getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
-
-        memberConfiguration.getAllMembers().forEach(it -> {
+        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {

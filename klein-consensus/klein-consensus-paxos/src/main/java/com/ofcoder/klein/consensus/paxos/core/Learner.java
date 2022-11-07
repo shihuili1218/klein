@@ -21,14 +21,18 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -72,7 +76,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
-    private final Map<Long, CountDownLatch> boostingLatch = new ConcurrentHashMap<>();
     private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
@@ -188,6 +191,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
     private Object _apply(long instance, Proposal data) {
+        LOG.info("doing apply instance[{}]", instance);
         if (data.getData() instanceof Instance.Noop) {
             //do nothing
             return null;
@@ -210,17 +214,14 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
 
     /**
-     * The method blocks until instance changes to confirm
+     * The method blocks until instance changes to applied
      *
      * @param instanceId id of the instance that you want to learn
      */
     public void boost(long instanceId) {
         LOG.info("start boost, instanceId: {}", instanceId);
 
-        CountDownLatch latch = new CountDownLatch(1);
-        if (boostingLatch.putIfAbsent(instanceId, latch) != null) {
-            latch = boostingLatch.get(instanceId);
-        }
+        final CompletableFuture<Object> future = new CompletableFuture<>();
 
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
@@ -230,11 +231,18 @@ public class Learner implements Lifecycle<ConsensusProp> {
         List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
             ProposalWithDone done = new ProposalWithDone();
             done.setProposal(it);
-            done.setDone(result -> {
-                if (!Result.State.SUCCESS.equals(result)) {
-                    boost(instanceId);
+            done.setDone(new ProposeDone() {
+                @Override
+                public void negotiationDone(Result.State result) {
+                    if (result != Result.State.SUCCESS) {
+                        future.cancel(true);
+                    }
                 }
-                // else: nothing to do
+
+                @Override
+                public void applyDone(Object result) {
+                    future.complete(result);
+                }
             });
             return done;
         }).collect(Collectors.toList());
@@ -243,18 +251,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
         RoleAccessor.getProposer().prepare(ctxt);
 
         try {
-            if (!latch.await(2000, TimeUnit.MILLISECONDS)) {
-                boost(instanceId);
-            }
-        } catch (InterruptedException e) {
-            LOG.warn(e.getMessage(), e);
+            future.get(2000, TimeUnit.MILLISECONDS);
+        } catch (ExecutionException | TimeoutException | InterruptedException e) {
+            LOG.warn(e.getMessage());
             boost(instanceId);
         }
-        boostingLatch.remove(instanceId);
     }
 
     public void learn(long instanceId, Endpoint target) {
-        LOG.info("start learn, instanceId: {}", instanceId);
+        LOG.info("start learn instanceId[{}] from {}", instanceId, target);
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -375,13 +380,10 @@ public class Learner implements Lifecycle<ConsensusProp> {
         } finally {
             logManager.getLock().writeLock().unlock();
         }
-
-        if (boostingLatch.containsKey(req.getInstanceId())) {
-            boostingLatch.get(req.getInstanceId()).countDown();
-        }
     }
 
     public void handleLearnRequest(LearnReq request, RpcContext context) {
+        LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
         LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
