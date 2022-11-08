@@ -30,10 +30,6 @@ public abstract class MemberConfiguration implements Serializable {
         return version.get();
     }
 
-    public int incrementVersion() {
-        return version.incrementAndGet();
-    }
-
     public Set<Endpoint> getAllMembers() {
         return new HashSet<>(allMembers.values());
     }

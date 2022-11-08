@@ -54,7 +54,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     @Override
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.writeOn(new ArrayList<>(this.allMembers.values()), this.self);
+        target.allMembers.putAll(this.allMembers);
+        target.self = this.self;
         if (this.master != null) {
             target.master = new Endpoint(this.master.getId(), this.master.getIp(), this.master.getPort());
         }
