@@ -22,9 +22,11 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import org.apache.logging.log4j.ThreadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -142,7 +144,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
      * Send accept message to all Acceptor.
      *
      * @param grantedProposalNo This is a proposalNo that has executed the prepare phase;
-     *                          You cannot use self.curProposalNo directly in the accept phase.
+     *                          You cannot use {@code self.curProposalNo} directly in the accept phase.
      *                          Because:
      *                          * T1: PREPARED
      *                          * T2: PREPARED → NO_PREPARE
@@ -176,6 +178,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
         // for self
         AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req);
+        // todo 如果自己是confirmed，那么不需要再进行了
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
@@ -209,7 +212,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, instanceId: {}", result.getNodeId(), result.getInstanceId());
+        LOG.info("handling node-{}'s accept response, instanceId: {}, instanceState: {}", result.getNodeId(), result.getInstanceId(), result.getInstanceState());
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
             callback.confirm(ctxt, it);
@@ -262,7 +265,6 @@ public class Proposer implements Lifecycle<ConsensusProp> {
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
-                    LOG.info("waiting prepare phase.");
                     skipPrepare.wait();
                 } catch (InterruptedException e) {
                     throw new ConsensusException(e.getMessage(), e);
@@ -289,6 +291,9 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             callback.refused(context);
             return;
         }
+
+        preparedInstanceMap.clear();
+
         final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
@@ -314,7 +319,7 @@ public class Proposer implements Lifecycle<ConsensusProp> {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage());
+                    LOG.error("send prepare msg to node-{}, occur exception, {}", it.getId(), err.getMessage());
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {

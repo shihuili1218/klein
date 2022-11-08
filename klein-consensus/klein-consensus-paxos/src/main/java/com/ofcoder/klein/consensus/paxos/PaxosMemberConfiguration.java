@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -40,10 +41,10 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
 
     public boolean changeMaster(String nodeId) {
         if (isValid(nodeId) || StringUtils.equals(nodeId, NULL_MASTER)) {
-            LOG.info("node-{} was promoted to master", nodeId);
             master = allMembers.getOrDefault(nodeId, null);
             version.incrementAndGet();
             RoleAccessor.getMaster().onChangeMaster(nodeId);
+            LOG.info("node-{} was promoted to master, version: {}", nodeId, version.get());
             return true;
         } else {
             return false;
@@ -54,8 +55,10 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
         target.writeOn(new ArrayList<>(this.allMembers.values()), this.self);
-        target.master = this.master;
-        target.version = this.version;
+        if (this.master != null) {
+            target.master = new Endpoint(this.master.getId(), this.master.getIp(), this.master.getPort());
+        }
+        target.version = new AtomicInteger(this.version.get());
         return target;
     }
 
