@@ -17,9 +17,13 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -54,9 +58,20 @@ public class Master implements Lifecycle<ConsensusProp> {
     private RepeatedTimer sendHeartbeatTimer;
     private RpcClient client;
     private ConsensusProp prop;
+    private final AtomicBoolean electing = new AtomicBoolean(false);
 
     public Master(PaxosNode self) {
         this.self = self;
+    }
+
+    @Override
+    public void shutdown() {
+        if (electTimer != null) {
+            electTimer.destroy();
+        }
+        if (sendHeartbeatTimer != null) {
+            sendHeartbeatTimer.destroy();
+        }
     }
 
     @Override
@@ -73,7 +88,7 @@ public class Master implements Lifecycle<ConsensusProp> {
 
             @Override
             protected int adjustTimeout(int timeoutMs) {
-                return ThreadLocalRandom.current().nextInt(200, 500);
+                return ThreadLocalRandom.current().nextInt(600, 800);
             }
         };
 
@@ -87,56 +102,58 @@ public class Master implements Lifecycle<ConsensusProp> {
         electTimer.start();
     }
 
-    @Override
-    public void shutdown() {
-        if (electTimer != null) {
-            electTimer.destroy();
-        }
-        if (sendHeartbeatTimer != null) {
-            sendHeartbeatTimer.destroy();
-        }
-    }
-
     private void election() {
-        LOG.info("start electing master.");
-        ElectionOp req = new ElectionOp();
-        req.setNodeId(self.getSelf().getId());
 
-        CountDownLatch latch = new CountDownLatch(1);
-        RoleAccessor.getProposer().propose(MasterSM.GROUP, req, new ProposeDone() {
-            @Override
-            public void negotiationDone(Result.State result) {
-                if (result == Result.State.UNKNOWN) {
+        if (!electing.compareAndSet(false, true)) {
+            return;
+        }
+        long start = System.currentTimeMillis();
+        try {
+            LOG.info("start electing master.");
+            ElectionOp req = new ElectionOp();
+            req.setNodeId(self.getSelf().getId());
+
+            CountDownLatch latch = new CountDownLatch(1);
+            RoleAccessor.getProposer().propose(MasterSM.GROUP, req, new ProposeDone() {
+                @Override
+                public void negotiationDone(Result.State result) {
+                    if (result == Result.State.UNKNOWN) {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void applyDone(Object result) {
                     latch.countDown();
                 }
-            }
+            });
 
-            @Override
-            public void applyDone(Object result) {
-                latch.countDown();
+            try {
+                boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                // do nothing for await's result, stop this timer in {@link #onChangeMaster}
+            } catch (InterruptedException e) {
+                LOG.debug(e.getMessage());
             }
-        });
-
-        try {
-            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-            // do nothing for await's result, stop this timer in {@link #onChangeMaster}
-        } catch (InterruptedException e) {
-            LOG.debug("electing master timeout");
+        } finally {
+            electing.compareAndSet(true, false);
         }
+        LOG.info("end election master, cost: {}", System.currentTimeMillis() - start);
     }
 
     private void sendHeartbeat() {
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
-        final CountDownLatch latch = new CountDownLatch(1);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
+        final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
         // for self
-        onReceiveHeartbeat(req, true);
+        if (onReceiveHeartbeat(req, true)) {
+            quorum.grant(self.getSelf());
+        }
 
         // for other members
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -150,27 +167,28 @@ public class Master implements Lifecycle<ConsensusProp> {
                     LOG.debug("node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
-                        latch.countDown();
-                        restartElect();
+                        complete.complete(quorum.isGranted());
                     }
                 }
 
                 @Override
                 public void complete(Pong result) {
-                    // do nothing.
                     quorum.grant(it);
                     if (quorum.isGranted() == Quorum.GrantResult.PASS) {
-                        latch.countDown();
+                        complete.complete(quorum.isGranted());
                     }
                 }
             }, 100);
         });
         try {
-            if (!latch.await(110L, TimeUnit.MICROSECONDS)) {
+            Quorum.GrantResult grantResult = complete.get(110L, TimeUnit.MICROSECONDS);
+            if (grantResult != Quorum.GrantResult.PASS) {
+                LOG.info("心跳多数派拒绝，重新选举master");
                 restartElect();
             }
-        } catch (InterruptedException err) {
-            LOG.error(err.getMessage());
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            LOG.info(e.getClass().getName() + "，心跳等待超时，重新选举master");
+            restartElect();
         }
     }
 
@@ -186,21 +204,28 @@ public class Master implements Lifecycle<ConsensusProp> {
             }
             return true;
         } else {
+            LOG.info("receive heartbeat from node-{}, result: {}. local.master: {}, req.version: {}", request.getNodeId(), false
+                    , memberConfiguration, request.getMemberConfigurationVersion());
             return false;
         }
     }
 
     private void restartElect() {
-        electTimer.reset(ThreadLocalRandom.current().nextInt(200, 500));
+        sendHeartbeatTimer.stop();
+        electTimer.restart();
+        electTimer.reset(ThreadLocalRandom.current().nextInt(600, 800));
+    }
+
+    private void restartHeartbeat() {
+        electTimer.stop();
+        sendHeartbeatTimer.restart();
     }
 
     public void onChangeMaster(final String newMaster) {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
-            electTimer.stop();
-            sendHeartbeatTimer.restart();
+            restartHeartbeat();
         } else {
-            sendHeartbeatTimer.stop();
-            electTimer.restart();
+            restartElect();
         }
     }
 }

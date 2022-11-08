@@ -23,6 +23,11 @@ import com.ofcoder.klein.consensus.facade.Result;
  */
 public interface ProposeDone {
     void negotiationDone(Result.State result);
+
+    default void confirmDone() {
+        // for subclass
+    }
+
     default void applyDone(Object result) {
         // for subclass
     }
