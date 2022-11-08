@@ -18,10 +18,10 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -77,6 +77,7 @@ public class Learner implements Lifecycle<ConsensusProp> {
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, CompletableFuture<Result.State>> boostFuture = new ConcurrentHashMap<>();
 
     public Learner(PaxosNode self) {
         this.self = self;
@@ -213,17 +214,25 @@ public class Learner implements Lifecycle<ConsensusProp> {
     }
 
 
+
     /**
-     * The method blocks until instance changes to applied
+     * The method blocks until instance changes to confirmed
      *
      * @param instanceId id of the instance that you want to learn
      */
     public void boost(long instanceId) {
-        LOG.info("start boost, instanceId: {}", instanceId);
-
-        final CompletableFuture<Object> future = new CompletableFuture<>();
-
+        LOG.info("start boost instanceId: {}", instanceId);
         Instance<Proposal> instance = logManager.getInstance(instanceId);
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            return;
+        }
+
+        final CompletableFuture<Result.State> future = new CompletableFuture<>();
+        if (boostFuture.putIfAbsent(instanceId, future) != null) {
+            blockBoost(instanceId);
+            return;
+        }
+
         List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
         localValue = localValue == null
                 ? Lists.newArrayList(new Proposal(Instance.Noop.GROUP, Instance.Noop.DEFAULT))
@@ -235,14 +244,15 @@ public class Learner implements Lifecycle<ConsensusProp> {
                 @Override
                 public void negotiationDone(Result.State result) {
                     if (result != Result.State.SUCCESS) {
-                        future.cancel(true);
+                        future.complete(result);
                     }
                 }
 
                 @Override
-                public void applyDone(Object result) {
-                    future.complete(result);
+                public void confirmDone() {
+                    future.complete(Result.State.SUCCESS);
                 }
+
             });
             return done;
         }).collect(Collectors.toList());
@@ -250,11 +260,24 @@ public class Learner implements Lifecycle<ConsensusProp> {
         ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration(), instanceId, proposalWithDones);
         RoleAccessor.getProposer().prepare(ctxt);
 
+        blockBoost(instanceId);
+    }
+
+    private void blockBoost(long instanceId) {
         try {
-            future.get(2000, TimeUnit.MILLISECONDS);
+
+            CompletableFuture<Result.State> future = boostFuture.get(instanceId);
+            if (future != null) {
+                Result.State state = future.get(2000, TimeUnit.MILLISECONDS);
+                if (state != Result.State.SUCCESS) {
+                    boost(instanceId);
+                }
+            }
         } catch (ExecutionException | TimeoutException | InterruptedException e) {
-            LOG.warn(e.getMessage());
+            LOG.warn("{}, boost instance[{}] failure, {}", e.getClass().getName(), instanceId, e.getMessage());
             boost(instanceId);
+        } finally {
+            boostFuture.remove(instanceId);
         }
     }
 
@@ -300,7 +323,8 @@ public class Learner implements Lifecycle<ConsensusProp> {
     public void confirm(long instanceId, final List<ProposalWithDone> dataWithDone) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
-        applyCallback.putIfAbsent(instanceId, dataWithDone);
+        applyCallback.putIfAbsent(instanceId, new ArrayList<>());
+        applyCallback.get(instanceId).addAll(dataWithDone);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -329,7 +353,6 @@ public class Learner implements Lifecycle<ConsensusProp> {
 
                 @Override
                 public void complete(Serializable result) {
-                    LOG.info("handling node-{}'s confirm response, instanceId: {}", it.getId(), req.getInstanceId());
                     // do nothing
                 }
             }, 1000);
@@ -373,6 +396,17 @@ public class Learner implements Lifecycle<ConsensusProp> {
             // apply statemachine
             if (!applyQueue.offer(req.getInstanceId())) {
                 LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+            }
+
+            if (applyCallback.containsKey(req.getInstanceId())) {
+                List<ProposalWithDone> proposalWithDones = applyCallback.get(req.getInstanceId());
+                for (ProposalWithDone proposalWithDone : proposalWithDones) {
+                    try {
+                        proposalWithDone.getDone().confirmDone();
+                    } catch (Exception e) {
+                        LOG.warn(e.getMessage());
+                    }
+                }
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);

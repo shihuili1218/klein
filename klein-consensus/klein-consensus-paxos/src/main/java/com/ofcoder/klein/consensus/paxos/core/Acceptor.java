@@ -152,6 +152,9 @@ public class Acceptor implements Lifecycle<ConsensusProp> {
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || checkProposalNo) {
+
+            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}", req.getMemberConfigurationVersion()
+                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo);
             return false;
         }
         self.setCurProposalNo(req.getProposalNo());

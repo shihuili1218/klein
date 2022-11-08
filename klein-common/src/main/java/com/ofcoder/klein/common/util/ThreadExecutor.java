@@ -17,7 +17,7 @@ public class ThreadExecutor {
     private final static ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(),
-            KleinThreadFactory.create("common-thread-", true));
+            KleinThreadFactory.create("common-thread", true));
 
 
     private static int cpus() {
