@@ -53,7 +53,7 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
  */
 public class Master implements Lifecycle<ConsensusProp> {
     private static final Logger LOG = LoggerFactory.getLogger(Master.class);
-    private PaxosNode self;
+    private final PaxosNode self;
     private RepeatedTimer electTimer;
     private RepeatedTimer sendHeartbeatTimer;
     private RpcClient client;
@@ -79,8 +79,7 @@ public class Master implements Lifecycle<ConsensusProp> {
         this.prop = op;
         this.client = RpcEngine.getClient();
 
-        // first run after 1 second, because the system may not be started
-        electTimer = new RepeatedTimer("elect-master", 1000) {
+        electTimer = new RepeatedTimer("elect-master", calculateElectionMasterInterval()) {
             @Override
             protected void onTrigger() {
                 election();
@@ -88,26 +87,31 @@ public class Master implements Lifecycle<ConsensusProp> {
 
             @Override
             protected int adjustTimeout(int timeoutMs) {
-                return ThreadLocalRandom.current().nextInt(600, 800);
+                return calculateElectionMasterInterval();
             }
         };
 
-        sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", 100) {
+        sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", 50) {
             @Override
             protected void onTrigger() {
                 sendHeartbeat();
             }
         };
+    }
 
-        electTimer.start();
+    private static int calculateElectionMasterInterval() {
+        return ThreadLocalRandom.current().nextInt(600, 800);
+    }
+
+    public void electingMaster() {
+        restartElect();
     }
 
     private void election() {
-
         if (!electing.compareAndSet(false, true)) {
             return;
         }
-        long start = System.currentTimeMillis();
+
         try {
             LOG.info("start electing master.");
             ElectionOp req = new ElectionOp();
@@ -137,7 +141,6 @@ public class Master implements Lifecycle<ConsensusProp> {
         } finally {
             electing.compareAndSet(true, false);
         }
-        LOG.info("end election master, cost: {}", System.currentTimeMillis() - start);
     }
 
     private void sendHeartbeat() {
@@ -178,10 +181,10 @@ public class Master implements Lifecycle<ConsensusProp> {
                         complete.complete(quorum.isGranted());
                     }
                 }
-            }, 100);
+            }, 55);
         });
         try {
-            Quorum.GrantResult grantResult = complete.get(110L, TimeUnit.MICROSECONDS);
+            Quorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
             if (grantResult != Quorum.GrantResult.PASS) {
                 LOG.info("心跳多数派拒绝，重新选举master");
                 restartElect();
@@ -193,18 +196,17 @@ public class Master implements Lifecycle<ConsensusProp> {
     }
 
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
-        LOG.info("receive heartbeat from node-{}", request.getNodeId());
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
         if (memberConfiguration.getMaster() != null
                 && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
-                && request.getMemberConfigurationVersion() == memberConfiguration.getVersion()) {
+                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
             // todo: check and update instance
             if (!isSelf) {
                 restartElect();
             }
             return true;
         } else {
-            LOG.info("receive heartbeat from node-{}, result: {}. local.master: {}, req.version: {}", request.getNodeId(), false
+            LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId()
                     , memberConfiguration, request.getMemberConfigurationVersion());
             return false;
         }
@@ -213,7 +215,7 @@ public class Master implements Lifecycle<ConsensusProp> {
     private void restartElect() {
         sendHeartbeatTimer.stop();
         electTimer.restart();
-        electTimer.reset(ThreadLocalRandom.current().nextInt(600, 800));
+        electTimer.reset(calculateElectionMasterInterval());
     }
 
     private void restartHeartbeat() {

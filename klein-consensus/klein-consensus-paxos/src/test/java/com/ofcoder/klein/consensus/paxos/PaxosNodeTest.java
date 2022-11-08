@@ -1,5 +1,7 @@
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -21,5 +23,11 @@ public class PaxosNodeTest extends TestCase {
                 .self(new Endpoint("3", "127.0.0.1", 1220))
                 .memberConfiguration(configuration).build();
         assertEquals(node.generateNextProposalNo(), 3);
+    }
+
+    public void testss(){
+        for (int i = 0; i < 10; i++) {
+            System.out.println(ThreadLocalRandom.current().nextInt(600, 800));
+        }
     }
 }
