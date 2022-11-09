@@ -54,7 +54,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.storage.facade.Instance;
@@ -268,7 +267,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void learn(long instanceId, Endpoint target) {
-        LOG.info("start learn instanceId[{}] from {}", instanceId, target);
+        LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -279,14 +278,14 @@ public class LearnerImpl implements Learner {
         client.sendRequestAsync(target, param, new AbstractInvokeCallback<LearnRes>() {
             @Override
             public void error(Throwable err) {
-                LOG.warn(err.getMessage());
+                LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
                 // do nothing
             }
 
             @Override
             public void complete(LearnRes result) {
                 if (result.getInstance() == null) {
-                    LOG.info("learn instance: {} from node-{}, but result.instance is null", instanceId, target.getId());
+                    LOG.error("learn instance[{}] from node-{}, but result.instance is null", instanceId, target.getId());
                     return;
                 }
                 handleConfirmRequest(ConfirmReq.Builder.aConfirmReq()
@@ -330,7 +329,7 @@ public class LearnerImpl implements Learner {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage());
+                    LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
                     // do nothing
                 }
 
@@ -364,7 +363,7 @@ public class LearnerImpl implements Learner {
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
-                LOG.info("the instance: {} is confirmed", localInstance.getInstanceId());
+                LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
                 return;
             }
             localInstance.setState(Instance.State.CONFIRMED);
@@ -375,6 +374,7 @@ public class LearnerImpl implements Learner {
             // apply statemachine
             if (!applyQueue.offer(req.getInstanceId())) {
                 LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+                // do nothing, other threads will boost the instance
             }
 
             if (applyCallback.containsKey(req.getInstanceId())) {
