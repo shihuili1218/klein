@@ -156,10 +156,10 @@ public class ProposerImpl implements Proposer {
      * @param ctxt              Negotiation Context
      * @param callback          Callback of accept phase,
      *                          if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
-     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#confirm(ProposeContext, Endpoint)}
+     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, Endpoint)}
      */
     private void accept(final long grantedProposalNo, final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
-        LOG.info("start accept phase, instanceId: {}", ctxt.getInstanceId());
+        LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
         ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
@@ -191,7 +191,7 @@ public class ProposerImpl implements Proposer {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error(err.getMessage());
+                    LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
 
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
@@ -213,10 +213,10 @@ public class ProposerImpl implements Proposer {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, instanceId: {}, instanceState: {}", result.getNodeId(), result.getInstanceId(), result.getInstanceState());
+        LOG.info("handling node-{}'s accept response, proposalNo: {}, instanceId: {}, remote.instanceState: {}", result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState());
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-            callback.confirm(ctxt, it);
+            callback.learn(ctxt, it);
             return;
         }
 
@@ -348,7 +348,7 @@ public class ProposerImpl implements Proposer {
             client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.error("send prepare msg to node-{}, occur exception, {}", it.getId(), err.getMessage());
+                    LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
@@ -368,7 +368,7 @@ public class ProposerImpl implements Proposer {
 
     private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
             , final PrepareRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s prepare response, result: {}", result.getNodeId(), result.getResult());
+        LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), proposalNo, result.getResult());
         for (Instance<Proposal> instance : result.getInstances()) {
             if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != null) {
                 synchronized (preparedInstanceMap) {
@@ -426,11 +426,10 @@ public class ProposerImpl implements Proposer {
 
         @Override
         public void granted(long grantedProposalNo, ProposeContext context) {
-            LOG.info("prepare granted.");
+            LOG.debug("prepare granted. proposalNo: {}", grantedProposalNo);
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                 skipPrepare.notifyAll();
-                LOG.info("notify prepare phase.");
             }
             ThreadExecutor.submit(() -> accept(grantedProposalNo, context, new AcceptCallback()));
         }
@@ -441,7 +440,6 @@ public class ProposerImpl implements Proposer {
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                 skipPrepare.notifyAll();
-                LOG.info("notify prepare phase.");
             }
 
             ThreadExecutor.submit(() -> {
@@ -456,6 +454,8 @@ public class ProposerImpl implements Proposer {
 
         @Override
         public void granted(ProposeContext context) {
+            LOG.debug("accept granted. proposalNo: {}, instance: {}", context.getGrantedProposalNo(), context.getInstanceId());
+
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
@@ -470,7 +470,8 @@ public class ProposerImpl implements Proposer {
         }
 
         @Override
-        public void confirm(ProposeContext context, Endpoint it) {
+        public void learn(ProposeContext context, Endpoint it) {
+            LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), it.getId());
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
