@@ -22,6 +22,7 @@ import java.io.Serializable;
  * @author 释慧利
  */
 public class Proposal implements Serializable {
+    public static final Proposal NOOP = new Proposal(Noop.GROUP, Noop.DEFAULT);
     private String group;
     private Object data;
 
@@ -47,5 +48,13 @@ public class Proposal implements Serializable {
 
     public void setData(Object data) {
         this.data = data;
+    }
+
+    /**
+     * No operation proposal
+     */
+    public static class Noop implements Serializable {
+        public static final Noop DEFAULT = new Noop();
+        public static final String GROUP = "NOOP";
     }
 }
