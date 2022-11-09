@@ -126,11 +126,4 @@ public class Instance<D extends Serializable> implements Serializable {
 
     }
 
-    /**
-     * No operation proposal
-     */
-    public static class Noop implements Serializable {
-        public static final Noop DEFAULT = new Noop();
-        public static final String GROUP = "NOOP";
-    }
 }

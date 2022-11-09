@@ -40,7 +40,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.MateData;
 import com.ofcoder.klein.storage.facade.Member;
@@ -83,7 +82,7 @@ public class PaxosConsensus implements Consensus {
         });
         try {
             if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
-                LOG.warn("******** negotiation timeout, data: {}. ********", data);
+                LOG.warn("******** negotiation timeout ********");
                 builder.state(Result.State.UNKNOWN);
             }
         } catch (InterruptedException e) {
@@ -115,7 +114,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void preheating() {
-        propose(Instance.Noop.GROUP, Instance.Noop.DEFAULT, true);
+        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
     }
 
     private void loadNode() {

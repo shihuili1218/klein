@@ -26,7 +26,7 @@ public class RoleAccessor {
 
     private static Proposer proposer;
     private static Acceptor acceptor;
-    private static Learner learner;
+    private static LearnerImpl learner;
     private static Master master;
 
     public static Proposer getProposer() {
@@ -37,7 +37,7 @@ public class RoleAccessor {
         return acceptor;
     }
 
-    public static Learner getLearner() {
+    public static LearnerImpl getLearner() {
         return learner;
     }
 
@@ -52,22 +52,22 @@ public class RoleAccessor {
         initProposer(prop, self);
     }
     private static void initMaster(ConsensusProp prop, PaxosNode self) {
-        master = new Master(self);
+        master = new MasterImpl(self);
         master.init(prop);
     }
 
     private static void initLearner(ConsensusProp prop, PaxosNode self) {
-        learner = new Learner(self);
+        learner = new LearnerImpl(self);
         learner.init(prop);
     }
 
     private static void initAcceptor(ConsensusProp prop, PaxosNode self) {
-        acceptor = new Acceptor(self);
+        acceptor = new AcceptorImpl(self);
         acceptor.init(prop);
     }
 
     private static void initProposer(ConsensusProp prop, PaxosNode self) {
-        proposer = new Proposer(self);
+        proposer = new ProposerImpl(self);
         proposer.init(prop);
     }
 
