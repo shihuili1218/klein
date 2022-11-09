@@ -16,14 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import java.nio.ByteBuffer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
@@ -37,6 +40,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
     public LearnProcessor(PaxosNode self) {
         this.self = self;
     }
+
     @Override
     public String service() {
         return LearnReq.class.getSimpleName();
@@ -49,7 +53,8 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
                     request.getNodeId());
             return;
         }
-        RoleAccessor.getLearner().handleLearnRequest(request, context);
+        LearnRes res = RoleAccessor.getLearner().handleLearnRequest(request);
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 
 }

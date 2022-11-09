@@ -46,6 +46,10 @@ public abstract class RepeatedTimer {
     private volatile int timeoutMs;
     private final String name;
 
+    public boolean isRunning() {
+        return running;
+    }
+
     public int getTimeoutMs() {
         return this.timeoutMs;
     }
