@@ -30,6 +30,7 @@ public interface Master extends Lifecycle<ConsensusProp> {
 
     void removeMember(Endpoint endpoint);
 
+    // todo master要拥有最完整的数据，晋升后需要立即推进未执行状态转移的instance，以保证成员变更的正确性
     void electingMaster();
 
     public boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
