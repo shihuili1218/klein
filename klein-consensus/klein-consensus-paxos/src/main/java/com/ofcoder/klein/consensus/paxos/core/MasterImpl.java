@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -31,13 +30,13 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
@@ -109,8 +108,7 @@ public class MasterImpl implements Master {
             return true;
         }
 
-        // boost all instance
-
+        // It can only be changed once at a time
         if (!changing.compareAndSet(false, true)) {
             return false;
         }
@@ -121,14 +119,8 @@ public class MasterImpl implements Master {
         req.setTarget(endpoint);
         req.setOp(ChangeMemberOp.ADD);
 
-        Consensus consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin();
-        Result<Serializable> propose = consensus.propose(MasterSM.GROUP, req, true);
-        if (propose.getState() != Result.State.SUCCESS) {
-            electing.compareAndSet(true, false);
-        } else {
-            // query and check
-            RoleAccessor.getProposer().boost();
-        }
+        long instanceId = self.incrementInstanceId();
+        return RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
     }
 
     @Override
