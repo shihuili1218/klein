@@ -17,7 +17,6 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -39,7 +38,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -52,14 +50,11 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author 释慧利
@@ -82,8 +77,8 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void init(ConsensusProp op) {
-        logManager = StorageEngine.<Proposal>getInstance().getLogManager();
-        this.client = RpcEngine.getClient();
+        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         applyExecutor.execute(() -> {
             while (shutdownLatch == null) {
@@ -122,6 +117,14 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
+    public void keepFresh() {
+        List<Instance<Proposal>> noConfirm = logManager.getInstanceNoConfirm();
+        for (Instance<Proposal> instance : noConfirm) {
+            boost(instance.getInstanceId());
+        }
+    }
+
+    @Override
     public void loadSM(final String group, final SM sm) {
         if (sms.putIfAbsent(group, sm) != null) {
             LOG.error("the group[{}] has been loaded with sm.", group);
@@ -131,7 +134,6 @@ public class LearnerImpl implements Learner {
         if (lastSnap != null) {
             sm.loadSnap(lastSnap);
         }
-
     }
 
     private void apply(long instanceId) {

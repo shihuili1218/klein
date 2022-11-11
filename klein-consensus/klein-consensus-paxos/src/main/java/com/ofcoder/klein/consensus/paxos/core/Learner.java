@@ -40,6 +40,11 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void loadSM(final String group, final SM sm);
 
     /**
+     * Check and keep the data fresh
+     */
+    void keepFresh();
+
+    /**
      * Send the learn message to <code>target</code>
      *
      * @param instanceId instance to learn

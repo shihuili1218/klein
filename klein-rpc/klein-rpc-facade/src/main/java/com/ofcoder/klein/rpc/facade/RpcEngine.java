@@ -18,19 +18,14 @@ public class RpcEngine {
         LOG.info("start rpc engine");
         Requires.requireTrue(prop.getPort() > 0 && prop.getPort() < 0xFFFF, "port out of range:" + prop.getPort());
 
-        server = ExtensionLoader.getExtensionLoader(RpcServer.class).getJoin(rpc);
+        server = ExtensionLoader.getExtensionLoader(RpcServer.class).getJoinWithGlobal(rpc);
         server.init(prop);
-        client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin(rpc);
+        client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoinWithGlobal(rpc);
         client.init(prop);
     }
 
     public static void registerProcessor(final RpcProcessor processor) {
         server.registerProcessor(processor);
-    }
-
-    // fixme use spi for get client?
-    public static RpcClient getClient() {
-        return client;
     }
 
     public static void shutdown() {

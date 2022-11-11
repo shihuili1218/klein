@@ -1,11 +1,12 @@
 package com.ofcoder.klein.rpc.facade;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * @author 释慧利
  */
-public class Endpoint {
+public class Endpoint implements Serializable {
     private String id;
     private String ip;
     private int port;
