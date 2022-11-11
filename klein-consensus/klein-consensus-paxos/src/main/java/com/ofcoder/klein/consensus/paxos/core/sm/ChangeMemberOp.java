@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import java.util.Objects;
+
 import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -52,5 +54,18 @@ public class ChangeMemberOp implements SystemOp {
 
     public void setTarget(Endpoint target) {
         this.target = target;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ChangeMemberOp that = (ChangeMemberOp) o;
+        return getOp() == that.getOp() && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getTarget(), that.getTarget());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getNodeId(), getOp(), getTarget());
     }
 }
