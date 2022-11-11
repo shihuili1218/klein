@@ -26,12 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -120,7 +117,7 @@ public class LearnerImpl implements Learner {
     public void keepFresh() {
         List<Instance<Proposal>> noConfirm = logManager.getInstanceNoConfirm();
         for (Instance<Proposal> instance : noConfirm) {
-            boost(instance.getInstanceId());
+            RoleAccessor.getProposer().boost(instance.getInstanceId(), Proposal.NOOP);
         }
     }
 
@@ -151,7 +148,7 @@ public class LearnerImpl implements Learner {
             if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
                 apply(pre);
             } else {
-                boost(pre);
+                RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
                 apply(pre);
             }
         }
@@ -211,60 +208,6 @@ public class LearnerImpl implements Learner {
             return null;
         }
 
-    }
-
-
-    /**
-     * The method blocks until instance changes to confirmed
-     *
-     * @param instanceId id of the instance that you want to learn
-     */
-    private void boost(long instanceId) {
-        LOG.info("boosting instanceId: {}", instanceId);
-        Instance<Proposal> instance = logManager.getInstance(instanceId);
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            return;
-        }
-
-        final CompletableFuture<Result.State> future = new CompletableFuture<>();
-        if (boostFuture.putIfAbsent(instanceId, future) != null) {
-            blockBoost(instanceId);
-            return;
-        }
-
-        RoleAccessor.getProposer().boost(instanceId, new ProposeDone() {
-            @Override
-            public void negotiationDone(Result.State result) {
-                if (result != Result.State.SUCCESS) {
-                    future.complete(result);
-                }
-            }
-
-            @Override
-            public void confirmDone() {
-                future.complete(Result.State.SUCCESS);
-            }
-        });
-
-        blockBoost(instanceId);
-    }
-
-    private void blockBoost(long instanceId) {
-        try {
-
-            CompletableFuture<Result.State> future = boostFuture.get(instanceId);
-            if (future != null) {
-                Result.State state = future.get(2000, TimeUnit.MILLISECONDS);
-                if (state != Result.State.SUCCESS) {
-                    boost(instanceId);
-                }
-            }
-        } catch (ExecutionException | TimeoutException | InterruptedException e) {
-            LOG.warn("{}, boost instance[{}] failure, {}", e.getClass().getName(), instanceId, e.getMessage());
-            boost(instanceId);
-        } finally {
-            boostFuture.remove(instanceId);
-        }
     }
 
     @Override

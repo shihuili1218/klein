@@ -17,11 +17,11 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -40,7 +40,6 @@ import com.ofcoder.klein.common.disruptor.AbstractBatchEventHandler;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -56,14 +55,10 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author far.liu
@@ -83,6 +78,8 @@ public class ProposerImpl implements Proposer {
      * The instance of the Prepare phase has been executed.
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
+    private LogManager<Proposal> logManager;
+    private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
 
     public ProposerImpl(PaxosNode self) {
         this.self = self;
@@ -94,6 +91,7 @@ public class ProposerImpl implements Proposer {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
+        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
 
         // Disruptor to run propose.
         Disruptor<ProposalWithDone> proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
@@ -239,14 +237,60 @@ public class ProposerImpl implements Proposer {
         }
     }
 
+    @Override
+    public boolean boost(long instanceId, Proposal proposal) {
+        LOG.info("boosting instanceId: {}", instanceId);
+        Instance<Proposal> instance = logManager.getInstance(instanceId);
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            return instance.getGrantedValue().contains(proposal);
+        }
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        if (boostLatch.putIfAbsent(instanceId, latch) != null) {
+            return blockBoost(instanceId, proposal);
+        }
+
+        tryBoost(instanceId, proposal, new ProposeDone() {
+            @Override
+            public void negotiationDone(Result.State result) {
+                if (result != Result.State.SUCCESS) {
+                    latch.countDown();
+                }
+            }
+
+            @Override
+            public void confirmDone() {
+                latch.countDown();
+            }
+        });
+
+        return blockBoost(instanceId, proposal);
+    }
+
+    private boolean blockBoost(long instanceId, Proposal proposal) {
+        try {
+
+            CountDownLatch latch = boostLatch.get(instanceId);
+            if (latch != null) {
+                boolean await = latch.await(2000, TimeUnit.MILLISECONDS);
+                //
+            }
+            return boost(instanceId, proposal);
+        } catch (InterruptedException e) {
+            LOG.warn("{}, boost instance[{}] failure, {}", e.getClass().getName(), instanceId, e.getMessage());
+            return boost(instanceId, proposal);
+        } finally {
+            boostLatch.remove(instanceId);
+        }
+    }
+
     /**
      * try to boost instance
      *
      * @param instanceId id of the instance that you want to boost
      * @param done       boost callback, NOTICE: it may be called multiple times
      */
-    @Override
-    public void boost(final long instanceId, final Proposal proposal, final ProposeDone done) {
+    private void tryBoost(final long instanceId, final Proposal proposal, final ProposeDone done) {
 
         Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {

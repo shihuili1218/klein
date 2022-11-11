@@ -36,14 +36,11 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
     <E extends Serializable> void propose(final String group, final E data, final ProposeDone done);
 
     /**
-     * Boost instance
+     * The method blocks until instance changes to confirmed
      *
-     * @param instanceId id of instance for boost
-     * @param done       callback
+     * @param instanceId      id of boost instance
+     * @param defaultProposal default proposal
+     * @return <code>true</code> if the consensus proposal is defaultProposal, else <code>false</code>
      */
-    default void boost(final long instanceId, final ProposeDone done) {
-        boost(instanceId, Proposal.NOOP, done);
-    }
-
-    void boost(final long instanceId, final Proposal proposal, final ProposeDone done);
+    boolean boost(final long instanceId, final Proposal defaultProposal);
 }
