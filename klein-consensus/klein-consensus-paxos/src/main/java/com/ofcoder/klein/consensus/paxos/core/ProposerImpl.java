@@ -60,7 +60,9 @@ import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
@@ -89,7 +91,7 @@ public class ProposerImpl implements Proposer {
     @Override
     public void init(ConsensusProp op) {
         this.prop = op;
-        this.client = RpcEngine.getClient();
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
         this.acceptTimeout = op.getRoundTimeout() - prepareTimeout;
 
@@ -244,19 +246,19 @@ public class ProposerImpl implements Proposer {
      * @param done       boost callback, NOTICE: it may be called multiple times
      */
     @Override
-    public void boost(final long instanceId, final ProposeDone done) {
+    public void boost(final long instanceId, final Proposal proposal, final ProposeDone done) {
 
-        Instance<Proposal> instance = StorageEngine.<Proposal>getInstance()
-                .getLogManager().getInstance(instanceId);
+        Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            done.applyDone(null);
+            done.negotiationDone(Result.State.SUCCESS);
             done.confirmDone();
+            done.applyDone(null);
             return;
         }
 
         List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
         localValue = CollectionUtils.isEmpty(localValue)
-                ? Lists.newArrayList(Proposal.NOOP)
+                ? Lists.newArrayList(proposal)
                 : localValue;
         List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
             ProposalWithDone event = new ProposalWithDone();

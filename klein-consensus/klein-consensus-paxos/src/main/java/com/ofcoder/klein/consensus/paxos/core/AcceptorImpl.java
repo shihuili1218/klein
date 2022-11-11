@@ -33,6 +33,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.BaseReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.StorageEngine;
@@ -52,7 +53,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public void init(ConsensusProp op) {
-        logManager = StorageEngine.<Proposal>getInstance().getLogManager();
+        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
     }
 
     @Override

@@ -21,7 +21,6 @@ import java.io.Serializable;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.sm.SM;
-import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
@@ -35,13 +34,12 @@ public class GroupWrapper {
     public GroupWrapper(final String group, final SM sm) {
         this.group = group;
         this.sm = sm;
-        KleinProp kleinProp = KleinProp.loadIfPresent();
-        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin(kleinProp.getConsensus());
+        this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin();
         this.consensus.loadSM(this.group, this.sm);
     }
 
     public <E extends Serializable, D extends Serializable> Result<D> propose(E data) {
-        return propose(data,false);
+        return propose(data, false);
     }
 
     public <E extends Serializable, D extends Serializable> Result<D> propose(E data, boolean apply) {
