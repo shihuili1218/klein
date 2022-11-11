@@ -270,12 +270,8 @@ public class LearnerImpl implements Learner {
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
-        InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(LearnReq.class.getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        client.sendRequestAsync(target, param, new AbstractInvokeCallback<LearnRes>() {
+        client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
             @Override
             public void error(Throwable err) {
                 LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
@@ -321,12 +317,8 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req);
 
         // for other members
-        InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(ConfirmReq.class.getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
         self.getMemberConfiguration().getMembersWithoutSelf().forEach(it -> {
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<Serializable>() {
+            client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
                     LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
