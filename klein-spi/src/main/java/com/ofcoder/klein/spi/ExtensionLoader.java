@@ -17,10 +17,6 @@
 
 package com.ofcoder.klein.spi;
 
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -34,7 +30,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import sun.misc.Unsafe;
 
 /**
  * The type Extension loader.
@@ -45,25 +48,26 @@ import java.util.stream.Collectors;
  */
 @SuppressWarnings("all")
 public final class ExtensionLoader<T> {
-    
+
     private static final Logger LOG = LoggerFactory.getLogger(ExtensionLoader.class);
-    
+
     private static final String SHENYU_DIRECTORY = "META-INF/services/";
-    
+
     private static final Map<Class<?>, ExtensionLoader<?>> LOADERS = new ConcurrentHashMap<>();
-    
+
     private final Class<T> clazz;
-    
+
     private final ClassLoader classLoader;
-    
+
     private final Holder<Map<String, ClassEntity>> cachedClasses = new Holder<>();
-    
+
     private final Map<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
-    
+
     private final Map<Class<?>, Object> joinInstances = new ConcurrentHashMap<>();
-    
+
     private String cachedDefaultName;
-    
+    private AtomicReference<String> globalName = new AtomicReference<>(null);
+
     private final Comparator<Holder<Object>> holderComparator = (o1, o2) -> {
         if (o1.getOrder() > o2.getOrder()) {
             return 1;
@@ -73,7 +77,7 @@ public final class ExtensionLoader<T> {
             return 0;
         }
     };
-    
+
     private final Comparator<ClassEntity> classEntityComparator = (o1, o2) -> {
         if (o1.getOrder() > o2.getOrder()) {
             return 1;
@@ -83,7 +87,7 @@ public final class ExtensionLoader<T> {
             return 0;
         }
     };
-    
+
     /**
      * Instantiates a new Extension loader.
      *
@@ -96,7 +100,7 @@ public final class ExtensionLoader<T> {
             ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getExtensionClassesEntity();
         }
     }
-    
+
     /**
      * Gets extension loader.
      *
@@ -106,9 +110,9 @@ public final class ExtensionLoader<T> {
      * @return the extension loader.
      */
     public static <T> ExtensionLoader<T> getExtensionLoader(final Class<T> clazz, final ClassLoader cl) {
-        
+
         Objects.requireNonNull(clazz, "extension clazz is null");
-        
+
         if (!clazz.isInterface()) {
             throw new IllegalArgumentException("extension clazz (" + clazz + ") is not interface!");
         }
@@ -122,7 +126,7 @@ public final class ExtensionLoader<T> {
         LOADERS.putIfAbsent(clazz, new ExtensionLoader<>(clazz, cl));
         return (ExtensionLoader<T>) LOADERS.get(clazz);
     }
-    
+
     /**
      * Gets extension loader.
      *
@@ -133,9 +137,9 @@ public final class ExtensionLoader<T> {
     public static <T> ExtensionLoader<T> getExtensionLoader(final Class<T> clazz) {
         return getExtensionLoader(clazz, ExtensionLoader.class.getClassLoader());
     }
-    
+
     /**
-     * Gets default join.
+     * Get default join.
      *
      * @return the default join.
      */
@@ -146,9 +150,27 @@ public final class ExtensionLoader<T> {
         }
         return getJoin(cachedDefaultName);
     }
-    
+
+    public T getJoinWithGlobal(final String name) {
+        if (!globalName.compareAndSet(null, name)) {
+            if (!StringUtils.equals(name, globalName.get())){
+                throw new SpiException(String.format("get global join, but global join[%s] already exists", globalName));
+            }
+        }
+        return getJoin(name);
+    }
+
     /**
-     * Gets join.
+     * Get global join.
+     *
+     * @return the default join.
+     */
+    public T getJoin() {
+        return getJoin(globalName.get());
+    }
+
+    /**
+     * Get join.
      *
      * @param name the name
      * @return the join.
@@ -177,7 +199,7 @@ public final class ExtensionLoader<T> {
         }
         return (T) value;
     }
-    
+
     /**
      * get all join spi.
      *
@@ -204,7 +226,7 @@ public final class ExtensionLoader<T> {
         });
         return joins;
     }
-    
+
     @SuppressWarnings("unchecked")
     private Holder<T> createExtension(final String name) {
         ClassEntity classEntity = getExtensionClassesEntity().get(name);
@@ -220,7 +242,7 @@ public final class ExtensionLoader<T> {
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new IllegalStateException("Extension instance(name: " + name + ", class: "
                         + aClass + ")  could not be instantiated: " + e.getMessage(), e);
-                
+
             }
         }
         Holder<T> objectHolder = new Holder<>();
@@ -228,7 +250,7 @@ public final class ExtensionLoader<T> {
         objectHolder.setValue((T) o);
         return objectHolder;
     }
-    
+
     /**
      * Gets extension classes.
      *
@@ -238,7 +260,7 @@ public final class ExtensionLoader<T> {
         Map<String, ClassEntity> classes = this.getExtensionClassesEntity();
         return classes.values().stream().collect(Collectors.toMap(e -> e.getName(), x -> x.getClazz(), (a, b) -> a));
     }
-    
+
     private Map<String, ClassEntity> getExtensionClassesEntity() {
         Map<String, ClassEntity> classes = cachedClasses.getValue();
         if (Objects.isNull(classes)) {
@@ -253,7 +275,7 @@ public final class ExtensionLoader<T> {
         }
         return classes;
     }
-    
+
     private Map<String, ClassEntity> loadExtensionClass() {
         SPI annotation = clazz.getAnnotation(SPI.class);
         if (Objects.nonNull(annotation)) {
@@ -266,7 +288,7 @@ public final class ExtensionLoader<T> {
         loadDirectory(classes);
         return classes;
     }
-    
+
     /**
      * Load files under SHENYU_DIRECTORY.
      */
@@ -285,7 +307,7 @@ public final class ExtensionLoader<T> {
             LOG.error("load extension class error {}", fileName, t);
         }
     }
-    
+
     private void loadResources(final Map<String, ClassEntity> classes, final URL url) throws IOException {
         try (InputStream inputStream = url.openStream()) {
             Properties properties = new Properties();
@@ -305,7 +327,7 @@ public final class ExtensionLoader<T> {
             throw new IllegalStateException("load extension resources error", e);
         }
     }
-    
+
     private void loadClass(final Map<String, ClassEntity> classes,
                            final String name, final String classPath) throws ClassNotFoundException {
         Class<?> subClass = Objects.nonNull(this.classLoader) ? Class.forName(classPath, true, this.classLoader) : Class.forName(classPath);
@@ -325,18 +347,18 @@ public final class ExtensionLoader<T> {
                     + name + " on " + oldClassEntity.getClazz().getName() + " or " + subClass.getName());
         }
     }
-    
+
     /**
      * The type Holder.
      *
      * @param <T> the type parameter.
      */
     public static class Holder<T> {
-        
+
         private volatile T value;
-        
+
         private Integer order;
-        
+
         /**
          * Gets value.
          *
@@ -345,7 +367,7 @@ public final class ExtensionLoader<T> {
         public T getValue() {
             return value;
         }
-        
+
         /**
          * Sets value.
          *
@@ -354,7 +376,7 @@ public final class ExtensionLoader<T> {
         public void setValue(final T value) {
             this.value = value;
         }
-        
+
         /**
          * set order.
          *
@@ -363,7 +385,7 @@ public final class ExtensionLoader<T> {
         public void setOrder(final Integer order) {
             this.order = order;
         }
-        
+
         /**
          * get order.
          *
@@ -373,30 +395,30 @@ public final class ExtensionLoader<T> {
             return order;
         }
     }
-    
+
     static final class ClassEntity {
-        
+
         /**
          * name.
          */
         private String name;
-        
+
         /**
          * order.
          */
         private Integer order;
-        
+
         /**
          * class.
          */
         private Class<?> clazz;
-        
+
         private ClassEntity(final String name, final Integer order, final Class<?> clazz) {
             this.name = name;
             this.order = order;
             this.clazz = clazz;
         }
-        
+
         /**
          * get class.
          *
@@ -405,7 +427,7 @@ public final class ExtensionLoader<T> {
         public Class<?> getClazz() {
             return clazz;
         }
-        
+
         /**
          * set class.
          *
@@ -414,7 +436,7 @@ public final class ExtensionLoader<T> {
         public void setClazz(final Class<?> clazz) {
             this.clazz = clazz;
         }
-        
+
         /**
          * get name.
          *
@@ -423,7 +445,7 @@ public final class ExtensionLoader<T> {
         public String getName() {
             return name;
         }
-        
+
         /**
          * get order.
          *

@@ -26,7 +26,7 @@ public class RoleAccessor {
 
     private static Proposer proposer;
     private static Acceptor acceptor;
-    private static LearnerImpl learner;
+    private static Learner learner;
     private static Master master;
 
     public static Proposer getProposer() {
@@ -37,7 +37,7 @@ public class RoleAccessor {
         return acceptor;
     }
 
-    public static LearnerImpl getLearner() {
+    public static Learner getLearner() {
         return learner;
     }
 

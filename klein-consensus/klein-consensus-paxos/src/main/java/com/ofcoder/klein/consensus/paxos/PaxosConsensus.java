@@ -38,7 +38,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.MateData;
@@ -119,7 +121,9 @@ public class PaxosConsensus implements Consensus {
 
     private void loadNode() {
         // reload self information from storage.
-        LogManager<Proposal> logManager = StorageEngine.<Proposal>getInstance().getLogManager();
+
+        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+
         MateData mateData = logManager.getMateData();
         PaxosMemberConfiguration configuration;
         if (CollectionUtils.isNotEmpty(mateData.getMembers())) {
@@ -152,7 +156,7 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void shutdown() {
-        LogManager<Proposal> logManager = StorageEngine.<Proposal>getInstance().getLogManager();
+        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         logManager.updateConfiguration(self.getMemberConfiguration().getAllMembers().stream().map(
                 it -> {
                     Member member = new Member();

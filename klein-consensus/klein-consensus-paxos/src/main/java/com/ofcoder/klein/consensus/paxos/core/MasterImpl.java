@@ -16,7 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.nio.ByteBuffer;
+import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -29,24 +29,23 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
  * @author 释慧利
@@ -59,6 +58,7 @@ public class MasterImpl implements Master {
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
+    private final AtomicBoolean changing = new AtomicBoolean(false);
 
     public MasterImpl(PaxosNode self) {
         this.self = self;
@@ -77,7 +77,7 @@ public class MasterImpl implements Master {
     @Override
     public void init(ConsensusProp op) {
         this.prop = op;
-        this.client = RpcEngine.getClient();
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         electTimer = new RepeatedTimer("elect-master", calculateElectionMasterInterval()) {
             @Override
@@ -100,17 +100,48 @@ public class MasterImpl implements Master {
     }
 
     private int calculateElectionMasterInterval() {
-        return ThreadLocalRandom.current().nextInt(700, 900);
+        return ThreadLocalRandom.current().nextInt(700, 1000);
     }
 
     @Override
-    public void addMember(Endpoint endpoint) {
+    public boolean addMember(Endpoint endpoint) {
+        if (self.getMemberConfiguration().isValid(endpoint.getId())) {
+            return true;
+        }
 
+        // boost all instance
+
+        if (!changing.compareAndSet(false, true)) {
+            return false;
+        }
+
+        LOG.info("start add member.");
+        ChangeMemberOp req = new ChangeMemberOp();
+        req.setNodeId(self.getSelf().getId());
+        req.setTarget(endpoint);
+        req.setOp(ChangeMemberOp.ADD);
+
+        Consensus consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin();
+        Result<Serializable> propose = consensus.propose(MasterSM.GROUP, req, true);
+        if (propose.getState() != Result.State.SUCCESS) {
+            electing.compareAndSet(true, false);
+        } else {
+            // query and check
+            RoleAccessor.getProposer().boost();
+        }
     }
 
     @Override
     public void removeMember(Endpoint endpoint) {
+        if (!changing.compareAndSet(false, true)) {
+            return;
+        }
+        try {
 
+        } finally {
+            electing.compareAndSet(true, false);
+
+        }
     }
 
     @Override

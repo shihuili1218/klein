@@ -12,7 +12,7 @@ public final class StorageEngine<P extends Serializable> {
     private LogManager<P> logManager;
 
     public void startup(String type, StorageProp prop) {
-        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin(type);
+        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoinWithGlobal(type);
         logManager.init(prop);
     }
 
@@ -21,10 +21,6 @@ public final class StorageEngine<P extends Serializable> {
             logManager.shutdown();
         }
 
-    }
-
-    public LogManager<P> getLogManager() {
-        return logManager;
     }
 
     public static <P extends Serializable> StorageEngine<P> getInstance() {

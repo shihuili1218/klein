@@ -14,26 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.paxos.core.sm;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
+import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * @author 释慧利
  */
-public interface Master extends Lifecycle<ConsensusProp> {
-    // 成员变更后，需要协商一个NOOP提案，
-    boolean addMember(Endpoint endpoint);
+public class ChangeMemberOp implements SystemOp {
+    public static final byte ADD = 0;
+    public static final byte REMOVE = 1;
+    private String nodeId;
+    private byte op;
+    private Endpoint target;
 
-    void removeMember(Endpoint endpoint);
 
-    // todo master要拥有最完整的数据，晋升后需要立即推进未执行状态转移的instance，以保证成员变更的正确性
-    void electingMaster();
+    public String getNodeId() {
+        return nodeId;
+    }
 
-    boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
 
-    void onChangeMaster(final String newMaster);
+    public byte getOp() {
+        return op;
+    }
+
+    public void setOp(byte op) {
+        this.op = op;
+    }
+
+    public Endpoint getTarget() {
+        return target;
+    }
+
+    public void setTarget(Endpoint target) {
+        this.target = target;
+    }
 }
