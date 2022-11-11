@@ -172,12 +172,8 @@ public class MasterImpl implements Master {
         }
 
         // for other members
-        InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(Ping.class.getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
         memberConfiguration.getMembersWithoutSelf().forEach(it -> {
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<Pong>() {
+            client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
                     LOG.debug("node: " + it.getId() + ", " + err.getMessage());

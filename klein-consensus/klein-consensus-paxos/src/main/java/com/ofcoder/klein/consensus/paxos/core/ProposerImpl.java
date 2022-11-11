@@ -183,12 +183,8 @@ public class ProposerImpl implements Proposer {
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
-        InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(AcceptReq.class.getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
         memberConfiguration.getMembersWithoutSelf().forEach(it -> {
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<AcceptRes>() {
+            client.sendRequestAsync(it, req, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
@@ -340,12 +336,8 @@ public class ProposerImpl implements Proposer {
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
 
         // for other members
-        InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(PrepareReq.class.getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
         memberConfiguration.getMembersWithoutSelf().forEach(it -> {
-            client.sendRequestAsync(it, param, new AbstractInvokeCallback<PrepareRes>() {
+            client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
                     LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());
