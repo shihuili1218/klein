@@ -14,7 +14,7 @@ public class PaxosNodeTest extends TestCase {
 
     public void testGenerateNextProposalNo() {
         PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
-        configuration.writeOn(
+        configuration.init(
                 Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220))
                 , new Endpoint("3", "127.0.0.1", 1220)
         );
