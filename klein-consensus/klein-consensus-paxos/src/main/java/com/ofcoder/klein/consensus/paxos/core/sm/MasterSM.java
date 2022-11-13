@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 
 /**
  * @author 释慧利
@@ -37,15 +36,32 @@ public class MasterSM extends AbstractSM {
 
     @Override
     protected Object apply(Object data) {
-        LOG.info("master statemachine apply, {}", data);
-        if (!(data instanceof ElectionOp)) {
-            LOG.debug("applying MasterSM, found unknown parameter types, data.type: {}", data != null ? data.getClass().getName() : null);
-            return false;
+        LOG.info("master statemachine apply, {}", data.getClass().getSimpleName());
+        if (data instanceof ElectionOp) {
+            electMaster((ElectionOp) data);
+        } else if (data instanceof ChangeMemberOp) {
+            changeMember((ChangeMemberOp) data);
+        } else {
+            LOG.error("applying MasterSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
         }
-        ElectionOp op = (ElectionOp) data;
-        boolean changed = configuration.changeMaster(op.getNodeId());
+        return null;
+    }
 
-        return changed;
+    private void changeMember(ChangeMemberOp op) {
+        switch (op.getOp()) {
+            case ChangeMemberOp.ADD:
+                configuration.writeOn(op.getTarget());
+                break;
+            case ChangeMemberOp.REMOVE:
+                configuration.writeOff(op.getTarget());
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void electMaster(ElectionOp op) {
+        configuration.changeMaster(op.getNodeId());
     }
 
     @Override

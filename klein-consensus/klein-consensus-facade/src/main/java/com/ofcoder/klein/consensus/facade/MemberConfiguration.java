@@ -35,7 +35,7 @@ public abstract class MemberConfiguration implements Serializable {
     }
 
     public Set<Endpoint> getMembersWithoutSelf() {
-        final String  selfId= self.getId();
+        final String selfId = self.getId();
         return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId())).collect(Collectors.toSet());
     }
 
@@ -44,7 +44,7 @@ public abstract class MemberConfiguration implements Serializable {
         return allMembers.containsKey(nodeId);
     }
 
-    public void writeOn(List<Endpoint> nodes, Endpoint self) {
+    public void init(List<Endpoint> nodes, Endpoint self) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
@@ -52,6 +52,11 @@ public abstract class MemberConfiguration implements Serializable {
         this.self = self;
         version.incrementAndGet();
 
+    }
+
+    public void writeOn(Endpoint node) {
+        allMembers.put(node.getId(), node);
+        version.incrementAndGet();
     }
 
     public void writeOff(Endpoint node) {

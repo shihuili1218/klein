@@ -38,14 +38,12 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.MateData;
 import com.ofcoder.klein.storage.facade.Member;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author far.liu
@@ -128,10 +126,10 @@ public class PaxosConsensus implements Consensus {
         PaxosMemberConfiguration configuration;
         if (CollectionUtils.isNotEmpty(mateData.getMembers())) {
             configuration = new PaxosMemberConfiguration();
-            configuration.writeOn(prop.getMembers(), this.prop.getSelf());
+            configuration.init(prop.getMembers(), this.prop.getSelf());
         } else {
             configuration = new PaxosMemberConfiguration();
-            configuration.writeOn(this.prop.getMembers(), this.prop.getSelf()
+            configuration.init(this.prop.getMembers(), this.prop.getSelf()
             );
         }
 
