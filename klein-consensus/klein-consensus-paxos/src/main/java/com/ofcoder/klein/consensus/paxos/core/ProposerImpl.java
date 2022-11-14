@@ -210,6 +210,9 @@ public class ProposerImpl implements Proposer {
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
         LOG.info("handling node-{}'s accept response, proposalNo: {}, instanceId: {}, remote.instanceState: {}", result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState());
+        self.setCurProposalNo(result.getCurProposalNo());
+        self.setCurInstanceId(result.getCurInstanceId());
+
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
             callback.learn(ctxt, it);
@@ -225,8 +228,6 @@ public class ProposerImpl implements Proposer {
             }
         } else {
             ctxt.getAcceptQuorum().refuse(it);
-
-            self.setCurProposalNo(result.getProposalNo());
 
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
@@ -407,6 +408,9 @@ public class ProposerImpl implements Proposer {
     private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
             , final PrepareRes result, final Endpoint it) {
         LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), proposalNo, result.getResult());
+        self.setCurProposalNo(result.getCurProposalNo());
+        self.setCurInstanceId(result.getCurInstanceId());
+
         for (Instance<Proposal> instance : result.getInstances()) {
             if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != null) {
                 synchronized (preparedInstanceMap) {
@@ -427,7 +431,6 @@ public class ProposerImpl implements Proposer {
             }
         } else {
             ctxt.getPrepareQuorum().refuse(it);
-            self.setCurProposalNo(result.getProposalNo());
 
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
