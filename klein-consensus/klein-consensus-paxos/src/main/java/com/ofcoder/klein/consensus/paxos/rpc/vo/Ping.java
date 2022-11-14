@@ -20,10 +20,32 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
  * @author 释慧利
  */
 public class Ping extends BaseReq {
+
+    private long maxAppliedInstanceId;
+    private long maxInstanceId;
+
+    public long getMaxAppliedInstanceId() {
+        return maxAppliedInstanceId;
+    }
+
+    public void setMaxAppliedInstanceId(long maxAppliedInstanceId) {
+        this.maxAppliedInstanceId = maxAppliedInstanceId;
+    }
+
+    public long getMaxInstanceId() {
+        return maxInstanceId;
+    }
+
+    public void setMaxInstanceId(long maxInstanceId) {
+        this.maxInstanceId = maxInstanceId;
+    }
+
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
+        private long maxAppliedInstanceId;
+        private long maxInstanceId;
 
         private Builder() {
         }
@@ -47,11 +69,23 @@ public class Ping extends BaseReq {
             return this;
         }
 
+        public Builder maxAppliedInstanceId(long maxAppliedInstanceId) {
+            this.maxAppliedInstanceId = maxAppliedInstanceId;
+            return this;
+        }
+
+        public Builder maxInstanceId(long maxInstanceId) {
+            this.maxInstanceId = maxInstanceId;
+            return this;
+        }
+
         public Ping build() {
             Ping ping = new Ping();
             ping.setNodeId(nodeId);
             ping.setProposalNo(proposalNo);
             ping.setMemberConfigurationVersion(memberConfigurationVersion);
+            ping.maxInstanceId = this.maxInstanceId;
+            ping.maxAppliedInstanceId = this.maxAppliedInstanceId;
             return ping;
         }
     }
