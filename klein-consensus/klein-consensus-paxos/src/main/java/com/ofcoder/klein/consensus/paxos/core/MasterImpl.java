@@ -217,11 +217,9 @@ public class MasterImpl implements Master {
         try {
             Quorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
             if (grantResult != Quorum.GrantResult.PASS) {
-                LOG.info("心跳多数派拒绝，重新选举master");
                 restartElect();
             }
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            LOG.info(e.getClass().getName() + "，心跳等待超时，重新选举master");
             restartElect();
         }
     }
@@ -279,6 +277,9 @@ public class MasterImpl implements Master {
     @Override
     public void onChangeMaster(final String newMaster) {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
+
+            // todo apply instance
+
             restartHeartbeat();
         } else {
             restartElect();
