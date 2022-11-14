@@ -12,45 +12,35 @@ import com.ofcoder.klein.storage.facade.Instance;
 public class PrepareRes implements Serializable {
     private String nodeId;
     private boolean result;
-    private long proposalNo;
+    private long curProposalNo;
+    private long curInstanceId;
     private List<Instance<Proposal>> instances;
 
     public String getNodeId() {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
-        this.nodeId = nodeId;
-    }
-
     public boolean getResult() {
         return result;
     }
 
-    public void setResult(boolean result) {
-        this.result = result;
+    public long getCurProposalNo() {
+        return curProposalNo;
     }
 
-    public long getProposalNo() {
-        return proposalNo;
-    }
-
-    public void setProposalNo(long proposalNo) {
-        this.proposalNo = proposalNo;
+    public long getCurInstanceId() {
+        return curInstanceId;
     }
 
     public List<Instance<Proposal>> getInstances() {
         return instances;
     }
 
-    public void setInstances(List<Instance<Proposal>> instances) {
-        this.instances = instances;
-    }
-
     public static final class Builder {
         private String nodeId;
         private boolean result;
-        private long proposalNo;
+        private long curProposalNo;
+        private long curInstanceId;
         private List<Instance<Proposal>> instances;
 
         private Builder() {
@@ -70,8 +60,13 @@ public class PrepareRes implements Serializable {
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
-            this.proposalNo = proposalNo;
+        public Builder curProposalNo(long curProposalNo) {
+            this.curProposalNo = curProposalNo;
+            return this;
+        }
+
+        public Builder curInstanceId(long curInstanceId) {
+            this.curInstanceId = curInstanceId;
             return this;
         }
 
@@ -82,10 +77,11 @@ public class PrepareRes implements Serializable {
 
         public PrepareRes build() {
             PrepareRes prepareRes = new PrepareRes();
-            prepareRes.setNodeId(nodeId);
-            prepareRes.setResult(result);
-            prepareRes.setProposalNo(proposalNo);
+            prepareRes.result = this.result;
+            prepareRes.curInstanceId = this.curInstanceId;
             prepareRes.instances = this.instances;
+            prepareRes.curProposalNo = this.curProposalNo;
+            prepareRes.nodeId = this.nodeId;
             return prepareRes;
         }
     }

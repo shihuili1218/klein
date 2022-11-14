@@ -213,6 +213,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void learn(long instanceId, Endpoint target) {
+        // todo 同一时间同一个instance，有一个线程执行即可
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();

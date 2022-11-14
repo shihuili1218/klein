@@ -28,6 +28,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -250,14 +251,17 @@ public class MasterImpl implements Master {
 
     private void checkAndUpdateInstance(Ping request) {
         self.setCurInstanceId(request.getMaxInstanceId());
+
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
 
         long localAppliedInstanceId = self.getCurAppliedInstanceId();
         long diff = request.getMaxAppliedInstanceId() - localAppliedInstanceId;
-        if (diff > 0){
-            for (int i = 1; i <= diff; i++) {
-                RoleAccessor.getLearner().learn(localAppliedInstanceId, from);
-            }
+        if (diff > 0) {
+            ThreadExecutor.submit(() -> {
+                for (int i = 1; i <= diff; i++) {
+                    RoleAccessor.getLearner().learn(localAppliedInstanceId, from);
+                }
+            });
         }
     }
 
