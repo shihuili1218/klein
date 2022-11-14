@@ -28,6 +28,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class PaxosNode extends Node {
     private long curInstanceId = 0;
     private final Object instanceIdLock = new Object();
+    private long curAppliedInstanceId = 0;
     private long curProposalNo = 0;
     private final Object proposalNoLock = new Object();
     private Endpoint self;
@@ -94,17 +95,25 @@ public class PaxosNode extends Node {
         return memberConfiguration;
     }
 
+    public long getCurAppliedInstanceId() {
+        return curAppliedInstanceId;
+    }
+
+    public void setCurAppliedInstanceId(long curAppliedInstanceId) {
+        this.curAppliedInstanceId = curAppliedInstanceId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PaxosNode paxosNode = (PaxosNode) o;
-        return Objects.equals(getCurInstanceId(), paxosNode.getCurInstanceId()) && Objects.equals(getCurProposalNo(), paxosNode.getCurProposalNo()) && Objects.equals(getSelf(), paxosNode.getSelf()) && Objects.equals(memberConfiguration, paxosNode.memberConfiguration);
+        return curInstanceId == paxosNode.curInstanceId && curAppliedInstanceId == paxosNode.curAppliedInstanceId && curProposalNo == paxosNode.curProposalNo && self.equals(paxosNode.self) && memberConfiguration.equals(paxosNode.memberConfiguration);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCurInstanceId(), getCurProposalNo(), getSelf(), memberConfiguration);
+        return Objects.hash(curInstanceId, curAppliedInstanceId, curProposalNo, self, memberConfiguration);
     }
 
     @Override
@@ -119,6 +128,7 @@ public class PaxosNode extends Node {
 
     public static final class Builder {
         private long curInstanceId;
+        private long curAppliedInstanceId;
         private long curProposalNo;
         private Endpoint self;
         private PaxosMemberConfiguration memberConfiguration;
@@ -132,6 +142,11 @@ public class PaxosNode extends Node {
 
         public Builder curInstanceId(long curInstanceId) {
             this.curInstanceId = curInstanceId;
+            return this;
+        }
+
+        public Builder curAppliedInstanceId(long curAppliedInstanceId) {
+            this.curAppliedInstanceId = curAppliedInstanceId;
             return this;
         }
 
@@ -154,6 +169,7 @@ public class PaxosNode extends Node {
             PaxosNode paxosNode = new PaxosNode();
             paxosNode.curProposalNo = this.curProposalNo;
             paxosNode.curInstanceId = this.curInstanceId;
+            paxosNode.curAppliedInstanceId = this.curAppliedInstanceId;
             paxosNode.self = this.self;
             paxosNode.memberConfiguration = this.memberConfiguration;
             return paxosNode;

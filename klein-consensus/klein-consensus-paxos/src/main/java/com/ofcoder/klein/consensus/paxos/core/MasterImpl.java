@@ -104,7 +104,7 @@ public class MasterImpl implements Master {
 
     @Override
     public boolean addMember(Endpoint endpoint) {
-        return changeMember(ChangeMemberOp.ADD,endpoint);
+        return changeMember(ChangeMemberOp.ADD, endpoint);
     }
 
     @Override
@@ -182,6 +182,8 @@ public class MasterImpl implements Master {
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
+                .maxAppliedInstanceId(self.getCurAppliedInstanceId())
+                .maxInstanceId(self.getCurInstanceId())
                 .build();
 
         final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
@@ -229,7 +231,10 @@ public class MasterImpl implements Master {
         if (memberConfiguration.getMaster() != null
                 && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
-            // todo: check and update instance
+            // check and update instance
+            checkAndUpdateInstance(request);
+
+            // reset and restart election timer
             if (!isSelf) {
                 restartElect();
             }
@@ -239,6 +244,20 @@ public class MasterImpl implements Master {
             LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId()
                     , memberConfiguration, request.getMemberConfigurationVersion());
             return false;
+        }
+    }
+
+
+    private void checkAndUpdateInstance(Ping request) {
+        self.setCurInstanceId(request.getMaxInstanceId());
+        Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
+
+        long localAppliedInstanceId = self.getCurAppliedInstanceId();
+        long diff = request.getMaxAppliedInstanceId() - localAppliedInstanceId;
+        if (diff > 0){
+            for (int i = 1; i <= diff; i++) {
+                RoleAccessor.getLearner().learn(localAppliedInstanceId, from);
+            }
         }
     }
 

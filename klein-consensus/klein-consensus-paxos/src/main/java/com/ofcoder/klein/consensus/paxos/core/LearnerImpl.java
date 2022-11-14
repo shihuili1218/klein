@@ -164,6 +164,7 @@ public class LearnerImpl implements Learner {
                 return;
             }
             logManager.updateInstance(localInstance);
+            self.setCurAppliedInstanceId(instanceId);
         } finally {
             logManager.getLock().writeLock().unlock();
         }
