@@ -104,6 +104,15 @@ public class MasterImpl implements Master {
 
     @Override
     public boolean addMember(Endpoint endpoint) {
+        return changeMember(ChangeMemberOp.ADD,endpoint);
+    }
+
+    @Override
+    public void removeMember(Endpoint endpoint) {
+        changeMember(ChangeMemberOp.REMOVE, endpoint);
+    }
+
+    private boolean changeMember(byte op, Endpoint endpoint) {
         if (self.getMemberConfiguration().isValid(endpoint.getId())) {
             return true;
         }
@@ -117,23 +126,10 @@ public class MasterImpl implements Master {
         ChangeMemberOp req = new ChangeMemberOp();
         req.setNodeId(self.getSelf().getId());
         req.setTarget(endpoint);
-        req.setOp(ChangeMemberOp.ADD);
+        req.setOp(op);
 
         long instanceId = self.incrementInstanceId();
         return RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
-    }
-
-    @Override
-    public void removeMember(Endpoint endpoint) {
-        if (!changing.compareAndSet(false, true)) {
-            return;
-        }
-        try {
-
-        } finally {
-            electing.compareAndSet(true, false);
-
-        }
     }
 
     @Override
