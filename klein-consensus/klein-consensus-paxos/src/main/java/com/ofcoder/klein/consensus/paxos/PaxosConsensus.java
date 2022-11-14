@@ -138,6 +138,7 @@ public class PaxosConsensus implements Consensus {
                 .curInstanceId(mateData.getMaxInstanceId())
                 .curProposalNo(mateData.getMaxProposalNo())
                 .memberConfiguration(configuration)
+                .curAppliedInstanceId(mateData.getMaxAppliedInstanceId())
                 .build();
         LOG.info("load node: {}", self);
     }

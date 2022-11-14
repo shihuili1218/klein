@@ -39,6 +39,9 @@ public abstract class MemberConfiguration implements Serializable {
         return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId())).collect(Collectors.toSet());
     }
 
+    public Endpoint getEndpointById(String id) {
+        return allMembers.getOrDefault(id, null);
+    }
 
     public boolean isValid(String nodeId) {
         return allMembers.containsKey(nodeId);
