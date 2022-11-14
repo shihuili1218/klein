@@ -10,8 +10,8 @@ import com.ofcoder.klein.storage.facade.Instance;
 public class AcceptRes implements Serializable {
     private String nodeId;
     private boolean result;
-    private long proposalNo;
-    private long instanceId;
+    private long curProposalNo;
+    private long curInstanceId;
     private Instance.State instanceState;
 
     public String getNodeId() {
@@ -22,13 +22,12 @@ public class AcceptRes implements Serializable {
         return result;
     }
 
-    public long getProposalNo() {
-        return proposalNo;
+    public long getCurProposalNo() {
+        return curProposalNo;
     }
 
-
-    public long getInstanceId() {
-        return instanceId;
+    public long getCurInstanceId() {
+        return curInstanceId;
     }
 
     public Instance.State getInstanceState() {
@@ -59,12 +58,12 @@ public class AcceptRes implements Serializable {
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        public Builder curProposalNo(long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder instanceId(long instanceId) {
+        public Builder curInstanceId(long instanceId) {
             this.instanceId = instanceId;
             return this;
         }
@@ -76,9 +75,9 @@ public class AcceptRes implements Serializable {
 
         public AcceptRes build() {
             AcceptRes acceptRes = new AcceptRes();
-            acceptRes.instanceId = this.instanceId;
+            acceptRes.curInstanceId = this.instanceId;
             acceptRes.result = this.result;
-            acceptRes.proposalNo = this.proposalNo;
+            acceptRes.curProposalNo = this.proposalNo;
             acceptRes.instanceState = this.instanceState;
             acceptRes.nodeId = this.nodeId;
             return acceptRes;

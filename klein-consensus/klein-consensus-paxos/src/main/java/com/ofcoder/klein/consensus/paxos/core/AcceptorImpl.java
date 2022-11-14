@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -36,7 +35,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.StorageEngine;
 
 /**
  * @author far.liu
@@ -65,12 +63,11 @@ public class AcceptorImpl implements Acceptor {
     public AcceptRes handleAcceptRequest(AcceptReq req) {
         LOG.info("processing the accept message from node-{}", req.getNodeId());
 
-        self.setCurInstanceId(req.getInstanceId());
-
         try {
             logManager.getLock().writeLock().lock();
 
             final long selfProposalNo = self.getCurProposalNo();
+            final long selfInstanceId = self.getCurInstanceId();
             final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
@@ -91,8 +88,8 @@ public class AcceptorImpl implements Acceptor {
                 AcceptRes res = AcceptRes.Builder.anAcceptRes()
                         .nodeId(self.getSelf().getId())
                         .result(false)
-                        .proposalNo(selfProposalNo)
-                        .instanceId(req.getInstanceId())
+                        .curProposalNo(selfProposalNo)
+                        .curInstanceId(selfInstanceId)
                         .instanceState(localInstance.getState())
                         .build();
                 logManager.updateInstance(localInstance);
@@ -101,8 +98,8 @@ public class AcceptorImpl implements Acceptor {
 
             AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
                     .nodeId(self.getSelf().getId())
-                    .instanceId(localInstance.getInstanceId())
-                    .proposalNo(selfProposalNo);
+                    .curInstanceId(selfInstanceId)
+                    .curProposalNo(selfProposalNo);
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 resBuilder.result(false)
@@ -118,6 +115,9 @@ public class AcceptorImpl implements Acceptor {
             }
             return resBuilder.build();
         } finally {
+            self.setCurProposalNo(req.getProposalNo());
+            self.setCurInstanceId(req.getInstanceId());
+
             logManager.getLock().writeLock().unlock();
         }
     }
@@ -126,23 +126,19 @@ public class AcceptorImpl implements Acceptor {
     public PrepareRes handlePrepareRequest(PrepareReq req, boolean isSelf) {
         LOG.info("processing the prepare message from node-{}", req.getNodeId());
         final long curProposalNo = self.getCurProposalNo();
+        final long curInstanceId = self.getCurInstanceId();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
 
+        PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
+                .nodeId(self.getSelf().getId())
+                .curProposalNo(curProposalNo)
+                .curInstanceId(curInstanceId);
+
         if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
-            PrepareRes res = PrepareRes.Builder.aPrepareRes()
-                    .nodeId(self.getSelf().getId())
-                    .result(false)
-                    .proposalNo(curProposalNo)
-                    .instances(new ArrayList<>()).build();
-            return res;
+            return res.result(false).instances(new ArrayList<>()).build();
         } else {
             List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
-            PrepareRes res = PrepareRes.Builder.aPrepareRes()
-                    .nodeId(self.getSelf().getId())
-                    .result(true)
-                    .proposalNo(curProposalNo)
-                    .instances(instances).build();
-            return res;
+            return res.result(true).instances(instances).build();
         }
     }
 
@@ -168,7 +164,6 @@ public class AcceptorImpl implements Acceptor {
                 || req.getProposalNo() < selfProposalNo) {
             return false;
         }
-        self.setCurProposalNo(req.getProposalNo());
         return true;
     }
 
