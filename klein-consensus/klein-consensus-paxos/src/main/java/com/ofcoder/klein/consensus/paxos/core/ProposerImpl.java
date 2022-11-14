@@ -322,7 +322,7 @@ public class ProposerImpl implements Proposer {
      * @param ctxt     Negotiation Context
      * @param callback Callback of prepare phase,
      *                 if the majority approved prepare, call {@link PhaseCallback.PreparePhaseCallback#granted(long, ProposeContext)}
-     *                 if the majority refuses to prepare after several retries, call {@link PhaseCallback.PreparePhaseCallback#refused(ProposeContext)}
+     *                 if the majority refused prepare after several retries, call {@link PhaseCallback.PreparePhaseCallback#refused(ProposeContext)}
      */
     private void prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
 

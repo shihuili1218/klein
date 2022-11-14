@@ -36,7 +36,7 @@ public class MasterSM extends AbstractSM {
 
     @Override
     protected Object apply(Object data) {
-        LOG.info("master statemachine apply, {}", data.getClass().getSimpleName());
+        LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
         if (data instanceof ElectionOp) {
             electMaster((ElectionOp) data);
         } else if (data instanceof ChangeMemberOp) {
@@ -56,6 +56,7 @@ public class MasterSM extends AbstractSM {
                 configuration.writeOff(op.getTarget());
                 break;
             default:
+                LOG.warn("MasterSM.changeMember, op[{}] is invalid", op.getOp());
                 break;
         }
     }
