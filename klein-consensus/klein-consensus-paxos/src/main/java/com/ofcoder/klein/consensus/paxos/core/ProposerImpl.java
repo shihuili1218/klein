@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -81,7 +82,6 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
-    private final AtomicBoolean healthy = new AtomicBoolean(false);
 
     public ProposerImpl(PaxosNode self) {
         this.self = self;
@@ -451,16 +451,6 @@ public class ProposerImpl implements Proposer {
 
         @Override
         protected void handle(List<ProposalWithDone> events) {
-            if (!healthy.get()) {
-                synchronized (healthy) {
-                    try {
-                        healthy.wait();
-                    } catch (InterruptedException e) {
-
-                    }
-                }
-            }
-
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
