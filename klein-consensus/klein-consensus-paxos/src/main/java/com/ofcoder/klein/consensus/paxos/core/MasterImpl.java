@@ -236,11 +236,14 @@ public class MasterImpl implements Master {
     @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+
+        // check and update instance
+        checkAndUpdateInstance(request);
+
         if (memberConfiguration.getMaster() != null
                 && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
-            // check and update instance
-            checkAndUpdateInstance(request);
+
 
             // reset and restart election timer
             if (!isSelf) {
@@ -266,7 +269,7 @@ public class MasterImpl implements Master {
         if (diff > 0) {
             ThreadExecutor.submit(() -> {
                 for (int i = 1; i <= diff; i++) {
-                    RoleAccessor.getLearner().learn(localAppliedInstanceId, from);
+                    RoleAccessor.getLearner().learn(localAppliedInstanceId + i, from);
                 }
             });
         }
@@ -275,7 +278,9 @@ public class MasterImpl implements Master {
     private void restartElect() {
         sendHeartbeatTimer.stop();
         electTimer.restart();
-        electTimer.reset(calculateElectionMasterInterval());
+        int timeoutMs = calculateElectionMasterInterval();
+        electTimer.reset(timeoutMs);
+        LOG.info("reset elect timer, next interval: {}", timeoutMs);
     }
 
     private void restartHeartbeat() {
