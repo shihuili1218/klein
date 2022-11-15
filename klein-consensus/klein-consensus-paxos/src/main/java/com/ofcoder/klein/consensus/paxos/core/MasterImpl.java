@@ -104,33 +104,41 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public boolean addMember(Endpoint endpoint) {
-        return changeMember(ChangeMemberOp.ADD, endpoint);
+    public void addMember(Endpoint endpoint) {
+        if (self.getMemberConfiguration().isValid(endpoint.getId())) {
+            return;
+        }
+        changeMember(ChangeMemberOp.ADD, endpoint);
     }
 
     @Override
     public void removeMember(Endpoint endpoint) {
+        if (!self.getMemberConfiguration().isValid(endpoint.getId())) {
+            return;
+        }
         changeMember(ChangeMemberOp.REMOVE, endpoint);
     }
 
     private boolean changeMember(byte op, Endpoint endpoint) {
-        if (self.getMemberConfiguration().isValid(endpoint.getId())) {
-            return true;
-        }
-
-        // It can only be changed once at a time
-        if (!changing.compareAndSet(false, true)) {
-            return false;
-        }
-
         LOG.info("start add member.");
-        ChangeMemberOp req = new ChangeMemberOp();
-        req.setNodeId(self.getSelf().getId());
-        req.setTarget(endpoint);
-        req.setOp(op);
 
-        long instanceId = self.incrementInstanceId();
-        return RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
+        try {
+            // It can only be changed once at a time
+            if (!changing.compareAndSet(false, true)) {
+                return false;
+            }
+
+            ChangeMemberOp req = new ChangeMemberOp();
+            req.setNodeId(self.getSelf().getId());
+            req.setTarget(endpoint);
+            req.setOp(op);
+
+            long instanceId = self.incrementInstanceId();
+            boolean boost = RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
+            return boost;
+        } finally {
+            changing.compareAndSet(true, false);
+        }
     }
 
     @Override
@@ -161,6 +169,7 @@ public class MasterImpl implements Master {
 
                 @Override
                 public void applyDone(Object result) {
+                    // master will boost the previous instance.
                     latch.countDown();
                 }
             });
@@ -277,9 +286,6 @@ public class MasterImpl implements Master {
     @Override
     public void onChangeMaster(final String newMaster) {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
-
-            // todo apply instance
-
             restartHeartbeat();
         } else {
             restartElect();

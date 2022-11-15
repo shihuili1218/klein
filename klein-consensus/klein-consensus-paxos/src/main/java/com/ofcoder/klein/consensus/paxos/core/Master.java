@@ -26,11 +26,10 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public interface Master extends Lifecycle<ConsensusProp> {
     // 成员变更后，需要协商一个NOOP提案，
-    boolean addMember(Endpoint endpoint);
+    void addMember(Endpoint endpoint);
 
     void removeMember(Endpoint endpoint);
 
-    // todo master要拥有最完整的数据，晋升后需要立即推进未执行状态转移的instance，以保证成员变更的正确性
     void electingMaster();
 
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
