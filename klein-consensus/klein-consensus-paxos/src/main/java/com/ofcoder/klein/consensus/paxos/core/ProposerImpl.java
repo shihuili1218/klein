@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -80,6 +81,7 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
+    private final AtomicBoolean healthy = new AtomicBoolean(false);
 
     public ProposerImpl(PaxosNode self) {
         this.self = self;
@@ -449,6 +451,16 @@ public class ProposerImpl implements Proposer {
 
         @Override
         protected void handle(List<ProposalWithDone> events) {
+            if (!healthy.get()) {
+                synchronized (healthy) {
+                    try {
+                        healthy.wait();
+                    } catch (InterruptedException e) {
+
+                    }
+                }
+            }
+
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);

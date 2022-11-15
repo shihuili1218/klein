@@ -108,13 +108,13 @@ public class PaxosConsensus implements Consensus {
         registerProcessor();
         RoleAccessor.create(prop, self);
         loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfiguration()));
+        RoleAccessor.getMaster().electingMaster();
 
         preheating();
-        RoleAccessor.getMaster().electingMaster();
     }
 
     private void preheating() {
-        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+
     }
 
     private void loadNode() {
@@ -140,7 +140,7 @@ public class PaxosConsensus implements Consensus {
                 .memberConfiguration(configuration)
                 .curAppliedInstanceId(mateData.getMaxAppliedInstanceId())
                 .build();
-        LOG.info("load node: {}", self);
+        LOG.info("self info: {}", self);
     }
 
 
