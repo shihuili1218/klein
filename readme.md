@@ -24,7 +24,7 @@ Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、�
 - [x] 拆分Group，proposer等角色无须隔离，只需隔离instance
 - [x] 增加Master：
   - [x] 成员变更
-  - [ ] master晋升应拥有最完整的数据(晋升后协商一个Noop，Acceptor返回最大instanceId)
+  - [x] master晋升应拥有最完整的数据(以提案协商选举master，如果成功晋升，那么在此之前的instance一定都apply了)
   - [ ] 数据对齐
     - [ ] 成员启动时、成员加入集群，主动向master学习
     - [x] Master心跳触发对齐
