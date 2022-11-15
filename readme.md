@@ -26,8 +26,9 @@ Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、�
   - [x] 成员变更
   - [x] master晋升应拥有最完整的数据(以提案协商选举master，如果成功晋升，那么在此之前的instance一定都apply了)
   - [ ] 数据对齐
-    - [ ] 成员启动时、成员加入集群，主动向master学习
     - [x] Master心跳触发对齐
+    - [ ] 快照同步（心跳携带checkpoint、learn消息返回checkpoint）
+    - [ ] ~~新成员加入集群，主动向master学习~~
   - [ ] 优化读请求(写请求一定要复制到Master)
   - [ ] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)

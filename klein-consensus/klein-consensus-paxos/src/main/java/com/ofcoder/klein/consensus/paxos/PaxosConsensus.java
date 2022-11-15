@@ -38,6 +38,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
@@ -114,7 +115,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void preheating() {
-
+//        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
     }
 
     private void loadNode() {
@@ -126,7 +127,10 @@ public class PaxosConsensus implements Consensus {
         PaxosMemberConfiguration configuration;
         if (CollectionUtils.isNotEmpty(mateData.getMembers())) {
             configuration = new PaxosMemberConfiguration();
-            configuration.init(prop.getMembers(), this.prop.getSelf());
+            configuration.init(
+                    mateData.getMembers().stream().map(it -> new Endpoint(it.getId(), it.getIp(), it.getPort())).collect(Collectors.toList())
+                    , this.prop.getSelf()
+            );
         } else {
             configuration = new PaxosMemberConfiguration();
             configuration.init(this.prop.getMembers(), this.prop.getSelf()
