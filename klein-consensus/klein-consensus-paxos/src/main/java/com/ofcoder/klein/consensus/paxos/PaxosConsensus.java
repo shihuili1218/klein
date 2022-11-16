@@ -19,9 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,13 +36,11 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.MateData;
-import com.ofcoder.klein.storage.facade.Member;
 
 /**
  * @author far.liu
@@ -121,29 +117,19 @@ public class PaxosConsensus implements Consensus {
     private void loadNode() {
         // reload self information from storage.
 
-        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        LogManager<Proposal, PaxosNode> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
+        configuration.init(this.prop.getMembers(), this.prop.getSelf());
 
-        MateData mateData = logManager.getMateData();
-        PaxosMemberConfiguration configuration;
-        if (CollectionUtils.isNotEmpty(mateData.getMembers())) {
-            configuration = new PaxosMemberConfiguration();
-            configuration.init(
-                    mateData.getMembers().stream().map(it -> new Endpoint(it.getId(), it.getIp(), it.getPort())).collect(Collectors.toList())
-                    , this.prop.getSelf()
-            );
-        } else {
-            configuration = new PaxosMemberConfiguration();
-            configuration.init(this.prop.getMembers(), this.prop.getSelf()
-            );
-        }
-
-        this.self = PaxosNode.Builder.aPaxosNode()
+        this.self = logManager.loadMateData(PaxosNode.Builder.aPaxosNode()
+                .curInstanceId(0)
+                .curAppliedInstanceId(0)
+                .curProposalNo(0)
+                .lastCheckpoint(0)
                 .self(prop.getSelf())
-                .curInstanceId(mateData.getMaxInstanceId())
-                .curProposalNo(mateData.getMaxProposalNo())
                 .memberConfiguration(configuration)
-                .curAppliedInstanceId(mateData.getMaxAppliedInstanceId())
-                .build();
+                .build());
+
         LOG.info("self info: {}", self);
     }
 
@@ -154,21 +140,12 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
         RpcEngine.registerProcessor(new LearnProcessor(this.self));
         RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
+        RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
     }
 
 
     @Override
     public void shutdown() {
-        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        logManager.updateConfiguration(self.getMemberConfiguration().getAllMembers().stream().map(
-                it -> {
-                    Member member = new Member();
-                    member.setId(it.getId());
-                    member.setIp(it.getIp());
-                    member.setPort(it.getPort());
-                    return member;
-                }
-        ).collect(Collectors.toList()), self.getMemberConfiguration().getVersion());
         if (RoleAccessor.getProposer() != null) {
             RoleAccessor.getProposer().shutdown();
         }

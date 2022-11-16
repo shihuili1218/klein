@@ -12,10 +12,9 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author 释慧利
  */
 @SPI
-public interface LogManager<P extends Serializable> extends Lifecycle<StorageProp> {
+public interface LogManager<P extends Serializable, M extends Serializable> extends Lifecycle<StorageProp> {
 
     ReentrantReadWriteLock getLock();
-
 
     /**
      * Persisting the Instance.
@@ -25,8 +24,6 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      * @param instance data
      */
     void updateInstance(final Instance<P> instance);
-
-    void updateConfiguration(List<Member> members, int version);
 
     /**
      * Get the instance by id.
@@ -43,9 +40,7 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     List<Instance<P>> getInstanceNoConfirm();
 
-    long maxAppliedInstanceId();
-
-    MateData getMateData();
+    M loadMateData(M defaultValue);
 
     void saveSnap(String group, Snap snap);
 

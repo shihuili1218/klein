@@ -17,13 +17,11 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -80,7 +78,7 @@ public class ProposerImpl implements Proposer {
      * The instance of the Prepare phase has been executed.
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
-    private LogManager<Proposal> logManager;
+    private LogManager<Proposal, PaxosNode> logManager;
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
 
     public ProposerImpl(PaxosNode self) {
@@ -212,8 +210,8 @@ public class ProposerImpl implements Proposer {
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
         LOG.info("handling node-{}'s accept response, proposalNo: {}, instanceId: {}, remote.instanceState: {}", result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState());
-        self.setCurProposalNo(result.getCurProposalNo());
-        self.setCurInstanceId(result.getCurInstanceId());
+        self.updateCurProposalNo(result.getCurProposalNo());
+        self.updateCurInstanceId(result.getCurInstanceId());
 
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
@@ -410,8 +408,8 @@ public class ProposerImpl implements Proposer {
     private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
             , final PrepareRes result, final Endpoint it) {
         LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), proposalNo, result.getResult());
-        self.setCurProposalNo(result.getCurProposalNo());
-        self.setCurInstanceId(result.getCurInstanceId());
+        self.updateCurProposalNo(result.getCurProposalNo());
+        self.updateCurInstanceId(result.getCurInstanceId());
 
         for (Instance<Proposal> instance : result.getInstances()) {
             if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != null) {
