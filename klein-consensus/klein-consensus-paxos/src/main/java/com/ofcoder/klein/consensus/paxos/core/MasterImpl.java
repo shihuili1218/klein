@@ -91,7 +91,7 @@ public class MasterImpl implements Master {
             }
         };
 
-        sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", 50) {
+        sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
                 sendHeartbeat();
@@ -100,7 +100,7 @@ public class MasterImpl implements Master {
     }
 
     private int calculateElectionMasterInterval() {
-        return ThreadLocalRandom.current().nextInt(700, 1000);
+        return ThreadLocalRandom.current().nextInt(prop.getPaxosProp().getMasterElectMinInterval(), prop.getPaxosProp().getMasterElectMaxInterval());
     }
 
     @Override
@@ -134,8 +134,7 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             long instanceId = self.incrementInstanceId();
-            boolean boost = RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
-            return boost;
+            return RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
         } finally {
             changing.compareAndSet(true, false);
         }
