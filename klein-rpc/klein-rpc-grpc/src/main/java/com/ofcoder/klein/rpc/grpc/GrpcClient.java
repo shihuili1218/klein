@@ -70,7 +70,7 @@ public class GrpcClient implements RpcClient {
             return false;
         }
         ManagedChannel managedChannel = channels.get(endpoint);
-        //todo
+        // todo check channel alive
         return true;
     }
 

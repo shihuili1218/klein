@@ -43,7 +43,7 @@ public class AcceptorImpl implements Acceptor {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptorImpl.class);
 
     private final PaxosNode self;
-    private LogManager<Proposal> logManager;
+    private LogManager<Proposal, PaxosNode> logManager;
 
     public AcceptorImpl(PaxosNode self) {
         this.self = self;
@@ -115,8 +115,8 @@ public class AcceptorImpl implements Acceptor {
             }
             return resBuilder.build();
         } finally {
-            self.setCurProposalNo(req.getProposalNo());
-            self.setCurInstanceId(req.getInstanceId());
+            self.updateCurProposalNo(req.getProposalNo());
+            self.updateCurInstanceId(req.getInstanceId());
 
             logManager.getLock().writeLock().unlock();
         }
@@ -153,7 +153,7 @@ public class AcceptorImpl implements Acceptor {
                     , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo);
             return false;
         }
-        self.setCurProposalNo(req.getProposalNo());
+        self.updateCurProposalNo(req.getProposalNo());
         return true;
     }
 

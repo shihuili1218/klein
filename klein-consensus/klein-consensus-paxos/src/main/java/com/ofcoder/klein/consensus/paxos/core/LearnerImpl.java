@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -29,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -38,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -46,6 +47,8 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -60,13 +63,13 @@ public class LearnerImpl implements Learner {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerImpl.class);
     private RpcClient client;
     private final PaxosNode self;
-    private LogManager<Proposal> logManager;
+    private LogManager<Proposal, PaxosNode> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long, CompletableFuture<Result.State>> boostFuture = new ConcurrentHashMap<>();
+    private final AtomicBoolean snapSyncing = new AtomicBoolean(false);
 
     public LearnerImpl(PaxosNode self) {
         this.self = self;
@@ -107,17 +110,33 @@ public class LearnerImpl implements Learner {
     }
 
     private void generateSnap() {
-        for (Map.Entry<String, SM> entry : sms.entrySet()) {
-            Snap snapshot = entry.getValue().snapshot();
-            logManager.saveSnap(entry.getKey(), snapshot);
+        try {
+            if (!snapSyncing.compareAndSet(false, true)) {
+                return;
+            }
+
+            for (Map.Entry<String, SM> entry : sms.entrySet()) {
+                Snap snapshot = entry.getValue().snapshot();
+                self.updateLastCheckpoint(snapshot.getCheckpoint());
+                logManager.saveSnap(entry.getKey(), snapshot);
+            }
+        } finally {
+            snapSyncing.compareAndSet(true, false);
         }
     }
 
-    @Override
-    public void keepFresh() {
-        List<Instance<Proposal>> noConfirm = logManager.getInstanceNoConfirm();
-        for (Instance<Proposal> instance : noConfirm) {
-            RoleAccessor.getProposer().boost(instance.getInstanceId(), Proposal.NOOP);
+    private void loadSnap(String group, Snap lastSnap) {
+        try {
+            if (!snapSyncing.compareAndSet(false, true)) {
+                return;
+            }
+            SM sm = sms.get(group);
+            if (lastSnap != null) {
+                sm.loadSnap(lastSnap);
+                self.updateLastCheckpoint(lastSnap.getCheckpoint());
+            }
+        } finally {
+            snapSyncing.compareAndSet(true, false);
         }
     }
 
@@ -128,16 +147,16 @@ public class LearnerImpl implements Learner {
             return;
         }
         Snap lastSnap = logManager.getLastSnap(group);
-        if (lastSnap != null) {
-            sm.loadSnap(lastSnap);
-        }
+        loadSnap(group, lastSnap);
     }
+
 
     private void apply(long instanceId) {
         LOG.info("start apply, instanceId: {}", instanceId);
 
-        final long maxAppliedInstanceId = logManager.maxAppliedInstanceId();
-        if (instanceId <= maxAppliedInstanceId) {
+        final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
+        final long lastCheckpoint = self.getLastCheckpoint();
+        if (instanceId <= maxAppliedInstanceId || lastCheckpoint >= instanceId) {
             // the instance has been applied.
             return;
         }
@@ -242,6 +261,61 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
+    public void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId) {
+        long curAppliedInstanceId = self.getCurAppliedInstanceId();
+        if (checkpoint > curAppliedInstanceId) {
+            snapSync(target);
+        } else {
+            long diff = maxAppliedInstanceId - curAppliedInstanceId;
+            if (diff > 0) {
+                ThreadExecutor.submit(() -> {
+                    for (int i = 1; i <= diff; i++) {
+                        RoleAccessor.getLearner().learn(curAppliedInstanceId + i, target);
+                    }
+                });
+            }
+        }
+    }
+
+    private void snapSync(Endpoint target) {
+        LOG.info("start snap sync from node-{}", target.getId());
+        try {
+            if (!snapSyncing.compareAndSet(false, true)) {
+                return;
+            }
+
+            CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
+            SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
+                    .nodeId(self.getSelf().getId())
+                    .proposalNo(self.getCurProposalNo())
+                    .memberConfigurationVersion(self.getMemberConfiguration().getVersion())
+                    .checkpoint(self.getLastCheckpoint())
+                    .build();
+            client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
+                @Override
+                public void error(Throwable err) {
+                    LOG.error("snap sync from node-{}, {}", target.getId(), err.getMessage());
+                    future.completeExceptionally(err);
+                }
+
+                @Override
+                public void complete(SnapSyncRes result) {
+                    future.complete(result);
+                }
+            }, 1000);
+
+            SnapSyncRes res = future.get(1010, TimeUnit.MILLISECONDS);
+            for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
+                loadSnap(entry.getKey(), entry.getValue());
+            }
+        } catch (Throwable e) {
+            LOG.error(e.getMessage());
+        } finally {
+            snapSyncing.compareAndSet(true, false);
+        }
+    }
+
+    @Override
     public void confirm(long instanceId, final List<ProposalWithDone> dataWithDone) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
@@ -284,8 +358,8 @@ public class LearnerImpl implements Learner {
     public void handleConfirmRequest(ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
-        self.setCurInstanceId(req.getInstanceId());
-        self.setCurProposalNo(req.getProposalNo());
+        self.updateCurInstanceId(req.getInstanceId());
+        self.updateCurProposalNo(req.getProposalNo());
 
         try {
             logManager.getLock().writeLock().lock();
@@ -337,8 +411,28 @@ public class LearnerImpl implements Learner {
     @Override
     public LearnRes handleLearnRequest(LearnReq request) {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
+
+        if (request.getInstanceId() <= self.getLastCheckpoint()) {
+            // todo snap
+        }
+
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
         LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
+        return res;
+    }
+
+    @Override
+    public SnapSyncRes handleSnapSyncRequest(SnapSyncReq req) {
+        SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
+                .images(new HashMap<>())
+                .checkpoint(self.getLastCheckpoint())
+                .build();
+        for (String group : sms.keySet()) {
+            Snap lastSnap = logManager.getLastSnap(group);
+            if (lastSnap.getCheckpoint() > req.getCheckpoint()) {
+                res.getImages().put(group, lastSnap);
+            }
+        }
         return res;
     }
 }

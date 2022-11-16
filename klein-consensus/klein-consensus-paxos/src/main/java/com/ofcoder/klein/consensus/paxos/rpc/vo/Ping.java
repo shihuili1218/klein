@@ -23,6 +23,7 @@ public class Ping extends BaseReq {
 
     private long maxAppliedInstanceId;
     private long maxInstanceId;
+    private long lastCheckpoint;
 
     public long getMaxAppliedInstanceId() {
         return maxAppliedInstanceId;
@@ -40,12 +41,21 @@ public class Ping extends BaseReq {
         this.maxInstanceId = maxInstanceId;
     }
 
+    public long getLastCheckpoint() {
+        return lastCheckpoint;
+    }
+
+    public void setLastCheckpoint(long lastCheckpoint) {
+        this.lastCheckpoint = lastCheckpoint;
+    }
+
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
         private long maxAppliedInstanceId;
         private long maxInstanceId;
+        private long lastCheckpoint;
 
         private Builder() {
         }
@@ -79,6 +89,11 @@ public class Ping extends BaseReq {
             return this;
         }
 
+        public Builder lastCheckpoint(long lastCheckpoint) {
+            this.lastCheckpoint = lastCheckpoint;
+            return this;
+        }
+
         public Ping build() {
             Ping ping = new Ping();
             ping.setNodeId(nodeId);
@@ -86,6 +101,7 @@ public class Ping extends BaseReq {
             ping.setMemberConfigurationVersion(memberConfigurationVersion);
             ping.maxInstanceId = this.maxInstanceId;
             ping.maxAppliedInstanceId = this.maxAppliedInstanceId;
+            ping.lastCheckpoint = this.lastCheckpoint;
             return ping;
         }
     }
