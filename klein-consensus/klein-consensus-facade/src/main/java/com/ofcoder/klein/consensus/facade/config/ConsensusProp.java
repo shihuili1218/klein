@@ -34,6 +34,8 @@ public class ConsensusProp {
      */
     private int retry = SystemPropertyUtil.getInt("klein.consensus.retry", 2);
 
+    private PaxosProp paxosProp = new PaxosProp();
+
     public Endpoint getSelf() {
         return self;
     }
@@ -72,5 +74,13 @@ public class ConsensusProp {
 
     public void setRetry(int retry) {
         this.retry = retry;
+    }
+
+    public PaxosProp getPaxosProp() {
+        return paxosProp;
+    }
+
+    public void setPaxosProp(PaxosProp paxosProp) {
+        this.paxosProp = paxosProp;
     }
 }
