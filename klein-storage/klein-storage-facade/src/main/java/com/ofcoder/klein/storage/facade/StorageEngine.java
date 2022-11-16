@@ -8,8 +8,8 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 /**
  * @author far.liu
  */
-public final class StorageEngine<P extends Serializable> {
-    private LogManager<P> logManager;
+public final class StorageEngine {
+    private LogManager logManager;
 
     public void startup(String type, StorageProp prop) {
         logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoinWithGlobal(type);
@@ -23,7 +23,7 @@ public final class StorageEngine<P extends Serializable> {
 
     }
 
-    public static <P extends Serializable> StorageEngine<P> getInstance() {
+    public static <P extends Serializable> StorageEngine getInstance() {
         return StorageEngineHolder.INSTANCE;
     }
 

@@ -192,6 +192,7 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .maxAppliedInstanceId(self.getCurAppliedInstanceId())
+                .lastCheckpoint(self.getLastCheckpoint())
                 .maxInstanceId(self.getCurInstanceId())
                 .build();
 
@@ -236,13 +237,14 @@ public class MasterImpl implements Master {
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
 
+        self.updateCurInstanceId(request.getMaxInstanceId());
+
         // check and update instance
         checkAndUpdateInstance(request);
 
         if (memberConfiguration.getMaster() != null
                 && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
-
 
             // reset and restart election timer
             if (!isSelf) {
@@ -259,18 +261,12 @@ public class MasterImpl implements Master {
 
 
     private void checkAndUpdateInstance(Ping request) {
-        self.setCurInstanceId(request.getMaxInstanceId());
-
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
 
-        long localAppliedInstanceId = self.getCurAppliedInstanceId();
-        long diff = request.getMaxAppliedInstanceId() - localAppliedInstanceId;
-        if (diff > 0) {
-            ThreadExecutor.submit(() -> {
-                for (int i = 1; i <= diff; i++) {
-                    RoleAccessor.getLearner().learn(localAppliedInstanceId + i, from);
-                }
-            });
+        if (request.getMaxAppliedInstanceId() > self.getCurAppliedInstanceId()) {
+            ThreadExecutor.submit(() ->
+                    RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId())
+            );
         }
     }
 

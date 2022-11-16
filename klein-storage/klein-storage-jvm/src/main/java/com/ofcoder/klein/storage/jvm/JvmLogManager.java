@@ -36,8 +36,6 @@ import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.MateData;
-import com.ofcoder.klein.storage.facade.Member;
 import com.ofcoder.klein.storage.facade.Snap;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
@@ -47,14 +45,14 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  * @author 释慧利
  */
 @Join
-public class JvmLogManager<P extends Serializable> implements LogManager<P> {
+public class JvmLogManager<P extends Serializable, M extends Serializable> implements LogManager<P, M> {
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ReentrantReadWriteLock lock;
-    private MateData mateData;
     private static final String SNAP_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
     private static final String MATE_PATH = SNAP_PATH + File.separator + "mate";
+    private M metadata;
 
     @Override
     public void init(StorageProp op) {
@@ -66,7 +64,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
         lock = new ReentrantReadWriteLock(true);
-        loadMateData();
     }
 
     @Override
@@ -101,34 +98,45 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
-        this.mateData.setMaxProposalNo(Math.max(this.mateData.getMaxProposalNo(), instance.getProposalNo()));
-        this.mateData.setMaxInstanceId(Math.max(this.mateData.getMaxInstanceId(), instance.getInstanceId()));
         if (instance.getState() == Instance.State.CONFIRMED) {
             confirmedInstances.put(instance.getInstanceId(), instance);
             runningInstances.remove(instance.getInstanceId());
-            if (instance.getApplied().get()) {
-                this.mateData.setMaxAppliedInstanceId(Math.max(this.mateData.getMaxAppliedInstanceId(), instance.getInstanceId()));
-            }
         } else {
             runningInstances.put(instance.getInstanceId(), instance);
         }
-    }
-
-    @Override
-    public void updateConfiguration(List<Member> members, int version) {
-        this.mateData.setMembers(members);
-        this.mateData.setMemberVersion(version);
         saveMateData();
     }
 
-    @Override
-    public long maxAppliedInstanceId() {
-        return this.mateData.getMaxAppliedInstanceId();
-    }
 
     @Override
-    public MateData getMateData() {
-        return this.mateData;
+    public M loadMateData(M defaultValue) {
+        File file = new File(MATE_PATH);
+        if (!file.exists()) {
+            this.metadata = defaultValue;
+            return this.metadata;
+        }
+        FileInputStream lastIn = null;
+        try {
+            lastIn = new FileInputStream(file);
+            this.metadata = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            return this.metadata;
+        } catch (IOException e) {
+            throw new StorageException("get checkpoint, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(lastIn);
+        }
+    }
+
+    private void saveMateData() {
+        FileOutputStream mateOut = null;
+        try {
+            mateOut = new FileOutputStream(MATE_PATH);
+            IOUtils.write(Hessian2Util.serialize(this.metadata), mateOut);
+        } catch (IOException e) {
+            throw new StorageException("save snap, " + e.getMessage(), e);
+        } finally {
+            StreamUtil.close(mateOut);
+        }
     }
 
     @Override
@@ -152,7 +160,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
             snapOut = new FileOutputStream(snapFile);
             IOUtils.write(Hessian2Util.serialize(snap), snapOut);
             IOUtils.write(Hessian2Util.serialize(snapFile.getPath()), lastOut);
-            saveMateData();
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -161,6 +168,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         }
 
         truncCheckpoint(snap.getCheckpoint());
+        saveMateData();
     }
 
     private void truncCheckpoint(long checkpoint) {
@@ -190,42 +198,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         } finally {
             StreamUtil.close(lastIn);
             StreamUtil.close(snapIn);
-        }
-    }
-
-    private void saveMateData() {
-        FileOutputStream mateOut = null;
-        try {
-            mateOut = new FileOutputStream(MATE_PATH);
-            IOUtils.write(Hessian2Util.serialize(this.mateData), mateOut);
-        } catch (IOException e) {
-            throw new StorageException("save snap, " + e.getMessage(), e);
-        } finally {
-            StreamUtil.close(mateOut);
-        }
-    }
-
-    private void loadMateData() {
-        this.mateData = MateData.Builder.aMateData()
-                .maxInstanceId(0)
-                .maxProposalNo(0)
-                .maxAppliedInstanceId(0)
-                .members(new ArrayList<>())
-                .memberVersion(0)
-                .build();
-        File file = new File(MATE_PATH);
-        if (!file.exists()) {
-            return;
-        }
-
-        FileInputStream lastIn = null;
-        try {
-            lastIn = new FileInputStream(file);
-            this.mateData = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
-        } catch (IOException e) {
-            throw new StorageException("get checkpoint, " + e.getMessage(), e);
-        } finally {
-            StreamUtil.close(lastIn);
         }
     }
 

@@ -26,6 +26,7 @@ public class MateData implements Serializable {
     private long maxInstanceId;
     private long maxAppliedInstanceId;
     private long maxProposalNo;
+    private long lastCheckpoint;
     private List<Member> members;
     private int memberVersion;
 
@@ -70,10 +71,19 @@ public class MateData implements Serializable {
         this.memberVersion = memberVersion;
     }
 
+    public long getLastCheckpoint() {
+        return lastCheckpoint;
+    }
+
+    public void setLastCheckpoint(long lastCheckpoint) {
+        this.lastCheckpoint = lastCheckpoint;
+    }
+
     public static final class Builder {
         private long maxInstanceId;
         private long maxAppliedInstanceId;
         private long maxProposalNo;
+        private long lastCheckpoint;
         private List<Member> members;
         private int memberVersion;
 
@@ -99,6 +109,11 @@ public class MateData implements Serializable {
             return this;
         }
 
+        public Builder lastCheckpoint(long lastCheckpoint) {
+            this.lastCheckpoint = lastCheckpoint;
+            return this;
+        }
+
         public Builder members(List<Member> members) {
             this.members = members;
             return this;
@@ -116,6 +131,7 @@ public class MateData implements Serializable {
             mateData.setMaxProposalNo(maxProposalNo);
             mateData.setMembers(members);
             mateData.setMemberVersion(memberVersion);
+            mateData.lastCheckpoint = this.lastCheckpoint;
             return mateData;
         }
     }
