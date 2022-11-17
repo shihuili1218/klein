@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * @author 释慧利
@@ -48,6 +49,19 @@ public class Proposal implements Serializable {
 
     public void setData(Object data) {
         this.data = data;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Proposal proposal = (Proposal) o;
+        return Objects.equals(getGroup(), proposal.getGroup()) && Objects.equals(getData(), proposal.getData());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getGroup(), getData());
     }
 
     /**

@@ -167,7 +167,7 @@ public class MasterImpl implements Master {
                 }
 
                 @Override
-                public void applyDone(Object result) {
+                public void applyDone(Object input, Object output) {
                     // master will boost the previous instance.
                     latch.countDown();
                 }
