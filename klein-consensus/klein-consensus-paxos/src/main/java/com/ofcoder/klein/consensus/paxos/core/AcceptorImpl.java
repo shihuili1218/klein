@@ -69,6 +69,16 @@ public class AcceptorImpl implements Acceptor {
             final long selfProposalNo = self.getCurProposalNo();
             final long selfInstanceId = self.getCurInstanceId();
             final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
+
+            if (req.getInstanceId() <= self.getLastCheckpoint()) {
+                return AcceptRes.Builder.anAcceptRes()
+                        .nodeId(self.getSelf().getId())
+                        .result(false)
+                        .instanceState(Instance.State.CONFIRMED)
+                        .curInstanceId(selfInstanceId)
+                        .curProposalNo(selfProposalNo).build();
+            }
+
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null) {
                 localInstance = Instance.Builder.<Proposal>anInstance()
