@@ -214,20 +214,31 @@ public class LearnerImpl implements Learner {
             //do nothing
             return null;
         }
+        try {
+            if (!snapSyncing.compareAndSet(false, true)) {
+                return _apply(instance, data);
+            }
 
-        if (sms.containsKey(data.getGroup())) {
-            SM sm = sms.get(data.getGroup());
-            try {
-                return sm.apply(instance, data.getData());
-            } catch (Exception e) {
-                LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+            if (instance <= self.getLastCheckpoint()) {
+                //do nothing
                 return null;
             }
-        } else {
-            LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
-            return null;
-        }
 
+            if (sms.containsKey(data.getGroup())) {
+                SM sm = sms.get(data.getGroup());
+                try {
+                    return sm.apply(instance, data.getData());
+                } catch (Exception e) {
+                    LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+                    return null;
+                }
+            } else {
+                LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
+                return null;
+            }
+        } finally {
+            snapSyncing.compareAndSet(true, false);
+        }
     }
 
     @Override
