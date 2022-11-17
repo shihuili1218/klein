@@ -179,7 +179,11 @@ public class ProposerImpl implements Proposer {
 
         // for self
         AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req);
-        // todo 如果自己是confirmed，那么不需要再进行了
+        if (res.getInstanceState() == Instance.State.CONFIRMED) {
+            // 如果自己是confirmed，那么不需要再进行了
+            callback.granted(ctxt);
+            return;
+        }
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
@@ -241,6 +245,7 @@ public class ProposerImpl implements Proposer {
     @Override
     public boolean boost(long instanceId, Proposal proposal) {
         LOG.info("boosting instanceId: {}", instanceId);
+        // fixme bug: checkpoint
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             return instance.getGrantedValue().contains(proposal);
@@ -501,6 +506,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.submit(() -> {
                 // do confirm
+                // 此处达成共识的提案已经变化了
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDataWithCallback());
 
                 for (ProposalWithDone event : context.getDataWithCallback()) {

@@ -257,16 +257,17 @@ public class LearnerImpl implements Learner {
 
             @Override
             public void complete(LearnRes result) {
-                if (result.getInstance() == null) {
-                    LOG.error("learn instance[{}] from node-{}, but result.instance is null", instanceId, target.getId());
-                    return;
+                if (result.getInstance() == null || !result.isResult()) {
+                    LOG.warn("learn instance[{}] from node-{}, but result.instance is null", instanceId, target.getId());
+                    snapSync(target);
+                } else {
+                    handleConfirmRequest(ConfirmReq.Builder.aConfirmReq()
+                            .nodeId(result.getNodeId())
+                            .proposalNo(result.getInstance().getProposalNo())
+                            .instanceId(result.getInstance().getInstanceId())
+                            .data(result.getInstance().getGrantedValue())
+                            .build());
                 }
-                handleConfirmRequest(ConfirmReq.Builder.aConfirmReq()
-                        .nodeId(result.getNodeId())
-                        .proposalNo(result.getInstance().getProposalNo())
-                        .instanceId(result.getInstance().getInstanceId())
-                        .data(result.getInstance().getGrantedValue())
-                        .build());
             }
         }, 1000);
     }
@@ -422,14 +423,14 @@ public class LearnerImpl implements Learner {
     @Override
     public LearnRes handleLearnRequest(LearnReq request) {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
-
-        if (request.getInstanceId() <= self.getLastCheckpoint()) {
-            // todo snap
-        }
+        LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
 
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
-        LearnRes res = LearnRes.Builder.aLearnRes().instance(instance).nodeId(self.getSelf().getId()).build();
-        return res;
+        if (request.getInstanceId() <= self.getLastCheckpoint() || instance == null) {
+            return res.result(false).build();
+        } else {
+            return res.result(true).instance(instance).build();
+        }
     }
 
     @Override
