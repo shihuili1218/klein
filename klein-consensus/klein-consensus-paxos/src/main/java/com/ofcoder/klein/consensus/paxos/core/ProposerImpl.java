@@ -515,14 +515,29 @@ public class ProposerImpl implements Proposer {
                     event.getDone().negotiationDone(Result.State.SUCCESS);
                 }
 
+                List<ProposalWithDone> completed = new ArrayList<>();
+                CountDownLatch latch = new CountDownLatch(context.getConsensusData().size());
                 // do confirm
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusData(), (input, output) -> {
                     for (ProposalWithDone done : context.getDataWithCallback()) {
                         if (done.getProposal() == input) {
                             done.getDone().applyDone(input.getData(), output);
+                            completed.add(done);
+                            break;
                         }
                     }
+                    latch.countDown();
                 });
+                try {
+                    if (latch.await(100, TimeUnit.MILLISECONDS)) {
+                        List<ProposalWithDone> copy = new ArrayList<>(context.getDataWithCallback());
+                        copy.removeAll(completed);
+                        if (CollectionUtils.isNotEmpty(copy)) {
+                            copy.forEach(it -> it.getDone().applyDone(null, null));
+                        }
+                    }
+                } catch (InterruptedException e) {
+                }
             });
 
         }
