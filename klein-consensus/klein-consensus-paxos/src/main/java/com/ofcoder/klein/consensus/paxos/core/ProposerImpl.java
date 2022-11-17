@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -245,9 +246,14 @@ public class ProposerImpl implements Proposer {
     @Override
     public boolean boost(long instanceId, Proposal proposal) {
         LOG.info("boosting instanceId: {}", instanceId);
-        // fixme bug: checkpoint
+        if (self.getLastCheckpoint() >= instanceId) {
+            // this instance has reached consensus,
+            // but we don't know what the consensus value is
+            // fixme
+            return false;
+        }
         Instance<Proposal> instance = logManager.getInstance(instanceId);
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+        if (instance != null && instance.getApplied().get()) {
             return instance.getGrantedValue().contains(proposal);
         }
 
@@ -265,7 +271,7 @@ public class ProposerImpl implements Proposer {
             }
 
             @Override
-            public void confirmDone() {
+            public void applyDone(Object input, Object output) {
                 latch.countDown();
             }
         });
@@ -279,7 +285,8 @@ public class ProposerImpl implements Proposer {
             CountDownLatch latch = boostLatch.get(instanceId);
             if (latch != null) {
                 boolean await = latch.await(2000, TimeUnit.MILLISECONDS);
-                //
+                // It is not necessary to handle the return value,
+                // which is ProposerImpl.boost work content
             }
             return boost(instanceId, proposal);
         } catch (InterruptedException e) {
@@ -301,8 +308,7 @@ public class ProposerImpl implements Proposer {
         Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             done.negotiationDone(Result.State.SUCCESS);
-            done.confirmDone();
-            done.applyDone(null);
+            done.applyDone(null, null);
             return;
         }
 
@@ -505,13 +511,18 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
-                // do confirm
-                // 此处达成共识的提案已经变化了
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getDataWithCallback());
-
                 for (ProposalWithDone event : context.getDataWithCallback()) {
                     event.getDone().negotiationDone(Result.State.SUCCESS);
                 }
+
+                // do confirm
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusData(), (input, output) -> {
+                    for (ProposalWithDone done : context.getDataWithCallback()) {
+                        if (done.getProposal() == input) {
+                            done.getDone().applyDone(input.getData(), output);
+                        }
+                    }
+                });
             });
 
         }

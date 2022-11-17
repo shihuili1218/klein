@@ -32,11 +32,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -68,7 +68,7 @@ public class LearnerImpl implements Learner {
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
-    private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
+    private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
     private final AtomicBoolean snapSyncing = new AtomicBoolean(false);
 
     public LearnerImpl(PaxosNode self) {
@@ -168,7 +168,6 @@ public class LearnerImpl implements Learner {
                 apply(pre);
             } else {
                 RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
-                apply(pre);
             }
         }
 
@@ -188,23 +187,14 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().unlock();
         }
 
-        if (applyCallback.containsKey(instanceId)) {
-            // is self
-            List<ProposalWithDone> proposalWithDones = applyCallback.remove(instanceId);
-            for (ProposalWithDone proposalWithDone : proposalWithDones) {
-                Object result = this._apply(instanceId, proposalWithDone.getProposal());
-                try {
-                    proposalWithDone.getDone().applyDone(result);
-                } catch (Exception e) {
-                    LOG.warn(String.format("apply instance[%s] to sm, call apply done occur exception. %s", instanceId, e.getMessage()), e);
-                }
-            }
-
-        } else {
-            // input state machine
+        try {
+            List<ApplyCallback> callback = applyCallback.getOrDefault(instanceId, Lists.newArrayList(new DefaultApplyCallback()));
             for (Proposal data : localInstance.getGrantedValue()) {
-                this._apply(localInstance.getInstanceId(), data);
+                Object result = this._apply(localInstance.getInstanceId(), data);
+                callback.forEach(it -> it.apply(data, result));
             }
+        } finally {
+            applyCallback.remove(instanceId);
         }
     }
 
@@ -261,12 +251,7 @@ public class LearnerImpl implements Learner {
                     LOG.warn("learn instance[{}] from node-{}, but result.instance is null", instanceId, target.getId());
                     snapSync(target);
                 } else {
-                    handleConfirmRequest(ConfirmReq.Builder.aConfirmReq()
-                            .nodeId(result.getNodeId())
-                            .proposalNo(result.getInstance().getProposalNo())
-                            .instanceId(result.getInstance().getInstanceId())
-                            .data(result.getInstance().getGrantedValue())
-                            .build());
+                    logManager.updateInstance(result.getInstance());
                 }
             }
         }, 1000);
@@ -328,11 +313,11 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(long instanceId, final List<ProposalWithDone> dataWithDone) {
+    public void confirm(long instanceId, final List<Proposal> data, final ApplyCallback callback) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         applyCallback.putIfAbsent(instanceId, new ArrayList<>());
-        applyCallback.get(instanceId).addAll(dataWithDone);
+        applyCallback.get(instanceId).add(callback);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -343,7 +328,6 @@ public class LearnerImpl implements Learner {
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
                 .instanceId(instanceId)
-                .data(dataWithDone.stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()))
                 .build();
 
         // for self
@@ -369,10 +353,6 @@ public class LearnerImpl implements Learner {
     @Override
     public void handleConfirmRequest(ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
-
-        self.updateCurInstanceId(req.getInstanceId());
-        self.updateCurProposalNo(req.getProposalNo());
-
         try {
             logManager.getLock().writeLock().lock();
 
@@ -380,10 +360,8 @@ public class LearnerImpl implements Learner {
             if (localInstance == null) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
-                localInstance = Instance.Builder.<Proposal>anInstance()
-                        .instanceId(req.getInstanceId())
-                        .applied(new AtomicBoolean(false))
-                        .build();
+                learn(req.getInstanceId(), self.getMemberConfiguration().getEndpointById(req.getNodeId()));
+                return;
             }
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
@@ -391,9 +369,9 @@ public class LearnerImpl implements Learner {
                 LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
                 return;
             }
+
             localInstance.setState(Instance.State.CONFIRMED);
             localInstance.setProposalNo(req.getProposalNo());
-            localInstance.setGrantedValue(req.getData());
             logManager.updateInstance(localInstance);
 
             // apply statemachine
@@ -402,20 +380,12 @@ public class LearnerImpl implements Learner {
                 // do nothing, other threads will boost the instance
             }
 
-            if (applyCallback.containsKey(req.getInstanceId())) {
-                List<ProposalWithDone> proposalWithDones = applyCallback.get(req.getInstanceId());
-                for (ProposalWithDone proposalWithDone : proposalWithDones) {
-                    try {
-                        proposalWithDone.getDone().confirmDone();
-                    } catch (Exception e) {
-                        LOG.warn(e.getMessage());
-                    }
-                }
-            }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             throw e;
         } finally {
+            self.updateCurInstanceId(req.getInstanceId());
+            self.updateCurProposalNo(req.getProposalNo());
             logManager.getLock().writeLock().unlock();
         }
     }
