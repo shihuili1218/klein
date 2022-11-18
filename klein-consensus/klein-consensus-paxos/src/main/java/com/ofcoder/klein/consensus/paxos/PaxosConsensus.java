@@ -73,7 +73,7 @@ public class PaxosConsensus implements Consensus {
 
             @Override
             public void applyDone(Object input, Object result) {
-                if (data.equals(input)){
+                if (data.equals(input)) {
                     builder.data((D) result);
                 }
                 completed.countDown();

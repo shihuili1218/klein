@@ -16,9 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
-import java.util.Map;
-
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -55,9 +52,9 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Send confirm message.
      *
      * @param instanceId id of the instance
-     * @param data       data: data in instance
+     * @param callback   apply callback
      */
-    void confirm(long instanceId, final List<Proposal> data, final ApplyCallback callback);
+    void confirm(long instanceId, final ApplyCallback callback);
 
     void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
 
@@ -82,7 +79,8 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     interface ApplyCallback {
         void apply(Proposal input, Object output);
     }
-    class DefaultApplyCallback implements ApplyCallback{
+
+    class DefaultApplyCallback implements ApplyCallback {
         @Override
         public void apply(Proposal input, Object output) {
             // do nothing.

@@ -61,7 +61,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public AcceptRes handleAcceptRequest(AcceptReq req) {
-        LOG.info("processing the accept message from node-{}", req.getNodeId());
+        LOG.info("processing the accept message from node-{}, instanceId: {}", req.getNodeId(), req.getInstanceId());
 
         try {
             logManager.getLock().writeLock().lock();
