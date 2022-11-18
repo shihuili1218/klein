@@ -180,11 +180,6 @@ public class ProposerImpl implements Proposer {
 
         // for self
         AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req);
-        if (res.getInstanceState() == Instance.State.CONFIRMED) {
-            // 如果自己是confirmed，那么不需要再进行了
-            callback.granted(ctxt);
-            return;
-        }
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
@@ -281,20 +276,18 @@ public class ProposerImpl implements Proposer {
 
     private boolean blockBoost(long instanceId, Proposal proposal) {
         try {
-
             CountDownLatch latch = boostLatch.get(instanceId);
             if (latch != null) {
                 boolean await = latch.await(2000, TimeUnit.MILLISECONDS);
                 // It is not necessary to handle the return value,
                 // which is ProposerImpl.boost work content
             }
-            return boost(instanceId, proposal);
         } catch (InterruptedException e) {
             LOG.warn("{}, boost instance[{}] failure, {}", e.getClass().getName(), instanceId, e.getMessage());
-            return boost(instanceId, proposal);
         } finally {
             boostLatch.remove(instanceId);
         }
+        return boost(instanceId, proposal);
     }
 
     /**
@@ -515,29 +508,15 @@ public class ProposerImpl implements Proposer {
                     event.getDone().negotiationDone(Result.State.SUCCESS);
                 }
 
-                List<ProposalWithDone> completed = new ArrayList<>();
-                CountDownLatch latch = new CountDownLatch(context.getConsensusData().size());
                 // do confirm
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusData(), (input, output) -> {
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
                     for (ProposalWithDone done : context.getDataWithCallback()) {
                         if (done.getProposal() == input) {
                             done.getDone().applyDone(input.getData(), output);
-                            completed.add(done);
                             break;
                         }
                     }
-                    latch.countDown();
                 });
-                try {
-                    if (latch.await(100, TimeUnit.MILLISECONDS)) {
-                        List<ProposalWithDone> copy = new ArrayList<>(context.getDataWithCallback());
-                        copy.removeAll(completed);
-                        if (CollectionUtils.isNotEmpty(copy)) {
-                            copy.forEach(it -> it.getDone().applyDone(null, null));
-                        }
-                    }
-                } catch (InterruptedException e) {
-                }
             });
 
         }

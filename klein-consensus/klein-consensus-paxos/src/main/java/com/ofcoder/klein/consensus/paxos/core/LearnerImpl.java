@@ -252,6 +252,11 @@ public class LearnerImpl implements Learner {
                     snapSync(target);
                 } else {
                     logManager.updateInstance(result.getInstance());
+                    // apply statemachine
+                    if (!applyQueue.offer(req.getInstanceId())) {
+                        LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+                        // do nothing, other threads will boost the instance
+                    }
                 }
             }
         }, 1000);
@@ -313,7 +318,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(long instanceId, final List<Proposal> data, final ApplyCallback callback) {
+    public void confirm(long instanceId, final ApplyCallback callback) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         applyCallback.putIfAbsent(instanceId, new ArrayList<>());
@@ -357,9 +362,10 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null) {
+            if (localInstance == null && req.getInstanceId() > self.getLastCheckpoint()) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
+                LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
                 learn(req.getInstanceId(), self.getMemberConfiguration().getEndpointById(req.getNodeId()));
                 return;
             }
