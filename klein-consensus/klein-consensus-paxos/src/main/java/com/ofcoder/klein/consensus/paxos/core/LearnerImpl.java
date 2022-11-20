@@ -153,10 +153,9 @@ public class LearnerImpl implements Learner {
 
 
     public void apply(long instanceId) {
-        LOG.info("start apply, instanceId: {}", instanceId);
-
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, maxAppliedInstanceId, lastCheckpoint);
         if (instanceId <= maxAppliedInstanceId || lastCheckpoint >= instanceId) {
             // the instance has been applied.
             return;
