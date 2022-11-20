@@ -141,6 +141,11 @@ public class PaxosNode extends Node {
                 "} " + super.toString();
     }
 
+    @Override
+    public String nodeId() {
+        return self.getId();
+    }
+
     public static final class Builder {
         private long curInstanceId;
         private long curAppliedInstanceId;
@@ -181,7 +186,7 @@ public class PaxosNode extends Node {
             return this;
         }
 
-        public Builder lastCheckpoint(long lastCheckpoint){
+        public Builder lastCheckpoint(long lastCheckpoint) {
             this.lastCheckpoint = lastCheckpoint;
             return this;
         }
