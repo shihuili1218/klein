@@ -36,7 +36,7 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
     <E extends Serializable> void propose(final String group, final E data, final ProposeDone done);
 
     /**
-     * The method blocks until instance changes to applied
+     * Boost the copy of the proposal to the majority, and ensure that you have executed confirm phase.
      *
      * @param instanceId      id of boost instance
      * @param defaultProposal default proposal

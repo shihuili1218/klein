@@ -36,6 +36,7 @@ import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.MateData;
 import com.ofcoder.klein.storage.facade.Snap;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
@@ -45,18 +46,20 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  * @author 释慧利
  */
 @Join
-public class JvmLogManager<P extends Serializable, M extends Serializable> implements LogManager<P, M> {
+public class JvmLogManager<P extends Serializable> implements LogManager<P> {
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ReentrantReadWriteLock lock;
-    private static final String SNAP_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
-    private static final String MATE_PATH = SNAP_PATH + File.separator + "mate";
-    private M metadata;
+    private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
+    private static String SELF_PATH;
+    private static String MATE_PATH;
+
+    private MateData metadata;
 
     @Override
     public void init(StorageProp op) {
-        File file = new File(SNAP_PATH);
+        File file = new File(BASE_PATH);
         if (!file.exists()) {
             boolean mkdir = file.mkdir();
         }
@@ -109,7 +112,15 @@ public class JvmLogManager<P extends Serializable, M extends Serializable> imple
 
 
     @Override
-    public M loadMateData(M defaultValue) {
+    public MateData loadMateData(MateData defaultValue) {
+        SELF_PATH = BASE_PATH + File.separator + defaultValue.nodeId();
+        File selfFile = new File(SELF_PATH);
+        if (!selfFile.exists()) {
+            boolean mkdir = selfFile.mkdir();
+            // do nothing for mkdir result
+        }
+
+        MATE_PATH = SELF_PATH + File.separator + "mate";
         File file = new File(MATE_PATH);
         if (!file.exists()) {
             this.metadata = defaultValue;
@@ -141,7 +152,7 @@ public class JvmLogManager<P extends Serializable, M extends Serializable> imple
 
     @Override
     public void saveSnap(String group, Snap snap) {
-        String bastPath = SNAP_PATH + File.separator + group + File.separator;
+        String bastPath = SELF_PATH + File.separator + group + File.separator;
         File snapFile = new File(bastPath + snap.getCheckpoint());
         if (snapFile.exists()) {
             return;
@@ -178,7 +189,7 @@ public class JvmLogManager<P extends Serializable, M extends Serializable> imple
 
     @Override
     public Snap getLastSnap(String group) {
-        String bastPath = SNAP_PATH + File.separator + group + File.separator;
+        String bastPath = SELF_PATH + File.separator + group + File.separator;
         File file = new File(bastPath + "last");
         if (!file.exists()) {
             return null;

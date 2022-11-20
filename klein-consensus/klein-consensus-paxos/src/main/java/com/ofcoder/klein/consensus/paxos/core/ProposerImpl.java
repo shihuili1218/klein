@@ -17,7 +17,6 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -79,7 +78,7 @@ public class ProposerImpl implements Proposer {
      * The instance of the Prepare phase has been executed.
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
-    private LogManager<Proposal, PaxosNode> logManager;
+    private LogManager<Proposal> logManager;
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
 
     public ProposerImpl(PaxosNode self) {
@@ -248,7 +247,7 @@ public class ProposerImpl implements Proposer {
             return false;
         }
         Instance<Proposal> instance = logManager.getInstance(instanceId);
-        if (instance != null && instance.getApplied().get()) {
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             return instance.getGrantedValue().contains(proposal);
         }
 
@@ -257,19 +256,7 @@ public class ProposerImpl implements Proposer {
             return blockBoost(instanceId, proposal);
         }
 
-        tryBoost(instanceId, proposal, new ProposeDone() {
-            @Override
-            public void negotiationDone(Result.State result) {
-                if (result != Result.State.SUCCESS) {
-                    latch.countDown();
-                }
-            }
-
-            @Override
-            public void applyDone(Object input, Object output) {
-                latch.countDown();
-            }
-        });
+        tryBoost(instanceId, proposal, result -> latch.countDown());
 
         return blockBoost(instanceId, proposal);
     }
@@ -298,10 +285,14 @@ public class ProposerImpl implements Proposer {
      */
     private void tryBoost(final long instanceId, final Proposal proposal, final ProposeDone done) {
 
+        if (self.getLastCheckpoint() >= instanceId) {
+            done.negotiationDone(Result.State.SUCCESS);
+            return;
+        }
+
         Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             done.negotiationDone(Result.State.SUCCESS);
-            done.applyDone(null, null);
             return;
         }
 
@@ -504,9 +495,6 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
-                for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(Result.State.SUCCESS);
-                }
 
                 // do confirm
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
@@ -517,6 +505,10 @@ public class ProposerImpl implements Proposer {
                         }
                     }
                 });
+
+                for (ProposalWithDone event : context.getDataWithCallback()) {
+                    event.getDone().negotiationDone(Result.State.SUCCESS);
+                }
             });
 
         }

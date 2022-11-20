@@ -43,7 +43,7 @@ public class AcceptorImpl implements Acceptor {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptorImpl.class);
 
     private final PaxosNode self;
-    private LogManager<Proposal, PaxosNode> logManager;
+    private LogManager<Proposal> logManager;
 
     public AcceptorImpl(PaxosNode self) {
         this.self = self;
@@ -134,7 +134,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public PrepareRes handlePrepareRequest(PrepareReq req, boolean isSelf) {
-        LOG.info("processing the prepare message from node-{}", req.getNodeId());
+        LOG.info("processing the prepare message from node-{}, isSelf: {}", req.getNodeId(), isSelf);
         final long curProposalNo = self.getCurProposalNo();
         final long curInstanceId = self.getCurInstanceId();
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();

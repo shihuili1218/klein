@@ -36,7 +36,8 @@ public abstract class MemberConfiguration implements Serializable {
 
     public Set<Endpoint> getMembersWithoutSelf() {
         final String selfId = self.getId();
-        return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId())).collect(Collectors.toSet());
+        return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+                .collect(Collectors.toSet());
     }
 
     public Endpoint getEndpointById(String id) {

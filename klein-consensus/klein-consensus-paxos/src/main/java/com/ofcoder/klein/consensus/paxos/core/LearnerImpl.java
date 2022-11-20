@@ -33,6 +33,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +64,7 @@ public class LearnerImpl implements Learner {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerImpl.class);
     private RpcClient client;
     private final PaxosNode self;
-    private LogManager<Proposal, PaxosNode> logManager;
+    private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
@@ -151,7 +152,7 @@ public class LearnerImpl implements Learner {
     }
 
 
-    private void apply(long instanceId) {
+    public void apply(long instanceId) {
         LOG.info("start apply, instanceId: {}", instanceId);
 
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
@@ -168,6 +169,7 @@ public class LearnerImpl implements Learner {
                 apply(pre);
             } else {
                 RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
+                apply(pre);
             }
         }
 
@@ -358,11 +360,18 @@ public class LearnerImpl implements Learner {
     @Override
     public void handleConfirmRequest(ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
+
+        if (req.getInstanceId() <= self.getLastCheckpoint()) {
+            // the instance is compressed.
+            LOG.info("the instance[{}] is compressed, checkpoint[{}]", req.getInstanceId(), self.getLastCheckpoint());
+            return;
+        }
+
         try {
             logManager.getLock().writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null && req.getInstanceId() > self.getLastCheckpoint()) {
+            if (localInstance == null) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
@@ -374,6 +383,9 @@ public class LearnerImpl implements Learner {
                 // the instance is confirmed.
                 LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
                 return;
+            }
+            if (CollectionUtils.isEmpty(localInstance.getGrantedValue())) {
+                LOG.info("the instance[{}] is ZZZZZZ", localInstance.getInstanceId());
             }
 
             localInstance.setState(Instance.State.CONFIRMED);
