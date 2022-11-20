@@ -40,6 +40,8 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      */
     void loadSM(final String group, final SM sm);
 
+    void apply(long instanceId);
+
     /**
      * Send the learn message to <code>target</code>
      *

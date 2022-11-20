@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;

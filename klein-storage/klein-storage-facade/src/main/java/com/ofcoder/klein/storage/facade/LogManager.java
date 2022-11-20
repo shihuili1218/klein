@@ -12,7 +12,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author 释慧利
  */
 @SPI
-public interface LogManager<P extends Serializable, M extends Serializable> extends Lifecycle<StorageProp> {
+public interface LogManager<P extends Serializable> extends Lifecycle<StorageProp> {
 
     ReentrantReadWriteLock getLock();
 
@@ -40,7 +40,7 @@ public interface LogManager<P extends Serializable, M extends Serializable> exte
      */
     List<Instance<P>> getInstanceNoConfirm();
 
-    M loadMateData(M defaultValue);
+    MateData loadMateData(MateData defaultValue);
 
     void saveSnap(String group, Snap snap);
 

@@ -134,7 +134,11 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             long instanceId = self.incrementInstanceId();
-            return RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
+            boolean boost = RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
+            if (boost) {
+                RoleAccessor.getLearner().apply(instanceId);
+            }
+            return boost;
         } finally {
             changing.compareAndSet(true, false);
         }

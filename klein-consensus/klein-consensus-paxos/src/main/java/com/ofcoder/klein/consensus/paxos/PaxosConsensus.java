@@ -119,11 +119,11 @@ public class PaxosConsensus implements Consensus {
     private void loadNode() {
         // reload self information from storage.
 
-        LogManager<Proposal, PaxosNode> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
         configuration.init(this.prop.getMembers(), this.prop.getSelf());
 
-        this.self = logManager.loadMateData(PaxosNode.Builder.aPaxosNode()
+        this.self = (PaxosNode) logManager.loadMateData(PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
                 .curAppliedInstanceId(0)
                 .curProposalNo(0)
