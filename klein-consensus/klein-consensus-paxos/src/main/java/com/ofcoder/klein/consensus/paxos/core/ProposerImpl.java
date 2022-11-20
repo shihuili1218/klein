@@ -402,7 +402,7 @@ public class ProposerImpl implements Proposer {
 
     private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
             , final PrepareRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), proposalNo, result.getResult());
+        LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), result.getCurProposalNo(), result.getResult());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
