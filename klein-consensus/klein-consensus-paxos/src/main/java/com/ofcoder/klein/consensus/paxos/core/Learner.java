@@ -16,6 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -26,6 +29,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.storage.facade.Instance;
 
 /**
  * @author 释慧利
@@ -48,7 +52,21 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param instanceId instance to learn
      * @param target     learn objective
      */
-    void learn(long instanceId, Endpoint target);
+    void learn(long instanceId, Endpoint target, LearnCallback callback);
+
+    default void learn(long instanceId, Endpoint target) {
+        learn(instanceId, target, new DefaultLearnCallback());
+    }
+
+    default boolean learnSync(long instanceId, Endpoint target) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        learn(instanceId, target, future::complete);
+        try {
+            return future.get(1010, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     /**
      * Send confirm message.
@@ -80,6 +98,18 @@ public interface Learner extends Lifecycle<ConsensusProp> {
 
     interface ApplyCallback {
         void apply(Proposal input, Object output);
+    }
+
+
+    interface LearnCallback {
+        void learned(boolean result);
+    }
+
+    class DefaultLearnCallback implements LearnCallback {
+        @Override
+        public void learned(boolean result) {
+
+        }
     }
 
     class DefaultApplyCallback implements ApplyCallback {
