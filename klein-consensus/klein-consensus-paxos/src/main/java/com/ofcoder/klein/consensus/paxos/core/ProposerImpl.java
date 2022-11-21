@@ -208,7 +208,8 @@ public class ProposerImpl implements Proposer {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, proposalNo: {}, instanceId: {}, remote.instanceState: {}", result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState());
+        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote。instanceState: {}, result: {}"
+                , result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState(), result.getResult());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
