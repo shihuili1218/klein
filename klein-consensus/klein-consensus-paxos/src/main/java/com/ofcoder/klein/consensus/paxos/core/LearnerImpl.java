@@ -167,6 +167,8 @@ public class LearnerImpl implements Learner {
             if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
                 apply(pre);
             } else {
+
+
                 RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
                 apply(pre);
             }
