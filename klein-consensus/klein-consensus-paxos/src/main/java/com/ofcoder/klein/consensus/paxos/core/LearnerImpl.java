@@ -50,6 +50,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -164,14 +165,20 @@ public class LearnerImpl implements Learner {
         if (instanceId > exceptConfirmId) {
             long pre = instanceId - 1;
             Instance<Proposal> preInstance = logManager.getInstance(pre);
-            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
-                apply(pre);
-            } else {
+            if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
+                for (Endpoint endpoint : self.getMemberConfiguration().getMembersWithoutSelf()) {
+                    if (learnSync(pre, endpoint)) {
+                        break;
+                    }
+                }
 
-
-                RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
-                apply(pre);
+                preInstance = logManager.getInstance(pre);
+                if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
+                    LOG.info("this is not a happy thing, instance[{}] has entered the boost stage", pre);
+                    RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
+                }
             }
+            apply(pre);
         }
 
         // update log to applied.
@@ -235,9 +242,14 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void learn(long instanceId, Endpoint target) {
-        // todo 同一时间同一个instance，有一个线程执行即可
+    public void learn(long instanceId, Endpoint target, LearnCallback callback) {
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
+
+        Instance<Proposal> instance = logManager.getInstance(instanceId);
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            callback.learned(true);
+            return;
+        }
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
 
@@ -245,21 +257,26 @@ public class LearnerImpl implements Learner {
             @Override
             public void error(Throwable err) {
                 LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
-                // do nothing
+                callback.learned(false);
             }
 
             @Override
             public void complete(LearnRes result) {
-                if (result.getInstance() == null || !result.isResult()) {
-                    LOG.warn("learn instance[{}] from node-{}, but result.instance is null", instanceId, target.getId());
-                    snapSync(target);
-                } else {
+                if (result.isResult() == Sync.SNAP) {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
+                    snapSync(target, callback);
+                } else if (result.isResult() == Sync.SINGLE) {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     logManager.updateInstance(result.getInstance());
                     // apply statemachine
                     if (!applyQueue.offer(req.getInstanceId())) {
                         LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
                         // do nothing, other threads will boost the instance
                     }
+                    callback.learned(true);
+                } else {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());
+                    callback.learned(false);
                 }
             }
         }, 1000);
@@ -269,20 +286,20 @@ public class LearnerImpl implements Learner {
     public void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId) {
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         if (checkpoint > curAppliedInstanceId) {
-            snapSync(target);
+            ThreadExecutor.submit(() -> snapSync(target, new DefaultLearnCallback()));
         } else {
             long diff = maxAppliedInstanceId - curAppliedInstanceId;
             if (diff > 0) {
                 ThreadExecutor.submit(() -> {
                     for (int i = 1; i <= diff; i++) {
-                        RoleAccessor.getLearner().learn(curAppliedInstanceId + i, target);
+                        RoleAccessor.getLearner().learnSync(curAppliedInstanceId + i, target);
                     }
                 });
             }
         }
     }
 
-    private void snapSync(Endpoint target) {
+    private void snapSync(Endpoint target, LearnCallback callback) {
         LOG.info("start snap sync from node-{}", target.getId());
         try {
             if (!snapSyncing.compareAndSet(false, true)) {
@@ -313,8 +330,10 @@ public class LearnerImpl implements Learner {
             for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
                 loadSnap(entry.getKey(), entry.getValue());
             }
+            callback.learned(true);
         } catch (Throwable e) {
             LOG.error(e.getMessage());
+            callback.learned(false);
         } finally {
             snapSyncing.compareAndSet(true, false);
         }
@@ -414,11 +433,15 @@ public class LearnerImpl implements Learner {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
         LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
 
+        if (request.getInstanceId() <= self.getLastCheckpoint()) {
+            return res.result(Sync.SNAP).build();
+        }
+
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
-        if (request.getInstanceId() <= self.getLastCheckpoint() || instance == null) {
-            return res.result(false).build();
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            return res.result(Sync.SINGLE).instance(instance).build();
         } else {
-            return res.result(true).instance(instance).build();
+            return res.result(Sync.NO_SUPPORT).build();
         }
     }
 

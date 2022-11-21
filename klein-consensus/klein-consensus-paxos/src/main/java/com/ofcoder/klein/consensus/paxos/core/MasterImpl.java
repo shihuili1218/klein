@@ -28,7 +28,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -268,9 +267,7 @@ public class MasterImpl implements Master {
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
 
         if (request.getMaxAppliedInstanceId() > self.getCurAppliedInstanceId()) {
-            ThreadExecutor.submit(() ->
-                    RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId())
-            );
+            RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
         }
     }
 

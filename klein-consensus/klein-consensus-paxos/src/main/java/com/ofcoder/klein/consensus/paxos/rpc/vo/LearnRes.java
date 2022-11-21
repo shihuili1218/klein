@@ -26,7 +26,7 @@ import com.ofcoder.klein.storage.facade.Instance;
  */
 public class LearnRes implements Serializable {
     private String nodeId;
-    private boolean result;
+    private Sync result;
     private Instance<Proposal> instance;
 
     public String getNodeId() {
@@ -45,17 +45,17 @@ public class LearnRes implements Serializable {
         this.instance = instance;
     }
 
-    public boolean isResult() {
+    public Sync isResult() {
         return result;
     }
 
-    public void setResult(boolean result) {
+    public void setResult(Sync result) {
         this.result = result;
     }
 
     public static final class Builder {
         private String nodeId;
-        private boolean result;
+        private Sync result;
         private Instance<Proposal> instance;
 
         private Builder() {
@@ -70,7 +70,7 @@ public class LearnRes implements Serializable {
             return this;
         }
 
-        public Builder result(boolean result) {
+        public Builder result(Sync result) {
             this.result = result;
             return this;
         }
