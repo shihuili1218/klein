@@ -1,60 +1,62 @@
+# Introduce
+![logo](logo.svg)
+Klein is a Paxos based distributed tool library. Based on Paxos, it can realize KV storage, cache, lock, registry,
+configuration center, etc.
 
-# 介绍
-![](logo.svg)
-Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、缓存。
+We hope that Klein can be deployed independently or embedded in your project. You can use it just like Redis,
+or embed Klein into your project without relying on any middleware to ensure data consistency among members. Of course,
+this is still in the process of implementation. 😆😆😆
 
-你可以独立部署Klein，像使用Redis一样使用它；但是仅仅是这样的话，也太没有新意了，它有趣的地方在于：Klein可以内嵌入你的项目中，你可以不依赖任何中间件，保证各个成员之间的数据一致。
+**Look forward to your star⭐**
 
-基于此，你可以有无限多的想法，例如用Klein来实现KV存储，或者用它来实现分布式缓存，甚至用它来实现分布式锁，etc anything.
+## Cache/K-V storage
+- Control the number of buffers based on LRU
+- Cache Automatic Expiration (TTL)
+## Lock
 
-## 缓存/K-V存储
-- 最大存储的大小（LRU）
-- TTL自动过期
-## 锁
+# Milepost
 
-# 里程map
-
-## 进度
-### paxos
-- [x] 写请求、乱序协商，顺序确认
-- [x] 读请求，使用协商log完成
-- [x] 批量协商
-- [x] 优化prepare阶段
-- [x] 快照
-- [x] 拆分Group，proposer等角色无须隔离，只需隔离instance
-- [x] 增加Master：
-  - [x] 成员变更
-  - [x] master晋升应拥有最完整的数据(以提案协商选举master，如果成功晋升，那么在此之前的instance一定都apply了)
-  - [x] 数据对齐
-    - [x] Master心跳触发对齐
-    - [x] 快照同步（心跳携带checkpoint、learn消息返回checkpoint）
-    - [ ] ~~新成员加入集群，主动向master学习~~
-  - [ ] 优化读请求(写请求一定要复制到Master)
-  - [ ] 优化写请求(写请求只能由Master执行，避免活锁)
-- [ ] 成员自动发现(调研)
-- [ ] 数据对齐：成员上线、落后成员对齐
+## Evolve
+### Paxos
+- [x] Write request, disordered negotiation, sequential confirmation
+- [x] Read request, using negotiation log
+- [x] Batch negotiation
+- [x] Optimize the prepare phase
+- [x] Snapshot
+- [x] To split roles such as Group and proposer, you only need to isolate instance instead of isolating them
+- [x] Master role：
+  - [x] Change of members
+  - [x] The master promotion should have the most complete data (the master should be elected through negotiation with the proposal. If the promotion is successful, the previous instances must be applied)
+  - [x] Keep data consistent
+    - [x] Master heartbeat triggers data synchronization
+    - [x] Snapshot synchronization (the heartbeat carries the checkpoint and the learn message returns the checkpoint)
+    - [ ] ~~New members join the cluster and actively learn from the master~~
+  - [ ] Optimize read requests (write requests must be copied to the master)
+  - [ ] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
+- [ ] Automatic member discovery (research)
+- [ ] Data synchronization: members are online and backward members are aligned
 - [ ] NWR
-- [ ] confirm优化读请求
-- [ ] 不存在干扰key，无需执行一轮Prepare
+- [ ] Confirm Optimize read requests
+- [ ] There is no interference key, so a round of Prepare is unnecessary
 
-### 缓存
-- [x] 读、写、等基础功能
-- [ ] 配合持久化实现LRU
-- [ ] TTL自动过期
+### Cache
+- [x] Basic functions such as reading, writing, etc
+- [ ] Implement LRU with persistence
+- [ ] Cache Automatic Expiration (TTL)
 
-### 待优化
-- LogManager行锁
-- 监控协商效率
-- 监控线程池指标(DefaultTimer, ThreadExecutor)
-- ProposalNo全局唯一
+### To be optimized
+- [ ] LogManager row lock
+- [ ] Monitor negotiation efficiency
+- [ ] Monitoring thread pool indicators (DefaultTimer, ThreadExecutor)
+- [x] ProposalNo全局唯一
 
-# 章解
+# Design ideas
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)
-- ProposalNo怎么生成？
-- 是否真的能支持并行协商？
-- 到底哪个提案会达成共识？
-- Confirm阶段（应用状态转移）是否真的可以异步执行？
-- 如何为一个运行的系统创建快照？
-- Group的拆分是否有必要完全隔离？
-- 优化Prepare阶段
-- 批量协商（队列），减少RPC交互
+- How to generate ProposalNo?
+- Can parallel negotiation really be supported?
+- Which proposal will reach consensus?
+- Can the Confirm phase (application state transition) really be executed asynchronously?
+- How do I create a snapshot of a running system?
+- Is it necessary to completely isolate the splitting of a group?
+- Optimize the Prepare phase
+- Batch negotiation (queue) to reduce RPC interaction
