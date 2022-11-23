@@ -183,7 +183,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     private void truncCheckpoint(long checkpoint) {
-        Set<Long> removeKeys = confirmedInstances.keySet().stream().filter(it -> it > checkpoint).collect(Collectors.toSet());
+        Set<Long> removeKeys = confirmedInstances.keySet().stream().filter(it -> it <= checkpoint).collect(Collectors.toSet());
         removeKeys.forEach(confirmedInstances::remove);
     }
 

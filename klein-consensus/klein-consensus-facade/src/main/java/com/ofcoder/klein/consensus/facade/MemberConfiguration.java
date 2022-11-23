@@ -41,6 +41,9 @@ public abstract class MemberConfiguration implements Serializable {
     }
 
     public Endpoint getEndpointById(String id) {
+        if (StringUtils.isEmpty(id)) {
+            return null;
+        }
         return allMembers.getOrDefault(id, null);
     }
 

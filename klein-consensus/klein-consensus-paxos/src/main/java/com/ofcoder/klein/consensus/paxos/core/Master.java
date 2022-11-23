@@ -25,7 +25,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
-    // 成员变更后，需要协商一个NOOP提案，
+
     void addMember(Endpoint endpoint);
 
     void removeMember(Endpoint endpoint);
@@ -34,5 +34,19 @@ public interface Master extends Lifecycle<ConsensusProp> {
 
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
 
+    /**
+     * Get heartbeat sender.
+     *
+     * @return last heartbeat came from it
+     */
+    Endpoint heartbeatFrom();
+
     void onChangeMaster(final String newMaster);
+
+    void addHealthyListener(final HealthyListener listener);
+
+    interface HealthyListener {
+        void change(boolean healthy);
+    }
+
 }

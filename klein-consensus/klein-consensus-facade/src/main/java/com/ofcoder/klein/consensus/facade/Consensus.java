@@ -36,8 +36,12 @@ public interface Consensus extends Lifecycle<ConsensusProp> {
      * @param data message
      * @return whether success
      */
-    <E extends Serializable, D extends Serializable> Result<D> read(final String group, final E data);
+    default <E extends Serializable, D extends Serializable> Result<D> read(final String group, final E data){
+        return propose(group, data, true);
+    }
 
     void loadSM(final String group, final SM sm);
+
+    boolean healthy();
 
 }

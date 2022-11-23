@@ -32,8 +32,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +71,7 @@ public class LearnerImpl implements Learner {
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
-    private final AtomicBoolean snapSyncing = new AtomicBoolean(false);
+    private final ReentrantLock snapLock = new ReentrantLock();
 
     public LearnerImpl(PaxosNode self) {
         this.self = self;
@@ -90,6 +90,12 @@ public class LearnerImpl implements Learner {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+            }
+        });
+        RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
+            @Override
+            public void change(boolean healthy) {
+
             }
         });
     }
@@ -113,7 +119,8 @@ public class LearnerImpl implements Learner {
 
     private void generateSnap() {
         try {
-            if (!snapSyncing.compareAndSet(false, true)) {
+            if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
+                    || (!snapLock.isLocked() && !snapLock.tryLock())) {
                 return;
             }
 
@@ -123,22 +130,27 @@ public class LearnerImpl implements Learner {
                 logManager.saveSnap(entry.getKey(), snapshot);
             }
         } finally {
-            snapSyncing.compareAndSet(true, false);
+            snapLock.unlock();
         }
     }
 
     private void loadSnap(String group, Snap lastSnap) {
+        if (lastSnap == null) {
+            return;
+        }
+        LOG.info("load snap, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
         try {
-            if (!snapSyncing.compareAndSet(false, true)) {
+            if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
+                    || (!snapLock.isLocked() && !snapLock.tryLock())) {
                 return;
             }
             SM sm = sms.get(group);
-            if (lastSnap != null) {
-                sm.loadSnap(lastSnap);
-                self.updateLastCheckpoint(lastSnap.getCheckpoint());
-            }
+
+            sm.loadSnap(lastSnap);
+            self.updateLastCheckpoint(lastSnap.getCheckpoint());
+            LOG.info("load snap success, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
         } finally {
-            snapSyncing.compareAndSet(true, false);
+            snapLock.unlock();
         }
     }
 
@@ -152,12 +164,11 @@ public class LearnerImpl implements Learner {
         loadSnap(group, lastSnap);
     }
 
-
     public void apply(long instanceId) {
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
         LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, maxAppliedInstanceId, lastCheckpoint);
-        if (instanceId <= maxAppliedInstanceId || lastCheckpoint >= instanceId) {
+        if (instanceId <= maxAppliedInstanceId || instanceId <= lastCheckpoint) {
             // the instance has been applied.
             return;
         }
@@ -166,16 +177,10 @@ public class LearnerImpl implements Learner {
             long pre = instanceId - 1;
             Instance<Proposal> preInstance = logManager.getInstance(pre);
             if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
-                for (Endpoint endpoint : self.getMemberConfiguration().getMembersWithoutSelf()) {
-                    if (learnSync(pre, endpoint)) {
-                        break;
-                    }
-                }
-
-                preInstance = logManager.getInstance(pre);
-                if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
-                    LOG.info("this is not a happy thing, instance[{}] has entered the boost stage", pre);
-                    RoleAccessor.getProposer().boost(pre, Proposal.NOOP);
+                Endpoint target = RoleAccessor.getMaster().heartbeatFrom();
+                if (target == null || !learnSync(pre, target)) {
+                    applyQueue.add(instanceId);
+                    return;
                 }
             }
             apply(pre);
@@ -214,31 +219,28 @@ public class LearnerImpl implements Learner {
             //do nothing
             return null;
         }
-        try {
-            if (!snapSyncing.compareAndSet(false, true)) {
-                return _apply(instance, data);
-            }
-
-            if (instance <= self.getLastCheckpoint()) {
-                //do nothing
-                return null;
-            }
-
-            if (sms.containsKey(data.getGroup())) {
-                SM sm = sms.get(data.getGroup());
-                try {
-                    return sm.apply(instance, data.getData());
-                } catch (Exception e) {
-                    LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
-                    return null;
-                }
-            } else {
-                LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
-                return null;
-            }
-        } finally {
-            snapSyncing.compareAndSet(true, false);
+        if (snapLock.isLocked()) {
+            return _apply(instance, data);
         }
+
+        if (instance <= self.getLastCheckpoint()) {
+            //do nothing
+            return null;
+        }
+
+        if (sms.containsKey(data.getGroup())) {
+            SM sm = sms.get(data.getGroup());
+            try {
+                return sm.apply(instance, data.getData());
+            } catch (Exception e) {
+                LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
+                return null;
+            }
+        } else {
+            LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
+            return null;
+        }
+
     }
 
     @Override
@@ -267,7 +269,14 @@ public class LearnerImpl implements Learner {
                     snapSync(target, callback);
                 } else if (result.isResult() == Sync.SINGLE) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
-                    logManager.updateInstance(result.getInstance());
+                    Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
+                            .instanceId(instanceId)
+                            .proposalNo(result.getInstance().getProposalNo())
+                            .grantedValue(result.getInstance().getGrantedValue())
+                            .state(result.getInstance().getState())
+                            .applied(new AtomicBoolean(false))
+                            .build();
+                    logManager.updateInstance(update);
                     // apply statemachine
                     if (!applyQueue.offer(req.getInstanceId())) {
                         LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
@@ -302,7 +311,7 @@ public class LearnerImpl implements Learner {
     private void snapSync(Endpoint target, LearnCallback callback) {
         LOG.info("start snap sync from node-{}", target.getId());
         try {
-            if (!snapSyncing.compareAndSet(false, true)) {
+            if (!snapLock.tryLock()) {
                 return;
             }
 
@@ -335,7 +344,7 @@ public class LearnerImpl implements Learner {
             LOG.error(e.getMessage());
             callback.learned(false);
         } finally {
-            snapSyncing.compareAndSet(true, false);
+            snapLock.unlock();
         }
     }
 
@@ -404,9 +413,6 @@ public class LearnerImpl implements Learner {
                 LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
                 return;
             }
-            if (CollectionUtils.isEmpty(localInstance.getGrantedValue())) {
-                LOG.info("the instance[{}] is ZZZZZZ", localInstance.getInstanceId());
-            }
 
             localInstance.setState(Instance.State.CONFIRMED);
             localInstance.setProposalNo(req.getProposalNo());
@@ -447,6 +453,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public SnapSyncRes handleSnapSyncRequest(SnapSyncReq req) {
+        LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
                 .images(new HashMap<>())
                 .checkpoint(self.getLastCheckpoint())
