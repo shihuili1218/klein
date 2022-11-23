@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -28,6 +30,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -45,6 +49,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
  * @author 释慧利
@@ -58,6 +64,9 @@ public class MasterImpl implements Master {
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
     private final AtomicBoolean changing = new AtomicBoolean(false);
+    private final List<HealthyListener> listeners = new ArrayList<>();
+    private String heartbeatFrom;
+    private LogManager<Proposal> logManager;
 
     public MasterImpl(PaxosNode self) {
         this.self = self;
@@ -77,7 +86,7 @@ public class MasterImpl implements Master {
     public void init(ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-
+        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         electTimer = new RepeatedTimer("elect-master", calculateElectionMasterInterval()) {
             @Override
             protected void onTrigger() {
@@ -118,13 +127,13 @@ public class MasterImpl implements Master {
         changeMember(ChangeMemberOp.REMOVE, endpoint);
     }
 
-    private boolean changeMember(byte op, Endpoint endpoint) {
+    private void changeMember(byte op, Endpoint endpoint) {
         LOG.info("start add member.");
 
         try {
             // It can only be changed once at a time
             if (!changing.compareAndSet(false, true)) {
-                return false;
+                return;
             }
 
             ChangeMemberOp req = new ChangeMemberOp();
@@ -132,12 +141,24 @@ public class MasterImpl implements Master {
             req.setTarget(endpoint);
             req.setOp(op);
 
-            long instanceId = self.incrementInstanceId();
-            boolean boost = RoleAccessor.getProposer().boost(instanceId, new Proposal(MasterSM.GROUP, req));
-            if (boost) {
-                RoleAccessor.getLearner().apply(instanceId);
-            }
-            return boost;
+            CountDownLatch latch = new CountDownLatch(1);
+            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
+                @Override
+                public void negotiationDone(Result.State result) {
+                    if (result == Result.State.UNKNOWN) {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void applyDone(Object input, Object output) {
+                    latch.countDown();
+                }
+            });
+            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+            // do nothing for await.result
+        } catch (InterruptedException e) {
+            // do nothing
         } finally {
             changing.compareAndSet(true, false);
         }
@@ -151,6 +172,8 @@ public class MasterImpl implements Master {
     private void election() {
         LOG.info("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
+        changeHealthy(false);
+        heartbeatFrom = null;
         if (!electing.compareAndSet(false, true)) {
             return;
         }
@@ -161,17 +184,18 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().propose(MasterSM.GROUP, req, new ProposeDone() {
+            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
                 @Override
                 public void negotiationDone(Result.State result) {
-                    if (result == Result.State.UNKNOWN) {
+                    if (result == Result.State.SUCCESS) {
+                        ThreadExecutor.submit(MasterImpl.this::boostInstance);
+                    } else {
                         latch.countDown();
                     }
                 }
 
                 @Override
                 public void applyDone(Object input, Object output) {
-                    // master will boost the previous instance.
                     latch.countDown();
                 }
             });
@@ -184,6 +208,15 @@ public class MasterImpl implements Master {
             }
         } finally {
             electing.compareAndSet(true, false);
+        }
+    }
+
+    private void boostInstance() {
+        List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+        for (Instance<Proposal> instance : instances) {
+            List<Proposal> grantedValue = instance.getGrantedValue();
+            RoleAccessor.getProposer().tryBoost(instance.getInstanceId(), grantedValue, result -> {
+            });
         }
     }
 
@@ -236,6 +269,18 @@ public class MasterImpl implements Master {
         }
     }
 
+
+    private void changeHealthy(boolean healthy) {
+        listeners.forEach(it -> {
+            it.change(healthy);
+        });
+    }
+
+    @Override
+    public void addHealthyListener(HealthyListener listener) {
+        listeners.add(listener);
+    }
+
     @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
@@ -248,6 +293,9 @@ public class MasterImpl implements Master {
         if (memberConfiguration.getMaster() != null
                 && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
+            changeHealthy(true);
+
+            heartbeatFrom = request.getNodeId();
 
             // reset and restart election timer
             if (!isSelf) {
@@ -262,6 +310,10 @@ public class MasterImpl implements Master {
         }
     }
 
+    @Override
+    public Endpoint heartbeatFrom() {
+        return self.getMemberConfiguration().getEndpointById(heartbeatFrom);
+    }
 
     private void checkAndUpdateInstance(Ping request) {
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
@@ -276,7 +328,7 @@ public class MasterImpl implements Master {
         electTimer.restart();
         int timeoutMs = calculateElectionMasterInterval();
         electTimer.reset(timeoutMs);
-        LOG.info("reset elect timer, next interval: {}", timeoutMs);
+        LOG.debug("reset elect timer, next interval: {}", timeoutMs);
     }
 
     private void restartHeartbeat() {

@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
+import java.util.List;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -42,5 +43,16 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      * @param defaultProposal default proposal
      * @return <code>true</code> if the consensus proposal is defaultProposal, else <code>false</code>
      */
+    @Deprecated
     boolean boost(final long instanceId, final Proposal defaultProposal);
+
+    /**
+     * try to boost instance
+     *
+     * @param instanceId id of the instance that you want to boost
+     * @param done       boost callback, NOTICE: it may be called multiple times
+     */
+    void tryBoost(final long instanceId, final List<Proposal> defaultProposal, final ProposeDone done);
+
+    boolean healthy();
 }

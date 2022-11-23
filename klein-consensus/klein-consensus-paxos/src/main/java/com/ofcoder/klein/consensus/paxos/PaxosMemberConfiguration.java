@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class PaxosMemberConfiguration extends MemberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
-    public static final String NULL_MASTER = "NULL";
     private volatile Endpoint master;
 
     public Endpoint getMaster() {
@@ -39,8 +37,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     }
 
     public boolean changeMaster(String nodeId) {
-        if (isValid(nodeId) || StringUtils.equals(nodeId, NULL_MASTER)) {
-            master = allMembers.getOrDefault(nodeId, null);
+        if (isValid(nodeId)) {
+            master = allMembers.get(nodeId);
             version.incrementAndGet();
             RoleAccessor.getMaster().onChangeMaster(nodeId);
             LOG.info("node-{} was promoted to master, version: {}", nodeId, version.get());
