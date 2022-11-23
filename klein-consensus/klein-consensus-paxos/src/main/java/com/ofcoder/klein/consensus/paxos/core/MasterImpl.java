@@ -65,7 +65,6 @@ public class MasterImpl implements Master {
     private final AtomicBoolean electing = new AtomicBoolean(false);
     private final AtomicBoolean changing = new AtomicBoolean(false);
     private final List<HealthyListener> listeners = new ArrayList<>();
-    private String heartbeatFrom;
     private LogManager<Proposal> logManager;
 
     public MasterImpl(PaxosNode self) {
@@ -173,7 +172,6 @@ public class MasterImpl implements Master {
         LOG.info("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
         changeHealthy(false);
-        heartbeatFrom = null;
         if (!electing.compareAndSet(false, true)) {
             return;
         }
@@ -295,8 +293,6 @@ public class MasterImpl implements Master {
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
             changeHealthy(true);
 
-            heartbeatFrom = request.getNodeId();
-
             // reset and restart election timer
             if (!isSelf) {
                 restartElect();
@@ -308,11 +304,6 @@ public class MasterImpl implements Master {
                     , memberConfiguration, request.getMemberConfigurationVersion());
             return false;
         }
-    }
-
-    @Override
-    public Endpoint heartbeatFrom() {
-        return self.getMemberConfiguration().getEndpointById(heartbeatFrom);
     }
 
     private void checkAndUpdateInstance(Ping request) {

@@ -478,6 +478,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
+            // todo: master选举出来之后，怎么触发协商
             if (healthy() && (this.tasks.size() >= batchSize || endOfBatch)) {
                 doHandle(this.tasks);
                 reset();
