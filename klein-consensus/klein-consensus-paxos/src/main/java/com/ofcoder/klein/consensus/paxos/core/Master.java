@@ -34,13 +34,6 @@ public interface Master extends Lifecycle<ConsensusProp> {
 
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
 
-    /**
-     * Get heartbeat sender.
-     *
-     * @return last heartbeat came from it
-     */
-    Endpoint heartbeatFrom();
-
     void onChangeMaster(final String newMaster);
 
     void addHealthyListener(final HealthyListener listener);

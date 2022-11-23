@@ -72,6 +72,7 @@ public class LearnerImpl implements Learner {
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
+    private final Object waitMaster = new Object();
 
     public LearnerImpl(PaxosNode self) {
         this.self = self;
@@ -95,7 +96,7 @@ public class LearnerImpl implements Learner {
         RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
             @Override
             public void change(boolean healthy) {
-
+                waitMaster.notifyAll();
             }
         });
     }
@@ -177,13 +178,25 @@ public class LearnerImpl implements Learner {
             long pre = instanceId - 1;
             Instance<Proposal> preInstance = logManager.getInstance(pre);
             if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
-                Endpoint target = RoleAccessor.getMaster().heartbeatFrom();
-                if (target == null || !learnSync(pre, target)) {
+                Endpoint master = self.getMemberConfiguration().getMaster();
+                if (master == null) {
+                    synchronized (waitMaster) {
+                        try {
+                            waitMaster.wait(500);
+                        } catch (InterruptedException e) {
+                            // do nothing
+                        }
+                    }
+                }
+                master = self.getMemberConfiguration().getMaster();
+                if (master == null || !learnSync(pre, master)) {
                     applyQueue.add(instanceId);
+                    applyQueue.add(pre);
                     return;
                 }
             }
-            apply(pre);
+            applyQueue.add(pre);
+            return;
         }
 
         // update log to applied.
