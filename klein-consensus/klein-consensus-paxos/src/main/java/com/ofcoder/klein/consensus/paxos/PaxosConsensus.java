@@ -91,13 +91,13 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> read(final String group, E data) {
-        return propose(group, data, true);
+    public void loadSM(final String group, SM sm) {
+        RoleAccessor.getLearner().loadSM(group, sm);
     }
 
     @Override
-    public void loadSM(final String group, SM sm) {
-        RoleAccessor.getLearner().loadSM(group, sm);
+    public boolean healthy() {
+        return RoleAccessor.getProposer().healthy();
     }
 
     @Override
@@ -113,7 +113,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void preheating() {
-//        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
     }
 
     private void loadNode() {

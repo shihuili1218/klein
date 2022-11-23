@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -32,11 +33,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.lmax.disruptor.BlockingWaitStrategy;
+import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslator;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
-import com.ofcoder.klein.common.disruptor.AbstractBatchEventHandler;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
@@ -80,6 +81,8 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
+    private boolean healthy = false;
+
 
     public ProposerImpl(PaxosNode self) {
         this.self = self;
@@ -104,6 +107,7 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
+        RoleAccessor.getMaster().addHealthyListener(healthy -> ProposerImpl.this.healthy = healthy);
     }
 
     @Override
@@ -239,6 +243,11 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
+    public boolean healthy() {
+        return healthy;
+    }
+
+    @Override
     public boolean boost(long instanceId, Proposal proposal) {
         LOG.info("boosting instanceId: {}", instanceId);
         if (self.getLastCheckpoint() >= instanceId) {
@@ -257,7 +266,7 @@ public class ProposerImpl implements Proposer {
             return blockBoost(instanceId, proposal);
         }
 
-        tryBoost(instanceId, proposal, result -> latch.countDown());
+        tryBoost(instanceId, Lists.newArrayList(proposal), result -> latch.countDown());
 
         return blockBoost(instanceId, proposal);
     }
@@ -278,13 +287,9 @@ public class ProposerImpl implements Proposer {
         return boost(instanceId, proposal);
     }
 
-    /**
-     * try to boost instance
-     *
-     * @param instanceId id of the instance that you want to boost
-     * @param done       boost callback, NOTICE: it may be called multiple times
-     */
-    private void tryBoost(final long instanceId, final Proposal proposal, final ProposeDone done) {
+
+    @Override
+    public void tryBoost(final long instanceId, final List<Proposal> proposal, final ProposeDone done) {
 
         if (self.getLastCheckpoint() >= instanceId) {
             done.negotiationDone(Result.State.SUCCESS);
@@ -298,9 +303,7 @@ public class ProposerImpl implements Proposer {
         }
 
         List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
-        localValue = CollectionUtils.isEmpty(localValue)
-                ? Lists.newArrayList(proposal)
-                : localValue;
+        localValue = CollectionUtils.isEmpty(localValue) ? proposal : localValue;
         List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
             ProposalWithDone event = new ProposalWithDone();
             event.setProposal(it);
@@ -437,14 +440,15 @@ public class ProposerImpl implements Proposer {
     }
 
 
-    public class ProposeEventHandler extends AbstractBatchEventHandler<ProposalWithDone> {
+    public class ProposeEventHandler implements EventHandler<ProposalWithDone> {
+        private int batchSize;
+        private final List<ProposalWithDone> tasks = new Vector<>(this.batchSize);
 
         public ProposeEventHandler(int batchSize) {
-            super(batchSize);
+            this.batchSize = batchSize;
         }
 
-        @Override
-        protected void handle(List<ProposalWithDone> events) {
+        private void doHandle(List<ProposalWithDone> events) {
             LOG.info("start negotiations, proposal size: {}", events.size());
 
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
@@ -455,6 +459,28 @@ public class ProposerImpl implements Proposer {
                 prepare(ctxt, new PrepareCallback());
             } else {
                 accept(curProposalNo, ctxt, new AcceptCallback());
+            }
+        }
+
+        public void reset() {
+            tasks.clear();
+        }
+
+        @Override
+        public void onEvent(ProposalWithDone event, long sequence, boolean endOfBatch) {
+            if (event.getShutdownLatch() != null) {
+                if (!this.tasks.isEmpty()) {
+                    doHandle(this.tasks);
+                    reset();
+                }
+                event.getShutdownLatch().countDown();
+                return;
+            }
+            this.tasks.add(event);
+
+            if (healthy() && (this.tasks.size() >= batchSize || endOfBatch)) {
+                doHandle(this.tasks);
+                reset();
             }
         }
     }

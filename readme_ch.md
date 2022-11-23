@@ -35,6 +35,7 @@ Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、�
 - [ ] NWR
 - [ ] confirm优化读请求
 - [ ] 不存在干扰key，无需执行一轮Prepare
+- [ ] Verified by jepsen
 
 ### 缓存
 - [x] 读、写、等基础功能

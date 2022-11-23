@@ -38,6 +38,7 @@ this is still in the process of implementation. 😆😆😆
 - [ ] NWR
 - [ ] Confirm Optimize read requests
 - [ ] There is no interference key, so a round of Prepare is unnecessary
+- [ ] Verified by jepsen
 
 ### Cache
 - [x] Basic functions such as reading, writing, etc
