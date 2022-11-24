@@ -175,9 +175,13 @@ T2时刻收到新的成员变更{A, B, C, D, E}
 | instance |  1  |  2  |  3  |  4  |  5  |  6  |
 |:-----:|:---:|:---:|:---:|:---:|:---:|:---:|  
 | content |  P  |  P  |  R  | P  | P  |  R  |
+
 则需要先等待instance 3先被执行状态转移后才能协商。
 3未执行状态转移前，集群中配置仍然是{A, B, C}
 
 ## checkpoint、maxApplied、maxInstance
+- checkpoint: 快照截至的instance，快照的数据范围为：[0, checkpoint]
+- maxApplied: 当前成员最后一个执行状态转移的instance
+- maxInstance: 当前成员见过的最大的instance
 
 
