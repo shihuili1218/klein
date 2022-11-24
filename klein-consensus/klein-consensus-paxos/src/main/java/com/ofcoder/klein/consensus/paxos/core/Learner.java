@@ -58,16 +58,6 @@ public interface Learner extends Lifecycle<ConsensusProp> {
         learn(instanceId, target, new DefaultLearnCallback());
     }
 
-    default boolean learnSync(long instanceId, Endpoint target) {
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        learn(instanceId, target, future::complete);
-        try {
-            return future.get(1010, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
     /**
      * Send confirm message.
      *
