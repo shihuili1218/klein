@@ -190,8 +190,8 @@ public class LearnerImpl implements Learner {
                 }
                 master = self.getMemberConfiguration().getMaster();
                 if (master == null || !learnSync(pre, master)) {
-                    applyQueue.add(instanceId);
                     applyQueue.add(pre);
+                    applyQueue.add(instanceId);
                     return;
                 }
             }
@@ -314,7 +314,7 @@ public class LearnerImpl implements Learner {
             if (diff > 0) {
                 ThreadExecutor.submit(() -> {
                     for (int i = 1; i <= diff; i++) {
-                        RoleAccessor.getLearner().learnSync(curAppliedInstanceId + i, target);
+                        RoleAccessor.getLearner().learn(curAppliedInstanceId + i, target);
                     }
                 });
             }

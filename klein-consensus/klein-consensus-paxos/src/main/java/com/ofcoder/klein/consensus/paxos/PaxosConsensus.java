@@ -113,7 +113,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void preheating() {
-        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+//        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
     }
 
     private void loadNode() {
