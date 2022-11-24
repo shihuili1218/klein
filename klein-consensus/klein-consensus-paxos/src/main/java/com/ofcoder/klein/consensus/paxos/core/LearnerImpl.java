@@ -72,7 +72,6 @@ public class LearnerImpl implements Learner {
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
-    private final Object waitMaster = new Object();
 
     public LearnerImpl(PaxosNode self) {
         this.self = self;
@@ -91,12 +90,6 @@ public class LearnerImpl implements Learner {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-            }
-        });
-        RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
-            @Override
-            public void change(boolean healthy) {
-                waitMaster.notifyAll();
             }
         });
     }
@@ -177,26 +170,14 @@ public class LearnerImpl implements Learner {
         if (instanceId > exceptConfirmId) {
             long pre = instanceId - 1;
             Instance<Proposal> preInstance = logManager.getInstance(pre);
-            if (preInstance == null || preInstance.getState() != Instance.State.CONFIRMED) {
-                Endpoint master = self.getMemberConfiguration().getMaster();
-                if (master == null) {
-                    synchronized (waitMaster) {
-                        try {
-                            waitMaster.wait(500);
-                        } catch (InterruptedException e) {
-                            // do nothing
-                        }
-                    }
-                }
-                master = self.getMemberConfiguration().getMaster();
-                if (master == null || !learnSync(pre, master)) {
-                    applyQueue.add(pre);
-                    applyQueue.add(instanceId);
-                    return;
-                }
+            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
+                apply(pre);
+                // continue current instanceId
+            } else {
+                ThreadExecutor.submit(() -> learnFromOther(pre, instanceId));
+                // abort current instanceId
+                return;
             }
-            applyQueue.add(pre);
-            return;
         }
 
         // update log to applied.
@@ -254,6 +235,38 @@ public class LearnerImpl implements Learner {
             return null;
         }
 
+    }
+
+    private void learnFromOther(long instanceId, long trigger) {
+
+        long singleTimeoutMS = 150;
+        long times;
+        final Endpoint master = self.getMemberConfiguration().getMaster();
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        if (master != null) {
+            times = 1;
+            learn(instanceId, master, future::complete);
+        } else {
+            times = self.getMemberConfiguration().getMembersWithoutSelf().size();
+            self.getMemberConfiguration().getMembersWithoutSelf().forEach(it -> {
+                CompletableFuture<Boolean> single = new CompletableFuture<>();
+                learn(instanceId, it, single::complete);
+                try {
+                    single.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
+                } catch (Exception e) {
+                    // do nothing
+                }
+            });
+            future.complete(false);
+        }
+        try {
+            if (future.get(singleTimeoutMS * times, TimeUnit.MILLISECONDS) && applyQueue.offer(trigger)) {
+                LOG.error("failed to boost the instance[{}] to the applyQueue, applyQueue.size = {}.", instanceId, applyQueue.size());
+            }
+        } catch (Exception e) {
+            // do nothing
+        }
     }
 
     @Override
@@ -325,6 +338,7 @@ public class LearnerImpl implements Learner {
         LOG.info("start snap sync from node-{}", target.getId());
         try {
             if (!snapLock.tryLock()) {
+                callback.learned(false);
                 return;
             }
 
