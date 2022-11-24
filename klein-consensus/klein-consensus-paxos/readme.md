@@ -150,7 +150,7 @@ Klein引入Master角色，该角色在集群中，同一时间只允许存在一
 我们可以让Master选举作为一个状态机，挂载在Paxos集群上，选举Master则为一个提案，在集群中进行协商，该提案达成共识，也就意味着Master选举成功
 ![img_1.png](elect_master.png)
 
-
+![img.png](elect_master_1.png)
 
 ## 成员变更
 
