@@ -34,7 +34,6 @@ this is still in the process of implementation. 😆😆😆
   - [ ] Optimize read requests (write requests must be copied to the master)
   - [ ] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
 - [ ] Automatic member discovery (research)
-- [ ] Data synchronization: members are online and backward members are aligned
 - [ ] NWR
 - [ ] Confirm Optimize read requests
 - [ ] There is no interference key, so a round of Prepare is unnecessary
