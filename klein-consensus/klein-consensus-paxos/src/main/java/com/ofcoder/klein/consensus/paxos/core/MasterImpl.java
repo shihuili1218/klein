@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -210,10 +211,17 @@ public class MasterImpl implements Master {
     }
 
     private void boostInstance() {
-        List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
-        for (Instance<Proposal> instance : instances) {
-            List<Proposal> grantedValue = instance.getGrantedValue();
-            RoleAccessor.getProposer().tryBoost(instance.getInstanceId(), grantedValue, result -> {
+
+        long miniInstanceId = self.getCurAppliedInstanceId();
+        long maxInstanceId = self.getCurInstanceId();
+        for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
+            Instance<Proposal> instance = logManager.getInstance(miniInstanceId);
+            if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+                continue;
+            }
+            List<Proposal> grantedValue = instance != null ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
+            grantedValue = CollectionUtils.isNotEmpty(grantedValue) ? grantedValue : Lists.newArrayList(Proposal.NOOP);
+            RoleAccessor.getProposer().tryBoost(miniInstanceId, grantedValue, result -> {
             });
         }
     }

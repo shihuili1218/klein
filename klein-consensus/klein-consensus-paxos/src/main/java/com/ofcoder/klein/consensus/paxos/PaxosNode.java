@@ -28,6 +28,7 @@ public class PaxosNode extends Node {
     private long curInstanceId = 0;
     private final Object instanceIdLock = new Object();
     private long curAppliedInstanceId = 0;
+    private final Object appliedInstanceIdLock = new Object();
     private long curProposalNo = 0;
     private final Object proposalNoLock = new Object();
     private long lastCheckpoint = 0;
@@ -100,8 +101,12 @@ public class PaxosNode extends Node {
         return curAppliedInstanceId;
     }
 
-    public void setCurAppliedInstanceId(long curAppliedInstanceId) {
-        this.curAppliedInstanceId = curAppliedInstanceId;
+    public void updateCurAppliedInstanceId(long appliedInstanceId) {
+        if (this.curAppliedInstanceId < appliedInstanceId) {
+            synchronized (appliedInstanceIdLock) {
+                this.curAppliedInstanceId = Math.max(curAppliedInstanceId, appliedInstanceId);
+            }
+        }
     }
 
     public long getLastCheckpoint() {
