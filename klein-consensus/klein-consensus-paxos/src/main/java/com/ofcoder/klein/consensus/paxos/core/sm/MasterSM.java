@@ -67,12 +67,18 @@ public class MasterSM extends AbstractSM {
 
     @Override
     protected Object makeImage() {
-        // do nothing.
-        return null;
+        return configuration.createRef();
     }
 
     @Override
     protected void loadImage(Object snap) {
-        // do nothing.
+        if (!(snap instanceof PaxosMemberConfiguration)) {
+            return;
+        }
+        PaxosMemberConfiguration snapConfiguration = (PaxosMemberConfiguration) snap;
+
+        configuration.loadSnap(snapConfiguration);
+
+        LOG.info("LOAD SNAP: {}", configuration);
     }
 }

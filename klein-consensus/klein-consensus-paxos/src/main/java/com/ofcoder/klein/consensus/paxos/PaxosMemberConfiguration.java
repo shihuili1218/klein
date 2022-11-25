@@ -48,6 +48,13 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         }
     }
 
+    public void loadSnap(PaxosMemberConfiguration snap) {
+        this.version = snap.version;
+        this.allMembers = snap.allMembers;
+        this.master = snap.master;
+        this.self = snap.self;
+    }
+
     @Override
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
