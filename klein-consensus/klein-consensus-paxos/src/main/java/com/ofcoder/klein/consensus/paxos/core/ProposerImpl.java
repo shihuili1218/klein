@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,7 +84,6 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
     private boolean healthy = false;
 
-
     public ProposerImpl(PaxosNode self) {
         this.self = self;
     }
@@ -104,10 +104,14 @@ public class ProposerImpl implements Proposer {
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();
-        proposeDisruptor.handleEventsWith(new ProposeEventHandler(this.prop.getBatchSize()));
+        ProposeEventHandler eventHandler = new ProposeEventHandler(this.prop.getBatchSize());
+        proposeDisruptor.handleEventsWith(eventHandler);
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
-        RoleAccessor.getMaster().addHealthyListener(healthy -> ProposerImpl.this.healthy = healthy);
+        RoleAccessor.getMaster().addHealthyListener(healthy -> {
+            ProposerImpl.this.healthy = healthy;
+            eventHandler.triggerHandle();
+        });
     }
 
     @Override
@@ -442,10 +446,26 @@ public class ProposerImpl implements Proposer {
 
     public class ProposeEventHandler implements EventHandler<ProposalWithDone> {
         private int batchSize;
-        private final List<ProposalWithDone> tasks = new Vector<>(this.batchSize);
+        private final List<ProposalWithDone> tasks = new Vector<>();
 
         public ProposeEventHandler(int batchSize) {
             this.batchSize = batchSize;
+        }
+
+        private void triggerHandle() {
+            if (tasks.isEmpty()) {
+                return;
+            }
+            syncHandle();
+        }
+
+        private void syncHandle() {
+            List<ProposalWithDone> temp;
+            synchronized (tasks) {
+                temp = new ArrayList<>(tasks);
+                tasks.clear();
+            }
+            doHandle(temp);
         }
 
         private void doHandle(List<ProposalWithDone> events) {
@@ -462,26 +482,19 @@ public class ProposerImpl implements Proposer {
             }
         }
 
-        public void reset() {
-            tasks.clear();
-        }
-
         @Override
         public void onEvent(ProposalWithDone event, long sequence, boolean endOfBatch) {
             if (event.getShutdownLatch() != null) {
                 if (!this.tasks.isEmpty()) {
-                    doHandle(this.tasks);
-                    reset();
+                    syncHandle();
                 }
                 event.getShutdownLatch().countDown();
                 return;
             }
             this.tasks.add(event);
 
-            // todo: master选举出来之后，怎么触发协商
             if (healthy() && (this.tasks.size() >= batchSize || endOfBatch)) {
-                doHandle(this.tasks);
-                reset();
+                syncHandle();
             }
         }
     }
