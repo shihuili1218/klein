@@ -23,11 +23,11 @@ public class ConsensusProp {
     /**
      * timeout for single round.
      */
-    private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 1000);
+    private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 150);
     /**
      * the number of proposals negotiated by the single round.
      */
-    private int batchSize = SystemPropertyUtil.getInt("klein.consensus.batch-size", 3);
+    private int batchSize = SystemPropertyUtil.getInt("klein.consensus.batch-size", 5);
     /**
      * negotiation failed, number of retry times.
      * if set 2, then runs 3 times

@@ -196,9 +196,9 @@ public class ProposerImpl implements Proposer {
                 public void error(Throwable err) {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
 
-                    ctxt.getPrepareQuorum().refuse(it);
-                    if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
-                            && ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                    ctxt.getAcceptQuorum().refuse(it);
+                    if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
+                            && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
                         skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                         ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
@@ -541,6 +541,7 @@ public class ProposerImpl implements Proposer {
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
                     for (ProposalWithDone done : context.getDataWithCallback()) {
                         if (done.getProposal() == input) {
+                            LOG.info("apply callback, instance: {}",context.getInstanceId());
                             done.getDone().applyDone(input.getData(), output);
                             break;
                         }
