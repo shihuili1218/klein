@@ -142,6 +142,8 @@ public class LearnerImpl implements Learner {
 
             sm.loadSnap(lastSnap);
             self.updateLastCheckpoint(lastSnap.getCheckpoint());
+            self.updateCurAppliedInstanceId(lastSnap.getCheckpoint());
+            self.updateCurInstanceId(lastSnap.getCheckpoint());
             LOG.info("load snap success, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
         } finally {
             snapLock.unlock();
@@ -191,7 +193,7 @@ public class LearnerImpl implements Learner {
                 return;
             }
             logManager.updateInstance(localInstance);
-            self.setCurAppliedInstanceId(instanceId);
+            self.updateCurAppliedInstanceId(instanceId);
         } finally {
             logManager.getLock().writeLock().unlock();
         }
@@ -249,20 +251,28 @@ public class LearnerImpl implements Learner {
             learn(instanceId, master, future::complete);
         } else {
             times = self.getMemberConfiguration().getMembersWithoutSelf().size();
-            self.getMemberConfiguration().getMembersWithoutSelf().forEach(it -> {
+
+            for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
                 CompletableFuture<Boolean> single = new CompletableFuture<>();
                 learn(instanceId, it, single::complete);
+                boolean learned = false;
                 try {
-                    single.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
+                    learned = single.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
                     // do nothing
                 }
-            });
-            future.complete(false);
+                if (learned) {
+                    future.complete(true);
+                    break;
+                }
+            }
+            if (!future.isDone()) {
+                future.complete(false);
+            }
         }
         try {
             if (future.get(singleTimeoutMS * times, TimeUnit.MILLISECONDS) && applyQueue.offer(trigger)) {
-                LOG.error("failed to boost the instance[{}] to the applyQueue, applyQueue.size = {}.", instanceId, applyQueue.size());
+                LOG.error("failed to boost the instance[{}].", instanceId);
             }
         } catch (Exception e) {
             // do nothing
@@ -302,7 +312,14 @@ public class LearnerImpl implements Learner {
                             .state(result.getInstance().getState())
                             .applied(new AtomicBoolean(false))
                             .build();
-                    logManager.updateInstance(update);
+
+
+                    try {
+                        logManager.getLock().writeLock().lock();
+                        logManager.updateInstance(update);
+                    } finally {
+                        logManager.getLock().writeLock().unlock();
+                    }
                     // apply statemachine
                     if (!applyQueue.offer(req.getInstanceId())) {
                         LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
@@ -319,6 +336,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId) {
+        LOG.info("keepSameData, target: {}, target[cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), checkpoint, maxAppliedInstanceId, self.getLastCheckpoint(), self.getCurAppliedInstanceId());
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         if (checkpoint > curAppliedInstanceId) {
             ThreadExecutor.submit(() -> snapSync(target, new DefaultLearnCallback()));
