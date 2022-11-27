@@ -160,7 +160,7 @@ public class LearnerImpl implements Learner {
         loadSnap(group, lastSnap);
     }
 
-    public void apply(long instanceId) {
+    private void apply(long instanceId) {
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
         LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, maxAppliedInstanceId, lastCheckpoint);

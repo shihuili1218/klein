@@ -16,9 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -29,7 +26,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.storage.facade.Instance;
 
 /**
  * @author 释慧利
@@ -44,16 +40,22 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      */
     void loadSM(final String group, final SM sm);
 
-    void apply(long instanceId);
+    /**
+     * Send the learn message to <code>target</code>
+     *
+     * @param instanceId instance to learn
+     * @param target     learn objective
+     * @param callback   Callbacks of learning results
+     */
+    void learn(long instanceId, Endpoint target, LearnCallback callback);
 
     /**
      * Send the learn message to <code>target</code>
      *
      * @param instanceId instance to learn
      * @param target     learn objective
+     * @see Learner#learn(long, Endpoint, LearnCallback)
      */
-    void learn(long instanceId, Endpoint target, LearnCallback callback);
-
     default void learn(long instanceId, Endpoint target) {
         learn(instanceId, target, new DefaultLearnCallback());
     }
@@ -66,6 +68,12 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      */
     void confirm(long instanceId, final ApplyCallback callback);
 
+    /**
+     * Keep the data consistent with <code>target</code>
+     * @param target to be learned
+     * @param checkpoint checkpoint of the last snapshot of <code>target</code>
+     * @param maxAppliedInstanceId maxAppliedInstanceId of <code>target</code>
+     */
     void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
 
     /**
@@ -83,7 +91,11 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param req message
      */
     LearnRes handleLearnRequest(LearnReq req);
-
+    /**
+     * Processing Snapshot Synchronization message.
+     *
+     * @param req message
+     */
     SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
 
     interface ApplyCallback {

@@ -27,6 +27,19 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
  * @author 释慧利
  */
 public interface Acceptor extends Lifecycle<ConsensusProp> {
+    /**
+     * Process the Accept message from Proposer
+     *
+     * @param req request content
+     * @return response
+     */
     AcceptRes handleAcceptRequest(AcceptReq req);
+
+    /**
+     * Process the Prepare message from Proposer
+     *
+     * @param req request content
+     * @return response
+     */
     PrepareRes handlePrepareRequest(PrepareReq req, boolean isSelf);
 }

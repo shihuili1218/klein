@@ -26,16 +26,45 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public interface Master extends Lifecycle<ConsensusProp> {
 
+    /**
+     * Change member, add <code>endpoint</code> to the cluster
+     *
+     * @param endpoint new member
+     */
     void addMember(Endpoint endpoint);
 
+    /**
+     * Change member, remove <code>endpoint</code> from cluster
+     *
+     * @param endpoint delete member
+     */
     void removeMember(Endpoint endpoint);
 
+    /**
+     * Election master
+     */
     void electingMaster();
 
+    /**
+     * Processing heartbeat message.
+     *
+     * @param request heartbeat
+     * @param isSelf  whether heartbeat come from themselves
+     * @return whether accept the heartbeat
+     */
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
 
+    /**
+     * This is a callback method of master change.
+     *
+     * @param newMaster new master
+     */
     void onChangeMaster(final String newMaster);
 
+    /**
+     * Added master health listener
+     * @param listener listener
+     */
     void addHealthyListener(final HealthyListener listener);
 
     interface HealthyListener {

@@ -110,7 +110,9 @@ public class ProposerImpl implements Proposer {
         this.proposeQueue = proposeDisruptor.start();
         RoleAccessor.getMaster().addHealthyListener(healthy -> {
             ProposerImpl.this.healthy = healthy;
-            eventHandler.triggerHandle();
+            if (healthy) {
+                eventHandler.triggerHandle();
+            }
         });
     }
 
@@ -541,7 +543,7 @@ public class ProposerImpl implements Proposer {
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
                     for (ProposalWithDone done : context.getDataWithCallback()) {
                         if (done.getProposal() == input) {
-                            LOG.info("apply callback, instance: {}",context.getInstanceId());
+                            LOG.info("apply callback, instance: {}", context.getInstanceId());
                             done.getDone().applyDone(input.getData(), output);
                             break;
                         }
