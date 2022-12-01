@@ -19,6 +19,7 @@
         <module>klein-spi</module>
         <module>klein-common</module>
         <module>klein-example</module>
+        <module>klein-jepsen</module>
     </modules>
 
     <properties>
