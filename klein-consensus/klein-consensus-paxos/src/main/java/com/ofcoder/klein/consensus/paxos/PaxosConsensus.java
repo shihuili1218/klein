@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.ofcoder.klein.consensus.paxos.core.ProposerRedirect;
+import com.ofcoder.klein.consensus.paxos.core.ProxyProposer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,8 +53,10 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private ConsensusProp prop;
 
+    private ProposerRedirect proxy;
+
     private <E extends Serializable> void proposeAsync(final String group, final E data, final ProposeDone done) {
-        RoleAccessor.getProposer().propose(group, data, done);
+       proxy.call(group, data, self, done);
     }
 
     @Override
@@ -108,6 +112,12 @@ public class PaxosConsensus implements Consensus {
         RoleAccessor.create(prop, self);
         loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfiguration()));
         RoleAccessor.getMaster().electingMaster();
+        boolean onlyMasterWrite = prop.getPaxosProp().isOnlyMasterWrite();
+        if (onlyMasterWrite){
+            proxy = new ProxyProposer();
+        } else {
+            proxy = RoleAccessor.getProposer();
+        }
 
         preheating();
     }

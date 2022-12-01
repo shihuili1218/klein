@@ -26,7 +26,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 /**
  * @author 释慧利
  */
-public interface Proposer extends Lifecycle<ConsensusProp> {
+public interface Proposer extends Lifecycle<ConsensusProp>,ProposerRedirect {
     /**
      * Propose proposal.
      *
