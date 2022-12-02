@@ -22,39 +22,73 @@ import java.util.Map;
 /**
  * @author 释慧利
  */
-public class LRUCache {
+public class LRUMap {
     private final MemoryMap<String, Object> memory;
 
-    public LRUCache(int size) {
-        memory = new MemoryMap<>(size);
+    public LRUMap(int size) {
+        memory = new MemoryMap<>(size, new OverflowListener<String, Object>() {
+            @Override
+            public void exceed(Map.Entry<String, Object> eldest) {
+
+            }
+        });
+    }
+
+    public boolean exist(String key) {
+        return false;
+    }
+
+    public void put(String key, Object data) {
+
+    }
+
+    public Object get(String key) {
+        return null;
+    }
+
+    public void remove(String key) {
+
+    }
+
+    public void clear() {
+
+    }
+
+    public Object putIfAbsent(String key, Object data) {
+        return null;
     }
 
 
-    private class MemoryMap<K, V> extends LinkedHashMap<K, V> {
-        private int capacity;
+    public Object makeImage() {
 
-        public MemoryMap(int initialCapacity) {
+        return null;
+    }
+
+    public void loadImage(Object image) {
+
+    }
+
+    private static class MemoryMap<K, V> extends LinkedHashMap<K, V> {
+        private int capacity;
+        private OverflowListener<K, V> listener;
+
+        public MemoryMap(int initialCapacity, OverflowListener<K, V> listener) {
             super(initialCapacity, 0.75f, true);
             this.capacity = initialCapacity;
+            this.listener = listener;
         }
 
         protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-            return size() > capacity;
+            boolean remove = size() > capacity;
+            if (remove) {
+                listener.exceed(eldest);
+            }
+            return remove;
         }
+    }
 
-        @Override
-        public V get(Object key) {
-            return super.get(key);
-        }
 
-        @Override
-        public boolean containsValue(Object value) {
-            return super.containsValue(value);
-        }
-
-        @Override
-        public V put(K key, V value) {
-            return super.put(key, value);
-        }
+    interface OverflowListener<K, V> {
+        void exceed(Map.Entry<K, V> eldest);
     }
 }

@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.core.cache;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,7 +32,7 @@ import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 public class CacheSM extends AbstractSM {
     public static final String GROUP = "cache";
 
-    private static final Map<String, Object> CONTAINER = new ConcurrentHashMap<>();
+    private static final LRUMap CONTAINER = new LRUMap(3);
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
     @Override
@@ -47,7 +48,7 @@ public class CacheSM extends AbstractSM {
                 CONTAINER.put(message.getKey(), message.getData());
                 break;
             case Message.GET:
-                return CONTAINER.getOrDefault(message.getKey(), null);
+                return CONTAINER.get(message.getKey());
             case Message.INVALIDATE:
                 CONTAINER.remove(message.getKey());
                 break;
@@ -57,7 +58,7 @@ public class CacheSM extends AbstractSM {
             case Message.PUTIFPRESENT:
                 return CONTAINER.putIfAbsent(message.getKey(), message.getData());
             case Message.EXIST:
-                return CONTAINER.containsKey(message.getKey());
+                return CONTAINER.exist(message.getKey());
             default:
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
                 break;
@@ -67,13 +68,13 @@ public class CacheSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return ImmutableMap.copyOf(CONTAINER);
+        return CONTAINER.makeImage();
     }
 
     @Override
     public void loadImage(Object snap) {
         CONTAINER.clear();
-        CONTAINER.putAll((Map<? extends String, ?>) snap);
+        CONTAINER.loadImage(snap);
     }
 
 }
