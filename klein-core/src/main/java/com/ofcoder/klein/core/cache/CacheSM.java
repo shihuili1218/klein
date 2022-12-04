@@ -16,16 +16,23 @@
  */
 package com.ofcoder.klein.core.cache;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
+import org.jetbrains.annotations.NotNull;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+import org.mapdb.DataInput2;
+import org.mapdb.DataOutput2;
+import org.mapdb.Serializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
-import com.ofcoder.klein.spi.ExtensionLoader;
-import com.ofcoder.klein.storage.facade.CacheManager;
 
 /**
  * @author 释慧利
@@ -79,15 +86,31 @@ public class CacheSM extends AbstractSM {
     }
 
     protected static class LRUMap {
-        private final MemoryMap<String, CacheManager.MateData> memory;
-        private final CacheManager cacheManager;
+        private final MemoryMap<String, MateData> memory;
+        private final ConcurrentMap<String, MateData> file;
+        private static final String DB_NAME = "jvm-cache";
 
         public LRUMap(int size) {
             memory = new MemoryMap<>(size);
-            cacheManager = ExtensionLoader.getExtensionLoader(CacheManager.class).getJoin();
+            DB db = DBMaker.fileDB(DB_NAME).closeOnJvmShutdown().make();
+            this.file = db.hashMap(DB_NAME, Serializer.STRING, new Serializer<MateData>() {
+                @Override
+                public void serialize(@NotNull DataOutput2 out, @NotNull MateData value) throws IOException {
+                    out.write(Hessian2Util.serialize(value));
+                }
+
+                @Override
+                public MateData deserialize(@NotNull DataInput2 input, int available) throws IOException {
+                    return Hessian2Util.deserialize(input.internalByteArray());
+                }
+            }).make();
+
         }
 
-        private boolean checkExpire(String key, CacheManager.MateData mateData) {
+        private boolean checkExpire(String key, MateData mateData) {
+            if (mateData == null) {
+                return false;
+            }
             if (mateData.getExpire() == Message.TTL_PERPETUITY) {
                 return true;
             }
@@ -99,28 +122,25 @@ public class CacheSM extends AbstractSM {
             }
         }
 
-        public boolean exist(String key) {
+        private MateData getValueFormMemberOrFile(String key) {
+            MateData mateData = null;
             if (memory.containsKey(key)) {
-                CacheManager.MateData mateData = memory.get(key);
-                return checkExpire(key, mateData);
-            } else {
-                CacheManager.MateData mateData = cacheManager.get(key);
-                if (mateData != null) {
-                    return checkExpire(key, mateData);
-                } else {
-                    return false;
-                }
+                mateData = memory.get(key);
             }
+            if (mateData == null && file.containsKey(key)) {
+                mateData = file.get(key);
+                memory.put(key, mateData);
+            }
+            return mateData;
+        }
+
+        public boolean exist(String key) {
+            MateData mateData = getValueFormMemberOrFile(key);
+            return checkExpire(key, mateData);
         }
 
         public Object get(String key) {
-            CacheManager.MateData mateData;
-            if (memory.containsKey(key)) {
-                mateData = memory.get(key);
-            } else {
-                mateData = cacheManager.get(key);
-                memory.put(key, mateData);
-            }
+            MateData mateData = getValueFormMemberOrFile(key);
             if (checkExpire(key, mateData)) {
                 return mateData.getData();
             } else {
@@ -129,29 +149,28 @@ public class CacheSM extends AbstractSM {
         }
 
         public synchronized void put(String key, Serializable data) {
-            CacheManager.MateData value = new CacheManager.MateData();
+            MateData value = new MateData();
             value.setExpire(Message.TTL_PERPETUITY);
             value.setData(data);
 
-            cacheManager.put(key, value);
+            file.put(key, value);
             memory.put(key, value);
         }
 
-
         public synchronized void put(String key, Serializable data, long expire) {
-            CacheManager.MateData value = new CacheManager.MateData();
+            MateData value = new MateData();
             value.setExpire(expire);
             value.setData(data);
 
-            cacheManager.put(key, value);
+            file.put(key, value);
             memory.put(key, value);
         }
 
         public synchronized Object putIfAbsent(String key, Serializable data, long expire) {
-            CacheManager.MateData value = new CacheManager.MateData();
+            MateData value = new MateData();
             value.setExpire(expire);
             value.setData(data);
-            CacheManager.MateData mateData = cacheManager.putIfAbsent(key, value);
+            MateData mateData = file.putIfAbsent(key, value);
             if (mateData == null) {
                 memory.put(key, value);
                 return null;
@@ -160,21 +179,27 @@ public class CacheSM extends AbstractSM {
         }
 
         public synchronized void remove(String key) {
-            cacheManager.remove(key);
+            file.remove(key);
             memory.remove(key);
         }
 
         public synchronized void clear() {
-            cacheManager.clear();
+            file.clear();
             memory.clear();
         }
 
         public Object makeImage() {
-            return cacheManager.makeImage();
+            return file;
         }
 
         public synchronized void loadImage(Object image) {
-            cacheManager.loadImage(image);
+            if (!(image instanceof Map)) {
+                return;
+            }
+            clear();
+            Map<? extends String, ? extends MateData> snap = (Map<? extends String, ? extends MateData>) image;
+            file.putAll(snap);
+            memory.putAll(snap);
         }
     }
 
