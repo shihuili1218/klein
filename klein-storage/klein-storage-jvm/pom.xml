@@ -23,6 +23,11 @@
             <groupId>com.ofcoder.klein.storage.api</groupId>
             <artifactId>klein-storage-facade</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
+            <version>3.0.9</version>
+        </dependency>
     </dependencies>
 
 </project>

@@ -13,11 +13,12 @@ public class Message implements Serializable {
     public static final byte EXIST = 0x04;
     public static final byte INVALIDATE = 0x05;
     public static final byte INVALIDATEALL = 0x06;
+    public static final long TTL_PERPETUITY = -1;
 
     private byte op;
     private String key;
-    private Object data;
-    private long expire;
+    private Serializable data;
+    private long expire = TTL_PERPETUITY;
 
     public byte getOp() {
         return op;
@@ -35,11 +36,11 @@ public class Message implements Serializable {
         this.key = key;
     }
 
-    public Object getData() {
+    public Serializable getData() {
         return data;
     }
 
-    public void setData(Object data) {
+    public void setData(Serializable data) {
         this.data = data;
     }
 

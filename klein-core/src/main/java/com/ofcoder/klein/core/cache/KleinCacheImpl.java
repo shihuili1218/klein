@@ -50,7 +50,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setKey(key);
         message.setOp(Message.PUT);
 
-        message.setExpire(System.currentTimeMillis() + unit.toMillis(ttl));
+        message.setExpire(System.nanoTime() + unit.toNanos(ttl));
         Result result = consensus.propose(message);
         return Result.State.SUCCESS.equals(result.getState());
     }
@@ -74,7 +74,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        message.setExpire(unit.toMicros(ttl));
+        message.setExpire(unit.toNanos(ttl));
         Result<D> result = consensus.propose(message, true);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");

@@ -49,6 +49,7 @@ this is still in the process of implementation. 😆😆😆
 - [ ] Monitor negotiation efficiency
 - [ ] Monitoring thread pool indicators (DefaultTimer, ThreadExecutor)
 - [x] ProposalNo全局唯一
+- [ ] 状态机持久化（master、lock）
 
 # Design ideas
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)
