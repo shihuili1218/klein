@@ -30,7 +30,6 @@ import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.storage.facade.CacheManager;
 
 import junit.framework.TestCase;
 
@@ -43,22 +42,20 @@ public class FileMapTest extends TestCase {
 
         DB db = DBMaker.fileDB("jvm").closeOnJvmShutdown().make();
 
-        ConcurrentMap<String, CacheManager.MateData> map =db.hashMap("jvm", Serializer.STRING, new Serializer<CacheManager.MateData>() {
+        ConcurrentMap<String, String> map = db.hashMap("jvm", Serializer.STRING, new Serializer<String>() {
             @Override
-            public void serialize(@NotNull DataOutput2 out, @NotNull CacheManager.MateData value) throws IOException {
+            public void serialize(@NotNull DataOutput2 out, @NotNull String value) throws IOException {
                 out.write(Hessian2Util.serialize(value));
             }
 
             @Override
-            public CacheManager.MateData deserialize(@NotNull DataInput2 input, int available) throws IOException {
+            public String deserialize(@NotNull DataInput2 input, int available) throws IOException {
                 return Hessian2Util.deserialize(input.internalByteArray());
             }
         }).make();
-        CacheManager.MateData zzz = new CacheManager.MateData(-1, "zzz");
-        map.put("hello", zzz);
-        CacheManager.MateData hello = map.get("hello");
+        map.put("hello", "zzz");
+        String hello = map.get("hello");
         Assert.assertNotNull(hello);
-        Assert.assertEquals(hello.getExpire(), zzz.getExpire());
-        Assert.assertEquals(hello.getData(), zzz.getData());
+        Assert.assertEquals(hello, "zzz");
     }
 }
