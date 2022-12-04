@@ -8,7 +8,7 @@ public class LRUMapTest extends TestCase {
 
     public void test_noUse() {
         int initialCapacity = 3;
-        LRUMap cache = new LRUMap(initialCapacity);
+        CacheSM.LRUMap cache = new CacheSM.LRUMap(initialCapacity);
         cache.put("4", 4);
         cache.put("3", 4);
         cache.put("1", 4);
@@ -21,7 +21,7 @@ public class LRUMapTest extends TestCase {
 
     public void test_used() {
         int initialCapacity = 3;
-        LRUMap cache = new LRUMap(initialCapacity);
+        CacheSM.LRUMap cache = new CacheSM.LRUMap(initialCapacity);
         cache.put("4", 4);
         cache.put("3", 4);
         cache.put("1", 4);

@@ -42,10 +42,11 @@ Klein是一个基于Paxos分布式共识类库，基于它实现了KV存储、�
 - [ ] TTL自动过期
 
 ### 待优化
-- LogManager行锁
-- 监控协商效率
-- 监控线程池指标(DefaultTimer, ThreadExecutor)
-- ProposalNo全局唯一
+- [ ] LogManager行锁
+- [ ] 监控协商效率
+- [ ] 监控线程池指标(DefaultTimer, ThreadExecutor)
+- [x] ProposalNo全局唯一
+- [ ] 状态机持久化（master、lock）
 
 # 章解
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)

@@ -36,7 +36,6 @@ import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.MateData;
 import com.ofcoder.klein.storage.facade.Snap;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
