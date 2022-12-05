@@ -6,7 +6,7 @@ import com.ofcoder.klein.common.util.SystemPropertyUtil;
  * @author far.liu
  */
 public class RpcProp {
-    private int port = SystemPropertyUtil.getInt("klein.rpc.server-port", 1218);
+    private int port = SystemPropertyUtil.getInt("klein.port", 1218);
     private int maxInboundMsgSize =  SystemPropertyUtil.getInt("klein.rpc.max-inbound-size", 4 * 1024 * 1024);
 
     public int getPort() {

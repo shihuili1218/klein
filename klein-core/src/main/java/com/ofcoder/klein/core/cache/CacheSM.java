@@ -33,15 +33,22 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
+import com.ofcoder.klein.core.config.CacheProp;
 
 /**
  * @author 释慧利
  */
 public class CacheSM extends AbstractSM {
+    private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
     public static final String GROUP = "cache";
 
-    private static final LRUMap CONTAINER = new LRUMap(3);
-    private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
+    private final LRUMap container;
+    private final CacheProp cacheProp;
+
+    public CacheSM(CacheProp cacheProp) {
+        this.cacheProp = cacheProp;
+        this.container = new LRUMap(cacheProp.getMemorySize(), cacheProp.getDataPath() + cacheProp.getId());
+    }
 
     @Override
     public Object apply(Object data) {
@@ -53,20 +60,20 @@ public class CacheSM extends AbstractSM {
         Message message = (Message) data;
         switch (message.getOp()) {
             case Message.PUT:
-                CONTAINER.put(message.getKey(), message.getData(), message.getExpire());
+                container.put(message.getKey(), message.getData(), message.getExpire());
                 break;
             case Message.GET:
-                return CONTAINER.get(message.getKey());
+                return container.get(message.getKey());
             case Message.INVALIDATE:
-                CONTAINER.remove(message.getKey());
+                container.remove(message.getKey());
                 break;
             case Message.INVALIDATEALL:
-                CONTAINER.clear();
+                container.clear();
                 break;
             case Message.PUTIFPRESENT:
-                return CONTAINER.putIfAbsent(message.getKey(), message.getData(), message.getExpire());
+                return container.putIfAbsent(message.getKey(), message.getData(), message.getExpire());
             case Message.EXIST:
-                return CONTAINER.exist(message.getKey());
+                return container.exist(message.getKey());
             default:
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
                 break;
@@ -76,24 +83,23 @@ public class CacheSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return CONTAINER.makeImage();
+        return container.makeImage();
     }
 
     @Override
     public void loadImage(Object snap) {
-        CONTAINER.clear();
-        CONTAINER.loadImage(snap);
+        container.clear();
+        container.loadImage(snap);
     }
 
     protected static class LRUMap {
         private final MemoryMap<String, MateData> memory;
         private final ConcurrentMap<String, MateData> file;
-        private static final String DB_NAME = "jvm-cache";
 
-        public LRUMap(int size) {
+        public LRUMap(int size, String dataPath) {
             memory = new MemoryMap<>(size);
-            DB db = DBMaker.fileDB(DB_NAME).closeOnJvmShutdown().make();
-            this.file = db.hashMap(DB_NAME, Serializer.STRING, new Serializer<MateData>() {
+            DB db = DBMaker.fileDB(dataPath).closeOnJvmShutdown().make();
+            this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MateData>() {
                 @Override
                 public void serialize(@NotNull DataOutput2 out, @NotNull MateData value) throws IOException {
                     out.write(Hessian2Util.serialize(value));

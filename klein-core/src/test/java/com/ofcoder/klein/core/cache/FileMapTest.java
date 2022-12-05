@@ -45,9 +45,9 @@ public class FileMapTest {
 
     @Test
     public void testPutAndGet() {
-        DB db = DBMaker.fileDB("jvm").closeOnJvmShutdown().make();
+        DB db = DBMaker.fileDB("jvm.mdb").closeOnJvmShutdown().make();
 
-        ConcurrentMap<String, String> map = db.hashMap("jvm", Serializer.STRING, new Serializer<String>() {
+        ConcurrentMap<String, String> map = db.hashMap("jvm.mdb", Serializer.STRING, new Serializer<String>() {
             @Override
             public void serialize(@NotNull DataOutput2 out, @NotNull String value) throws IOException {
                 out.write(Hessian2Util.serialize(value));
