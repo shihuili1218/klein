@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.jvm;/**
+package com.ofcoder.klein.core.cache;/**
  * @author far.liu
  */
 
@@ -23,6 +23,8 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.DataInput2;
@@ -31,15 +33,18 @@ import org.mapdb.Serializer;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 
-import junit.framework.TestCase;
-
 /**
  * @author 释慧利
  */
-public class FileMapTest extends TestCase {
+public class FileMapTest {
 
-    public void testFileMap() {
+    @Before
+    public void setup() {
 
+    }
+
+    @Test
+    public void testPutAndGet() {
         DB db = DBMaker.fileDB("jvm").closeOnJvmShutdown().make();
 
         ConcurrentMap<String, String> map = db.hashMap("jvm", Serializer.STRING, new Serializer<String>() {
@@ -52,10 +57,12 @@ public class FileMapTest extends TestCase {
             public String deserialize(@NotNull DataInput2 input, int available) throws IOException {
                 return Hessian2Util.deserialize(input.internalByteArray());
             }
-        }).make();
+        }).createOrOpen();
+
         map.put("hello", "zzz");
         String hello = map.get("hello");
         Assert.assertNotNull(hello);
         Assert.assertEquals(hello, "zzz");
     }
+
 }

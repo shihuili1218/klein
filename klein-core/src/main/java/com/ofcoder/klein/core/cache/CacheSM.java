@@ -103,7 +103,7 @@ public class CacheSM extends AbstractSM {
                 public MateData deserialize(@NotNull DataInput2 input, int available) throws IOException {
                     return Hessian2Util.deserialize(input.internalByteArray());
                 }
-            }).make();
+            }).createOrOpen();
 
         }
 
@@ -203,7 +203,7 @@ public class CacheSM extends AbstractSM {
         }
     }
 
-    private static class MemoryMap<K, V> extends LinkedHashMap<K, V> {
+    protected static class MemoryMap<K, V> extends LinkedHashMap<K, V> {
         private final int capacity;
 
         public MemoryMap(int initialCapacity) {
