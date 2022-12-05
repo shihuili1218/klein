@@ -146,7 +146,6 @@ public class PaxosNode extends Node {
                 "} " + super.toString();
     }
 
-    @Override
     public String nodeId() {
         return self.getId();
     }
