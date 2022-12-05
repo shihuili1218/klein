@@ -43,7 +43,7 @@ public class Klein {
         StorageEngine.getInstance().startup(prop.getStorage(), prop.getStorageProp());
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
 
-        this.cache = new KleinCacheImpl();
+        this.cache = new KleinCacheImpl(prop.getCacheProp());
         this.lock = new KleinLockImpl();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
