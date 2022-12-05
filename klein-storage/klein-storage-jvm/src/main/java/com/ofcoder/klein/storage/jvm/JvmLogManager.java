@@ -61,11 +61,21 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         File file = new File(BASE_PATH);
         if (!file.exists()) {
             boolean mkdir = file.mkdir();
+            // do nothing for mkdir result
         }
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
         lock = new ReentrantReadWriteLock(true);
+
+        SELF_PATH = BASE_PATH + File.separator + op.getId();
+        File selfFile = new File(SELF_PATH);
+        if (!selfFile.exists()) {
+            boolean mkdir = selfFile.mkdir();
+            // do nothing for mkdir result
+        }
+
+        MATE_PATH = SELF_PATH + File.separator + "mate";
     }
 
     @Override
@@ -112,14 +122,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public MateData loadMateData(MateData defaultValue) {
-        SELF_PATH = BASE_PATH + File.separator + defaultValue.nodeId();
-        File selfFile = new File(SELF_PATH);
-        if (!selfFile.exists()) {
-            boolean mkdir = selfFile.mkdir();
-            // do nothing for mkdir result
-        }
 
-        MATE_PATH = SELF_PATH + File.separator + "mate";
         File file = new File(MATE_PATH);
         if (!file.exists()) {
             this.metadata = defaultValue;

@@ -51,6 +51,5 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      * @author 释慧利
      */
     interface MateData extends Serializable {
-        String nodeId();
     }
 }
