@@ -47,7 +47,7 @@ public class CacheSM extends AbstractSM {
 
     public CacheSM(CacheProp cacheProp) {
         this.cacheProp = cacheProp;
-        this.container = new LRUMap(cacheProp.getMemorySize(), cacheProp.getDataPath() + cacheProp.getId());
+        this.container = new LRUMap(cacheProp.getMemorySize(), cacheProp.getDataPath() + "." + cacheProp.getId());
     }
 
     @Override

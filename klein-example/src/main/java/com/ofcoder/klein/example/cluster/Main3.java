@@ -28,11 +28,14 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class Main3 {
     public static void main(String[] args) throws IOException {
+        System.setProperty("klein.id", "3");
+        System.setProperty("klein.port", "1220");
+
         KleinProp prop3 = KleinProp.loadIfPresent();
 
         prop3.getConsensusProp().setMembers(Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220)));
-        prop3.getConsensusProp().setSelf(new Endpoint("3", "127.0.0.1", 1220));
-        prop3.getRpcProp().setPort(1220);
+//        prop3.getConsensusProp().setSelf(new Endpoint("3", "127.0.0.1", 1220));
+//        prop3.getRpcProp().setPort(1220);
 
         Klein instance3 = Klein.getInstance();
 
