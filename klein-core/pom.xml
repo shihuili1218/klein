@@ -33,6 +33,10 @@
             <groupId>com.ofcoder.klein.storage.jvm</groupId>
             <artifactId>klein-storage-jvm</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
