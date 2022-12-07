@@ -18,6 +18,8 @@ package com.ofcoder.klein.core.cache;/**
  * @author far.liu
  */
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
@@ -63,6 +65,33 @@ public class FileMapTest {
         String hello = map.get("hello");
         Assert.assertNotNull(hello);
         Assert.assertEquals(hello, "zzz");
+    }
+
+
+    @Test
+    public void testSerializable() throws FileNotFoundException {
+        DB db = DBMaker.fileDB("jvm.mdb").closeOnJvmShutdown().make();
+
+        ConcurrentMap<String, String> map = db.hashMap("jvm.mdb", Serializer.STRING, new Serializer<String>() {
+            @Override
+            public void serialize(@NotNull DataOutput2 out, @NotNull String value) throws IOException {
+                out.write(Hessian2Util.serialize(value));
+            }
+
+            @Override
+            public String deserialize(@NotNull DataInput2 input, int available) throws IOException {
+                return Hessian2Util.deserialize(input.internalByteArray());
+            }
+        }).createOrOpen();
+
+        map.put("hello", "zzz");
+        String hello = map.get("hello");
+        Assert.assertNotNull(hello);
+
+        FileOutputStream outputStream = new FileOutputStream("jvm.filemap");
+        outputStream.write();
+
+
     }
 
 }
