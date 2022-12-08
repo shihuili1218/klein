@@ -7,6 +7,6 @@ import com.ofcoder.klein.storage.facade.LogManager;
 /**
  * @author 释慧利
  */
-public abstract class Node implements Serializable, LogManager.MateData {
+public abstract class Node implements Serializable, LogManager.MetaData {
 
 }

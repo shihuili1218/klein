@@ -40,7 +40,7 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     List<Instance<P>> getInstanceNoConfirm();
 
-    MateData loadMateData(MateData defaultValue);
+    MetaData loadMetaData(MetaData defaultValue);
 
     void saveSnap(String group, Snap snap);
 
@@ -50,6 +50,6 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
     /**
      * @author 释慧利
      */
-    interface MateData extends Serializable {
+    interface MetaData extends Serializable {
     }
 }

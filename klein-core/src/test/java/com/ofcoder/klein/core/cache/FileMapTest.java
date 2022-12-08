@@ -18,11 +18,15 @@ package com.ofcoder.klein.core.cache;/**
  * @author far.liu
  */
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.io.IOUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -33,6 +37,7 @@ import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
+import com.google.common.collect.Maps;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 
 /**
@@ -69,7 +74,7 @@ public class FileMapTest {
 
 
     @Test
-    public void testSerializable() throws FileNotFoundException {
+    public void testSerializable() throws Exception {
         DB db = DBMaker.fileDB("jvm.mdb").closeOnJvmShutdown().make();
 
         ConcurrentMap<String, String> map = db.hashMap("jvm.mdb", Serializer.STRING, new Serializer<String>() {
@@ -88,9 +93,20 @@ public class FileMapTest {
         String hello = map.get("hello");
         Assert.assertNotNull(hello);
 
-        FileOutputStream outputStream = new FileOutputStream("jvm.filemap");
-        outputStream.write();
+        ConcurrentMap<String, String> hashMap = Maps.newConcurrentMap();
+        hashMap.putAll(map);
 
+        FileOutputStream outputStream = new FileOutputStream("jvm.filemap");
+        outputStream.write(Hessian2Util.serialize(hashMap));
+        outputStream.flush();
+        outputStream.close();
+
+        FileInputStream inputStream = new FileInputStream("jvm.filemap");
+        ConcurrentMap<String, String> deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(inputStream));
+        inputStream.close();
+
+        Assert.assertEquals(map.size(), deserialize.size());
+        Assert.assertEquals(map.get("hello"), deserialize.get("hello"));
 
     }
 

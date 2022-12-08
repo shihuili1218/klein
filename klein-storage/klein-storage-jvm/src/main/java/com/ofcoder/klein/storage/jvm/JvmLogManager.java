@@ -52,9 +52,9 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     private ReentrantReadWriteLock lock;
     private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
     private static String SELF_PATH;
-    private static String MATE_PATH;
+    private static String META_PATH;
 
-    private MateData metadata;
+    private MetaData metadata;
 
     @Override
     public void init(StorageProp op) {
@@ -75,7 +75,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
             // do nothing for mkdir result
         }
 
-        MATE_PATH = SELF_PATH + File.separator + "mate";
+        META_PATH = SELF_PATH + File.separator + "mate";
     }
 
     @Override
@@ -116,14 +116,14 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         } else {
             runningInstances.put(instance.getInstanceId(), instance);
         }
-        saveMateData();
+        saveMetaData();
     }
 
 
     @Override
-    public MateData loadMateData(MateData defaultValue) {
+    public MetaData loadMetaData(MetaData defaultValue) {
 
-        File file = new File(MATE_PATH);
+        File file = new File(META_PATH);
         if (!file.exists()) {
             this.metadata = defaultValue;
             return this.metadata;
@@ -140,10 +140,10 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         }
     }
 
-    private void saveMateData() {
+    private void saveMetaData() {
         FileOutputStream mateOut = null;
         try {
-            mateOut = new FileOutputStream(MATE_PATH);
+            mateOut = new FileOutputStream(META_PATH);
             IOUtils.write(Hessian2Util.serialize(this.metadata), mateOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
@@ -181,7 +181,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         }
 
         truncCheckpoint(snap.getCheckpoint());
-        saveMateData();
+        saveMetaData();
     }
 
     private void truncCheckpoint(long checkpoint) {
