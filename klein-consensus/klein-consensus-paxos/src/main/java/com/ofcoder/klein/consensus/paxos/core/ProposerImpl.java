@@ -577,4 +577,13 @@ public class ProposerImpl implements Proposer {
     }
 
 
+    /**
+     * @author 释慧利
+     */
+    public enum PrepareState {
+        NO_PREPARE,
+        PREPARING,
+        PREPARED,
+        ;
+    }
 }
