@@ -22,6 +22,10 @@ import com.ofcoder.klein.consensus.facade.Result;
  * @author 释慧利
  */
 public interface ProposeDone {
+    /**
+     * call the method when negotiation done
+     * @param result negotiation result
+     */
     void negotiationDone(Result.State result);
 
     /**
