@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade.config;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.facade.config;
 
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
