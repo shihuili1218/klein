@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.core.cache;/**
- * @author far.liu
- */
+package com.ofcoder.klein.core.cache;
 
 import java.io.Serializable;
 
@@ -24,14 +22,14 @@ import java.io.Serializable;
  * @author 释慧利
  */
 public
-class MateData implements Serializable {
+class MetaData implements Serializable {
     private long expire = -1;
     private Serializable data;
 
-    public MateData() {
+    public MetaData() {
     }
 
-    public MateData(long expire, Serializable data) {
+    public MetaData(long expire, Serializable data) {
         this.expire = expire;
         this.data = data;
     }

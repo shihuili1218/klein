@@ -123,7 +123,7 @@ public class PaxosConsensus implements Consensus {
         PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
         configuration.init(this.prop.getMembers(), this.prop.getSelf());
 
-        this.self = (PaxosNode) logManager.loadMateData(PaxosNode.Builder.aPaxosNode()
+        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
                 .curAppliedInstanceId(0)
                 .curProposalNo(0)

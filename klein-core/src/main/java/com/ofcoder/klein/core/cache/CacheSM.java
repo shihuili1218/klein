@@ -18,6 +18,7 @@ package com.ofcoder.klein.core.cache;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -93,34 +94,34 @@ public class CacheSM extends AbstractSM {
     }
 
     protected static class LRUMap {
-        private final MemoryMap<String, MateData> memory;
-        private final ConcurrentMap<String, MateData> file;
+        private final MemoryMap<String, MetaData> memory;
+        private final ConcurrentMap<String, MetaData> file;
 
         public LRUMap(int size, String dataPath) {
             memory = new MemoryMap<>(size);
             DB db = DBMaker.fileDB(dataPath).closeOnJvmShutdown().make();
-            this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MateData>() {
+            this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData>() {
                 @Override
-                public void serialize(@NotNull DataOutput2 out, @NotNull MateData value) throws IOException {
+                public void serialize(@NotNull DataOutput2 out, @NotNull MetaData value) throws IOException {
                     out.write(Hessian2Util.serialize(value));
                 }
 
                 @Override
-                public MateData deserialize(@NotNull DataInput2 input, int available) throws IOException {
+                public MetaData deserialize(@NotNull DataInput2 input, int available) throws IOException {
                     return Hessian2Util.deserialize(input.internalByteArray());
                 }
             }).createOrOpen();
 
         }
 
-        private boolean checkExpire(String key, MateData mateData) {
-            if (mateData == null) {
+        private boolean checkExpire(String key, MetaData metaData) {
+            if (metaData == null) {
                 return false;
             }
-            if (mateData.getExpire() == Message.TTL_PERPETUITY) {
+            if (metaData.getExpire() == Message.TTL_PERPETUITY) {
                 return true;
             }
-            if (mateData.getExpire() < System.nanoTime()) {
+            if (metaData.getExpire() < System.nanoTime()) {
                 remove(key);
                 return false;
             } else {
@@ -128,34 +129,34 @@ public class CacheSM extends AbstractSM {
             }
         }
 
-        private MateData getValueFormMemberOrFile(String key) {
-            MateData mateData = null;
+        private MetaData getValueFormMemberOrFile(String key) {
+            MetaData metaData = null;
             if (memory.containsKey(key)) {
-                mateData = memory.get(key);
+                metaData = memory.get(key);
             }
-            if (mateData == null && file.containsKey(key)) {
-                mateData = file.get(key);
-                memory.put(key, mateData);
+            if (metaData == null && file.containsKey(key)) {
+                metaData = file.get(key);
+                memory.put(key, metaData);
             }
-            return mateData;
+            return metaData;
         }
 
         public boolean exist(String key) {
-            MateData mateData = getValueFormMemberOrFile(key);
-            return checkExpire(key, mateData);
+            MetaData metaData = getValueFormMemberOrFile(key);
+            return checkExpire(key, metaData);
         }
 
         public Object get(String key) {
-            MateData mateData = getValueFormMemberOrFile(key);
-            if (checkExpire(key, mateData)) {
-                return mateData.getData();
+            MetaData metaData = getValueFormMemberOrFile(key);
+            if (checkExpire(key, metaData)) {
+                return metaData.getData();
             } else {
                 return null;
             }
         }
 
         public synchronized void put(String key, Serializable data) {
-            MateData value = new MateData();
+            MetaData value = new MetaData();
             value.setExpire(Message.TTL_PERPETUITY);
             value.setData(data);
 
@@ -164,7 +165,7 @@ public class CacheSM extends AbstractSM {
         }
 
         public synchronized void put(String key, Serializable data, long expire) {
-            MateData value = new MateData();
+            MetaData value = new MetaData();
             value.setExpire(expire);
             value.setData(data);
 
@@ -173,15 +174,15 @@ public class CacheSM extends AbstractSM {
         }
 
         public synchronized Object putIfAbsent(String key, Serializable data, long expire) {
-            MateData value = new MateData();
+            MetaData value = new MetaData();
             value.setExpire(expire);
             value.setData(data);
-            MateData mateData = file.putIfAbsent(key, value);
-            if (mateData == null) {
+            MetaData metaData = file.putIfAbsent(key, value);
+            if (metaData == null) {
                 memory.put(key, value);
                 return null;
             }
-            return mateData.getData();
+            return metaData.getData();
         }
 
         public synchronized void remove(String key) {
@@ -195,7 +196,7 @@ public class CacheSM extends AbstractSM {
         }
 
         public Object makeImage() {
-            return file;
+            return new HashMap<>(file);
         }
 
         public synchronized void loadImage(Object image) {
@@ -203,7 +204,7 @@ public class CacheSM extends AbstractSM {
                 return;
             }
             clear();
-            Map<? extends String, ? extends MateData> snap = (Map<? extends String, ? extends MateData>) image;
+            Map<? extends String, ? extends MetaData> snap = (Map<? extends String, ? extends MetaData>) image;
             file.putAll(snap);
             memory.putAll(snap);
         }
