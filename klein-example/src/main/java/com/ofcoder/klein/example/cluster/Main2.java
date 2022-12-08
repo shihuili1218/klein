@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
 /**
  * @author 释慧利
@@ -33,7 +34,13 @@ public class Main2 {
 
         KleinProp prop2 = KleinProp.loadIfPresent();
 
-        prop2.getConsensusProp().setMembers(Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220)));
+        prop2.getConsensusProp().setMembers(
+                Lists.newArrayList(
+                        new Endpoint("1", RpcUtil.getLocalIp(), 1218),
+                        new Endpoint("2", RpcUtil.getLocalIp(), 1219),
+                        new Endpoint("3", RpcUtil.getLocalIp(), 1220)
+                )
+        );
 //        prop2.getConsensusProp().setSelf(new Endpoint("2", "127.0.0.1", 1219));
 //        prop2.getRpcProp().setPort(1219);
 

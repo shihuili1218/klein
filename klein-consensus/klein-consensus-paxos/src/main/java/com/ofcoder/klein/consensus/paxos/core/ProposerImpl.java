@@ -339,6 +339,8 @@ public class ProposerImpl implements Proposer {
             callback.granted(curProposalNo, ctxt);
             return;
         }
+
+        LOG.info("limit prepare. instance: {}, skipPrepare: {}", ctxt.getInstanceId(), skipPrepare);
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
@@ -428,14 +430,16 @@ public class ProposerImpl implements Proposer {
         }
 
         if (result.getResult()) {
-            ctxt.getPrepareQuorum().grant(it);
+            boolean grant = ctxt.getPrepareQuorum().grant(it);
+            LOG.info("handling node-{}'s prepare response, grant: {}, {}", result.getNodeId(), grant, ctxt.getPrepareQuorum().isGranted());
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.PASS
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 // do accept phase.
                 callback.granted(proposalNo, ctxt);
             }
         } else {
-            ctxt.getPrepareQuorum().refuse(it);
+            boolean refuse = ctxt.getPrepareQuorum().refuse(it);
+            LOG.info("handling node-{}'s prepare response, refuse: {}, {}", result.getNodeId(), refuse, ctxt.getPrepareQuorum().isGranted());
 
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE

@@ -170,7 +170,7 @@ public class MasterImpl implements Master {
     }
 
     private void election() {
-        LOG.info("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
+        LOG.debug("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
         changeHealthy(false);
         if (!electing.compareAndSet(false, true)) {
@@ -186,6 +186,7 @@ public class MasterImpl implements Master {
             RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
                 @Override
                 public void negotiationDone(Result.State result) {
+                    LOG.info("electing master, negotiationDone: {}", result);
                     if (result == Result.State.SUCCESS) {
                         ThreadExecutor.submit(MasterImpl.this::boostInstance);
                     } else {
@@ -195,6 +196,7 @@ public class MasterImpl implements Master {
 
                 @Override
                 public void applyDone(Object input, Object output) {
+                    LOG.info("electing master, applyDone: {}", input);
                     latch.countDown();
                 }
             });
