@@ -31,14 +31,15 @@ public class Main2 {
     public static void main(String[] args) throws IOException {
         System.setProperty("klein.id", "2");
         System.setProperty("klein.port", "1219");
+        System.setProperty("klein.ip", "127.0.0.1");
 
         KleinProp prop2 = KleinProp.loadIfPresent();
 
         prop2.getConsensusProp().setMembers(
                 Lists.newArrayList(
-                        new Endpoint("1", RpcUtil.getLocalIp(), 1218),
-                        new Endpoint("2", RpcUtil.getLocalIp(), 1219),
-                        new Endpoint("3", RpcUtil.getLocalIp(), 1220)
+                        new Endpoint("1", "127.0.0.1", 1218),
+                        new Endpoint("2", "127.0.0.1", 1219),
+                        new Endpoint("3", "127.0.0.1", 1220)
                 )
         );
 //        prop2.getConsensusProp().setSelf(new Endpoint("2", "127.0.0.1", 1219));
