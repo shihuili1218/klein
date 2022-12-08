@@ -11,6 +11,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 public class KleinProp {
     private String id = SystemPropertyUtil.get("klein.id", "1");
     private int port = SystemPropertyUtil.getInt("klein.port", 1218);
+    private String ip = SystemPropertyUtil.get("klein.ip", "127.0.0.1");
     private String storage = SystemPropertyUtil.get("klein.storage", "jvm");
     private String consensus = SystemPropertyUtil.get("klein.consensus", "paxos");
     private String rpc = SystemPropertyUtil.get("klein.rpc", "grpc");
@@ -33,6 +34,14 @@ public class KleinProp {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
     }
 
     public String getStorage() {

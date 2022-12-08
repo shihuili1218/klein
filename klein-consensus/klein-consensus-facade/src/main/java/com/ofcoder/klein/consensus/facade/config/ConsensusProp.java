@@ -13,7 +13,7 @@ import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 public class ConsensusProp {
     private Endpoint self = new Endpoint(
             SystemPropertyUtil.get("klein.id", "1"),
-            RpcUtil.getLocalIp(),
+            SystemPropertyUtil.get("klein.ip", "127.0.0.1"),
             SystemPropertyUtil.getInt("klein.port", 1218)
     );
     /**
