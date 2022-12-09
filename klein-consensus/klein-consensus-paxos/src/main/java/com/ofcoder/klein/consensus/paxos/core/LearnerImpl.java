@@ -22,7 +22,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +34,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -75,6 +76,7 @@ public class LearnerImpl implements Learner {
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
 
@@ -179,13 +181,13 @@ public class LearnerImpl implements Learner {
         } else if (instanceId > exceptConfirmId) {
 
             for (long i = exceptConfirmId; i < instanceId; i++) {
-                Instance<Proposal> preInstance = logManager.getInstance(lastApplyId + i);
-                if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
+                Instance<Proposal> exceptInstance = logManager.getInstance(i);
+                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     applyQueue.add(i);
                 } else {
-                    List<Proposal> defaultValue = preInstance == null || CollectionUtils.isEmpty(preInstance.getGrantedValue())
-                            ? Lists.newArrayList(Proposal.NOOP) : preInstance.getGrantedValue();
-                    learnHard(instanceId, defaultValue);
+                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
+                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
+                    learnHard(i, defaultValue);
                 }
             }
 
@@ -210,14 +212,17 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().unlock();
         }
 
+        Set<Long> applied = applyCallback.keySet().stream().filter(it -> instanceId >= it).collect(Collectors.toSet());
         try {
-            List<ApplyCallback> callback = applyCallback.getOrDefault(instanceId, Lists.newArrayList(new DefaultApplyCallback()));
             for (Proposal data : localInstance.getGrantedValue()) {
                 Object result = this._apply(localInstance.getInstanceId(), data);
-                callback.forEach(it -> it.apply(data, result));
+
+                applied.forEach(it -> {
+                    applyCallback.get(it).forEach(r -> r.apply(data, result));
+                });
             }
         } finally {
-            applyCallback.remove(instanceId);
+            applied.forEach(applyCallback::remove);
         }
     }
 
@@ -279,31 +284,34 @@ public class LearnerImpl implements Learner {
         return lr;
     }
 
-    Map<Long, Vector<LearnCallback>> learningInstance = new ConcurrentHashMap<>();
-
     @Override
     public void learn(long instanceId, Endpoint target, LearnCallback callback) {
-        Instance<Proposal> instance = logManager.getInstance(instanceId);
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            callback.learned(true);
+        List<LearnCallback> callbacks = learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
+        learningCallbacks.get(instanceId).add(callback);
+        if (callbacks != null) {
             return;
         }
+        // else callbacks = null, do learn
 
-        if (learningInstance.putIfAbsent(instanceId, new Vector<>(Lists.newArrayList(callback))) != null) {
-            learningInstance.get(instanceId).add(callback);
+        Instance<Proposal> instance = logManager.getInstance(instanceId);
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            List<LearnCallback> remove = learningCallbacks.remove(instanceId);
+            if (remove != null) {
+                remove.forEach(it -> it.learned(true));
+            }
             return;
         }
 
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
-
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
-
         client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
             @Override
             public void error(Throwable err) {
                 LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
-                Vector<LearnCallback> remove = learningInstance.remove(instanceId);
-                remove.forEach(it -> it.learned(false));
+                List<LearnCallback> remove = learningCallbacks.remove(instanceId);
+                if (remove != null) {
+                    remove.forEach(it -> it.learned(false));
+                }
             }
 
             @Override
@@ -311,12 +319,19 @@ public class LearnerImpl implements Learner {
                 if (result.isResult() == Sync.SNAP) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
                     long checkpoint = snapSync(target);
-
-
-                    if (checkpoint > instanceId) {
-
+                    Set<Long> learned = learningCallbacks.keySet().stream().filter(it -> checkpoint >= it).collect(Collectors.toSet());
+                    learned.forEach(it -> {
+                        List<LearnCallback> remove = learningCallbacks.remove(it);
+                        if (remove != null) {
+                            remove.forEach(r -> r.learned(true));
+                        }
+                    });
+                    if (!learned.contains(instanceId)) {
+                        List<LearnCallback> remove = learningCallbacks.remove(instanceId);
+                        if (remove != null) {
+                            remove.forEach(r -> r.learned(false));
+                        }
                     }
-
                 } else if (result.isResult() == Sync.SINGLE) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
@@ -326,7 +341,6 @@ public class LearnerImpl implements Learner {
                             .state(result.getInstance().getState())
                             .applied(new AtomicBoolean(false))
                             .build();
-
 
                     try {
                         logManager.getLock().writeLock().lock();
@@ -339,10 +353,16 @@ public class LearnerImpl implements Learner {
                         LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
                         // do nothing, other threads will boost the instance
                     }
-                    callback.learned(true);
+                    List<LearnCallback> remove = learningCallbacks.remove(instanceId);
+                    if (remove != null) {
+                        remove.forEach(r -> r.learned(true));
+                    }
                 } else {
                     LOG.info("learn instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());
-                    callback.learned(false);
+                    List<LearnCallback> remove = learningCallbacks.remove(instanceId);
+                    if (remove != null) {
+                        remove.forEach(r -> r.learned(false));
+                    }
                 }
             }
         }, 1000);
@@ -400,6 +420,15 @@ public class LearnerImpl implements Learner {
                 loadSnap(entry.getKey(), entry.getValue());
                 checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
             }
+
+            final long finalCheckpoint = checkpoint;
+            applyCallback.keySet().stream().filter(it -> finalCheckpoint >= it).forEach(
+                    it -> {
+                        applyCallback.remove(it).forEach(r -> {
+                            r.apply(null, null);
+                        });
+                    }
+            );
             return checkpoint;
         } catch (Throwable e) {
             LOG.error(e.getMessage());

@@ -172,7 +172,7 @@ public class ProposerImpl implements Proposer {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
-        ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId())
+        ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId()) && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue())
                 ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
                 : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
 
@@ -544,6 +544,7 @@ public class ProposerImpl implements Proposer {
             ThreadExecutor.submit(() -> {
 
                 // do confirm
+                // fixme output callback
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
                     for (ProposalWithDone done : context.getDataWithCallback()) {
                         if (done.getProposal() == input) {
