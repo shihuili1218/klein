@@ -542,6 +542,12 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             ThreadExecutor.submit(() -> {
+                for (ProposalWithDone event : context.getDataWithCallback()) {
+                    event.getDone().negotiationDone(Result.State.SUCCESS);
+                }
+            });
+
+            ThreadExecutor.submit(() -> {
 
                 // do confirm
                 // fixme output callback
@@ -555,9 +561,6 @@ public class ProposerImpl implements Proposer {
                     }
                 });
 
-                for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(Result.State.SUCCESS);
-                }
             });
 
         }
