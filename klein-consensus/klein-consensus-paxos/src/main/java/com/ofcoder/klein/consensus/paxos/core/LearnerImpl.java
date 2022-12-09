@@ -20,8 +20,10 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -34,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +45,7 @@ import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -72,6 +77,7 @@ public class LearnerImpl implements Learner {
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
+    private ConsensusProp prop;
 
     public LearnerImpl(PaxosNode self) {
         this.self = self;
@@ -79,6 +85,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void init(ConsensusProp op) {
+        this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
@@ -163,24 +170,30 @@ public class LearnerImpl implements Learner {
     private void apply(long instanceId) {
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
+        final long lastApplyId = Math.max(maxAppliedInstanceId, lastCheckpoint);
+        final long exceptConfirmId = lastApplyId + 1;
         LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, maxAppliedInstanceId, lastCheckpoint);
-        if (instanceId <= maxAppliedInstanceId || instanceId <= lastCheckpoint) {
+
+        if (instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
-        }
-        long exceptConfirmId = maxAppliedInstanceId + 1;
-        if (instanceId > exceptConfirmId) {
-            long pre = instanceId - 1;
-            Instance<Proposal> preInstance = logManager.getInstance(pre);
-            if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
-                apply(pre);
-                // continue current instanceId
-            } else {
-                ThreadExecutor.submit(() -> learnFromOther(pre, instanceId));
-                // abort current instanceId
-                return;
+        } else if (instanceId > exceptConfirmId) {
+
+            for (long i = exceptConfirmId; i < instanceId; i++) {
+                Instance<Proposal> preInstance = logManager.getInstance(lastApplyId + i);
+                if (preInstance != null && preInstance.getState() == Instance.State.CONFIRMED) {
+                    applyQueue.add(i);
+                } else {
+                    List<Proposal> defaultValue = preInstance == null || CollectionUtils.isEmpty(preInstance.getGrantedValue())
+                            ? Lists.newArrayList(Proposal.NOOP) : preInstance.getGrantedValue();
+                    learnHard(instanceId, defaultValue);
+                }
             }
+
+            applyQueue.add(instanceId);
+            return;
         }
+        // else: instanceId == exceptConfirmId, do apply.
 
         // update log to applied.
         Instance<Proposal> localInstance;
@@ -239,48 +252,39 @@ public class LearnerImpl implements Learner {
 
     }
 
-    private void learnFromOther(long instanceId, long trigger) {
+    private boolean learnHard(long instanceId, List<Proposal> defaultValue) {
 
-        long singleTimeoutMS = 150;
-        long times;
         final Endpoint master = self.getMemberConfiguration().getMaster();
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
 
+        boolean lr = false;
         if (master != null) {
-            times = 1;
-            learn(instanceId, master, future::complete);
-        } else {
-            times = self.getMemberConfiguration().getMembersWithoutSelf().size();
-
-            for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-                CompletableFuture<Boolean> single = new CompletableFuture<>();
-                learn(instanceId, it, single::complete);
-                boolean learned = false;
+            if (StringUtils.equals(master.getId(), self.getSelf().getId())) {
+                CompletableFuture<Boolean> future = new CompletableFuture<>();
+                RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, result -> future.complete(result == Result.State.SUCCESS));
                 try {
-                    learned = single.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
+                    lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
-                    // do nothing
                 }
-                if (learned) {
-                    future.complete(true);
+            } else {
+                lr = learnSync(instanceId, master);
+            }
+        } else {
+            // learn hard
+            for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
+                lr = learnSync(instanceId, it);
+                if (lr) {
                     break;
                 }
             }
-            if (!future.isDone()) {
-                future.complete(false);
-            }
         }
-        try {
-            if (future.get(singleTimeoutMS * times, TimeUnit.MILLISECONDS) && applyQueue.offer(trigger)) {
-                LOG.error("failed to boost the instance[{}].", instanceId);
-            }
-        } catch (Exception e) {
-            // do nothing
-        }
+        return lr;
     }
 
     @Override
     public void learn(long instanceId, Endpoint target, LearnCallback callback) {
+
+        // todo single thread
+
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
 
         Instance<Proposal> instance = logManager.getInstance(instanceId);

@@ -16,6 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -61,6 +64,25 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     }
 
     /**
+     * Synchronous learning
+     *
+     * @param instanceId instance to learn
+     * @param target     learn objective
+     * @return learn result
+     * @see Learner#learn(long, Endpoint, LearnCallback)
+     */
+    default boolean learnSync(long instanceId, Endpoint target) {
+        long singleTimeoutMS = 150;
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        learn(instanceId, target, future::complete);
+        try {
+            return future.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Send confirm message.
      *
      * @param instanceId id of the instance
@@ -70,8 +92,9 @@ public interface Learner extends Lifecycle<ConsensusProp> {
 
     /**
      * Keep the data consistent with <code>target</code>
-     * @param target to be learned
-     * @param checkpoint checkpoint of the last snapshot of <code>target</code>
+     *
+     * @param target               to be learned
+     * @param checkpoint           checkpoint of the last snapshot of <code>target</code>
      * @param maxAppliedInstanceId maxAppliedInstanceId of <code>target</code>
      */
     void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
@@ -91,6 +114,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param req message
      */
     LearnRes handleLearnRequest(LearnReq req);
+
     /**
      * Processing Snapshot Synchronization message.
      *
