@@ -20,10 +20,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -280,18 +279,22 @@ public class LearnerImpl implements Learner {
         return lr;
     }
 
+    Map<Long, Vector<LearnCallback>> learningInstance = new ConcurrentHashMap<>();
+
     @Override
     public void learn(long instanceId, Endpoint target, LearnCallback callback) {
-
-        // todo single thread
-
-        LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
-
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             callback.learned(true);
             return;
         }
+
+        if (learningInstance.putIfAbsent(instanceId, new Vector<>(Lists.newArrayList(callback))) != null) {
+            learningInstance.get(instanceId).add(callback);
+            return;
+        }
+
+        LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
 
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
 
@@ -299,14 +302,21 @@ public class LearnerImpl implements Learner {
             @Override
             public void error(Throwable err) {
                 LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
-                callback.learned(false);
+                Vector<LearnCallback> remove = learningInstance.remove(instanceId);
+                remove.forEach(it -> it.learned(false));
             }
 
             @Override
             public void complete(LearnRes result) {
                 if (result.isResult() == Sync.SNAP) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
-                    snapSync(target, callback);
+                    long checkpoint = snapSync(target);
+
+
+                    if (checkpoint > instanceId) {
+
+                    }
+
                 } else if (result.isResult() == Sync.SINGLE) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
@@ -343,7 +353,7 @@ public class LearnerImpl implements Learner {
         LOG.info("keepSameData, target: {}, target[cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), checkpoint, maxAppliedInstanceId, self.getLastCheckpoint(), self.getCurAppliedInstanceId());
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         if (checkpoint > curAppliedInstanceId) {
-            ThreadExecutor.submit(() -> snapSync(target, new DefaultLearnCallback()));
+            ThreadExecutor.submit(() -> snapSync(target));
         } else {
             long diff = maxAppliedInstanceId - curAppliedInstanceId;
             if (diff > 0) {
@@ -356,12 +366,13 @@ public class LearnerImpl implements Learner {
         }
     }
 
-    private void snapSync(Endpoint target, LearnCallback callback) {
+    private long snapSync(Endpoint target) {
         LOG.info("start snap sync from node-{}", target.getId());
         try {
+            long checkpoint = -1;
+
             if (!snapLock.tryLock()) {
-                callback.learned(false);
-                return;
+                return checkpoint;
             }
 
             CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
@@ -387,11 +398,12 @@ public class LearnerImpl implements Learner {
             SnapSyncRes res = future.get(1010, TimeUnit.MILLISECONDS);
             for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
                 loadSnap(entry.getKey(), entry.getValue());
+                checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
             }
-            callback.learned(true);
+            return checkpoint;
         } catch (Throwable e) {
             LOG.error(e.getMessage());
-            callback.learned(false);
+            return -1;
         } finally {
             snapLock.unlock();
         }
