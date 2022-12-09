@@ -24,12 +24,14 @@ import com.ofcoder.klein.consensus.facade.Result;
 public interface ProposeDone {
     /**
      * call the method when negotiation done
+     *
      * @param result negotiation result
      */
     void negotiationDone(Result.State result);
 
     /**
      * This method may not be called because the agreed proposal is uncontrollable.
+     *
      * @param input  Enter the value of the state machine
      * @param output Value of state machine output
      */
