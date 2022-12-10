@@ -42,7 +42,11 @@ this is still in the process of implementation. 😆😆😆
 ### Cache
 - [x] Basic functions such as reading, writing, etc
 - [ ] Implement LRU with persistence
-- [ ] Cache Automatic Expiration (TTL)
+- [x] Cache Automatic Expiration (TTL)
+
+### Collection
+- [ ] list
+- [ ] map
 
 ### To be optimized
 - [ ] LogManager row lock

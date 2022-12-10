@@ -25,15 +25,8 @@ public class ThreadExecutor {
     }
 
     public static void submit(Runnable task) {
-        EXECUTOR.submit(() -> {
-            try {
-                task.run();
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-            }
-        });
+        EXECUTOR.execute(task);
     }
-
 
     /**
      * @see #shutdownAndAwaitTermination(ExecutorService, long)

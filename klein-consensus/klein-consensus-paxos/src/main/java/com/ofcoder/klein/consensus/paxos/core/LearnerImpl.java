@@ -102,19 +102,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void shutdown() {
-        shutdownLatch = new CountDownLatch(1);
-        ThreadExecutor.submit(() -> {
-            try {
-                generateSnap();
-            } finally {
-                shutdownLatch.countDown();
-            }
-        });
-        try {
-            shutdownLatch.await();
-        } catch (InterruptedException e) {
-            LOG.warn(e.getMessage(), e);
-        }
+        generateSnap();
     }
 
     private void generateSnap() {
@@ -126,6 +114,7 @@ public class LearnerImpl implements Learner {
 
             for (Map.Entry<String, SM> entry : sms.entrySet()) {
                 Snap snapshot = entry.getValue().snapshot();
+                LOG.info("save snapshot, group: {}, cp: {}", entry.getKey(), snapshot.getCheckpoint());
                 self.updateLastCheckpoint(snapshot.getCheckpoint());
                 logManager.saveSnap(entry.getKey(), snapshot);
             }
