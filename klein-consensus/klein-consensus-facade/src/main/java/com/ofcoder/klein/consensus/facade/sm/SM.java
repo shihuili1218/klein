@@ -13,4 +13,6 @@ public interface SM {
 
     void loadSnap(Snap snap);
 
+    void close();
+
 }
