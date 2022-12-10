@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -36,7 +37,6 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -67,6 +67,7 @@ public class MasterImpl implements Master {
     private final AtomicBoolean changing = new AtomicBoolean(false);
     private final List<HealthyListener> listeners = new ArrayList<>();
     private LogManager<Proposal> logManager;
+    private ElectState state = ElectState.ELECTING;
 
     public MasterImpl(PaxosNode self) {
         this.self = self;
@@ -142,19 +143,20 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
-                @Override
-                public void negotiationDone(Result.State result) {
-                    if (result == Result.State.UNKNOWN) {
-                        latch.countDown();
-                    }
-                }
+            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
+                    , new ProposeDone() {
+                        @Override
+                        public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                            if (!result) {
+                                latch.countDown();
+                            }
+                        }
 
-                @Override
-                public void applyDone(Object input, Object output) {
-                    latch.countDown();
-                }
-            });
+                        @Override
+                        public void applyDone(Map<Proposal, Object> applyResults) {
+                            latch.countDown();
+                        }
+                    });
             boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
             // do nothing for await.result
         } catch (InterruptedException e) {
@@ -172,6 +174,7 @@ public class MasterImpl implements Master {
     private void election() {
         LOG.debug("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
+        state = ElectState.ELECTING;
         changeHealthy(false);
         if (!electing.compareAndSet(false, true)) {
             return;
@@ -183,23 +186,25 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
-                @Override
-                public void negotiationDone(Result.State result) {
-                    LOG.info("electing master, negotiationDone: {}", result);
-                    if (result == Result.State.SUCCESS) {
-                        ThreadExecutor.submit(MasterImpl.this::boostInstance);
-                    } else {
-                        latch.countDown();
-                    }
-                }
+            Proposal proposal = new Proposal(MasterSM.GROUP, req);
+            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(proposal)
+                    , new ProposeDone() {
+                        @Override
+                        public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                            LOG.info("electing master, negotiationDone: {}", result);
+                            if (result && consensusDatas.contains(proposal)) {
+                                ThreadExecutor.submit(MasterImpl.this::boostInstance);
+                            } else {
+                                latch.countDown();
+                            }
+                        }
 
-                @Override
-                public void applyDone(Object input, Object output) {
-                    LOG.info("electing master, applyDone: {}", input);
-                    latch.countDown();
-                }
-            });
+                        @Override
+                        public void applyDone(Map<Proposal, Object> applyResults) {
+                            LOG.info("electing master, applyDone: {}", applyResults);
+                            latch.countDown();
+                        }
+                    });
 
             try {
                 boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
@@ -213,6 +218,7 @@ public class MasterImpl implements Master {
     }
 
     private void boostInstance() {
+        state = ElectState.BOOSTING;
 
         long miniInstanceId = self.getCurAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
@@ -223,12 +229,13 @@ public class MasterImpl implements Master {
             }
             List<Proposal> grantedValue = instance != null ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
             grantedValue = CollectionUtils.isNotEmpty(grantedValue) ? grantedValue : Lists.newArrayList(Proposal.NOOP);
-            RoleAccessor.getProposer().tryBoost(miniInstanceId, grantedValue, result -> {
-            });
+            RoleAccessor.getProposer().tryBoost(miniInstanceId, grantedValue, new ProposeDone.DefaultProposeDone());
         }
     }
 
     private void sendHeartbeat() {
+        state = ElectState.DOMINANT;
+
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
@@ -290,6 +297,11 @@ public class MasterImpl implements Master {
     }
 
     @Override
+    public ElectState electState() {
+        return state;
+    }
+
+    @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
 
@@ -305,6 +317,7 @@ public class MasterImpl implements Master {
 
             // reset and restart election timer
             if (!isSelf) {
+                state = ElectState.FOLLOWING;
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());

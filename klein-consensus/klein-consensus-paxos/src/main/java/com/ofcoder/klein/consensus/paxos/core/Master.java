@@ -63,12 +63,33 @@ public interface Master extends Lifecycle<ConsensusProp> {
 
     /**
      * Added master health listener
+     *
      * @param listener listener
      */
     void addHealthyListener(final HealthyListener listener);
 
+    ElectState electState();
+
     interface HealthyListener {
         void change(boolean healthy);
+    }
+
+    enum ElectState {
+        ELECTING(-1),
+        FOLLOWING(0),
+        BOOSTING(1),
+        DOMINANT(2),
+        ;
+        private int state;
+        public static final int UPGRADING = ElectState.BOOSTING.state;
+
+        ElectState(int state) {
+            this.state = state;
+        }
+
+        public int getState() {
+            return state;
+        }
     }
 
 }

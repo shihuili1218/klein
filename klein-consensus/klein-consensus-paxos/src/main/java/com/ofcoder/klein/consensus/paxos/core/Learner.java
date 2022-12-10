@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -86,9 +87,9 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Send confirm message.
      *
      * @param instanceId id of the instance
-     * @param callback   apply callback
+     * @param dons       call ProposeDone#applyDone(java.util.Map) when apply done
      */
-    void confirm(long instanceId, final ApplyCallback callback);
+    void confirm(long instanceId, final List<ProposeDone> dons);
 
     /**
      * Keep the data consistent with <code>target</code>
@@ -137,13 +138,5 @@ public interface Learner extends Lifecycle<ConsensusProp> {
 
         }
     }
-
-    class DefaultApplyCallback implements ApplyCallback {
-        @Override
-        public void apply(Proposal input, Object output) {
-            // do nothing.
-        }
-    }
-
 
 }

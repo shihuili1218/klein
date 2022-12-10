@@ -32,22 +32,12 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      *
      * @param data client's data
      * @param done client's callback
-     * @param <E>  client's data type, extend Serializable
      */
-    <E extends Serializable> void propose(final String group, final E data, final ProposeDone done);
+    <E extends Serializable> void propose(final Proposal data, final ProposeDone done);
 
     /**
-     * Boost the copy of the proposal to the majority, and ensure that you have executed confirm phase.
-     *
-     * @param instanceId      id of boost instance
-     * @param defaultProposal default proposal
-     * @return <code>true</code> if the consensus proposal is defaultProposal, else <code>false</code>
-     */
-    @Deprecated
-    boolean boost(final long instanceId, final Proposal defaultProposal);
-
-    /**
-     * try to boost instance
+     * Try to boost instance
+     * Boost the copy of the proposal to the majority and the confirm status is reached
      *
      * @param instanceId id of the instance that you want to boost
      * @param done       boost callback, NOTICE: it may be called multiple times
