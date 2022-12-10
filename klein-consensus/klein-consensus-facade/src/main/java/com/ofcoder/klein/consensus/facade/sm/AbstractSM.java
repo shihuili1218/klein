@@ -84,5 +84,9 @@ public abstract class AbstractSM implements SM {
 
     protected abstract void loadImage(Object snap);
 
+    @Override
+    public void close() {
+
+    }
 }
 

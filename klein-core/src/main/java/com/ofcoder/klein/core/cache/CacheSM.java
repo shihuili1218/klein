@@ -93,13 +93,19 @@ public class CacheSM extends AbstractSM {
         container.loadImage(snap);
     }
 
+    @Override
+    public void close() {
+        container.close();
+    }
+
     protected static class LRUMap {
         private final MemoryMap<String, MetaData> memory;
         private final ConcurrentMap<String, MetaData> file;
+        private final DB db;
 
         public LRUMap(int size, String dataPath) {
             memory = new MemoryMap<>(size);
-            DB db = DBMaker.fileDB(dataPath).closeOnJvmShutdown().make();
+            db = DBMaker.fileDB(dataPath).make();
             this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData>() {
                 @Override
                 public void serialize(@NotNull DataOutput2 out, @NotNull MetaData value) throws IOException {
@@ -207,6 +213,9 @@ public class CacheSM extends AbstractSM {
             Map<? extends String, ? extends MetaData> snap = (Map<? extends String, ? extends MetaData>) image;
             file.putAll(snap);
             memory.putAll(snap);
+        }
+        private void close(){
+            db.close();
         }
     }
 

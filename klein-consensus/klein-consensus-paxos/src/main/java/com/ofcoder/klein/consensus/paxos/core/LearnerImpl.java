@@ -103,6 +103,7 @@ public class LearnerImpl implements Learner {
     @Override
     public void shutdown() {
         generateSnap();
+        sms.values().forEach(SM::close);
     }
 
     private void generateSnap() {
