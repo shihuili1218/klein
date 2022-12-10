@@ -37,7 +37,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,6 @@ import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -75,7 +73,7 @@ public class LearnerImpl implements Learner {
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
-    private final Map<Long, List<Learner.ApplyCallback>> applyCallback = new ConcurrentHashMap<>();
+    private final Map<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private static final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
@@ -212,16 +210,18 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().unlock();
         }
 
-        Set<Long> applied = applyCallback.keySet().stream().filter(it -> instanceId >= it).collect(Collectors.toSet());
         try {
+            Map<Proposal, Object> applyResult = new HashMap<>();
             for (Proposal data : localInstance.getGrantedValue()) {
                 Object result = this._apply(localInstance.getInstanceId(), data);
-
-                applied.forEach(it -> {
-                    applyCallback.get(it).forEach(r -> r.apply(data, result));
-                });
+                applyResult.put(data, result);
+            }
+            List<ProposeDone> remove = applyCallback.remove(instanceId);
+            if (remove != null) {
+                remove.forEach(it -> it.applyDone(applyResult));
             }
         } finally {
+            Set<Long> applied = applyCallback.keySet().stream().filter(it -> instanceId >= it).collect(Collectors.toSet());
             applied.forEach(applyCallback::remove);
         }
     }
@@ -257,27 +257,31 @@ public class LearnerImpl implements Learner {
     }
 
     private boolean learnHard(long instanceId, List<Proposal> defaultValue) {
-
-        final Endpoint master = self.getMemberConfiguration().getMaster();
-
         boolean lr = false;
-        if (master != null) {
-            if (StringUtils.equals(master.getId(), self.getSelf().getId())) {
-                CompletableFuture<Boolean> future = new CompletableFuture<>();
-                RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, result -> future.complete(result == Result.State.SUCCESS));
-                try {
-                    lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
-                } catch (Exception e) {
+
+        if (RoleAccessor.getMaster().electState().getState() >= Master.ElectState.UPGRADING) {
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, new ProposeDone() {
+                @Override
+                public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                    future.complete(result);
                 }
-            } else {
-                lr = learnSync(instanceId, master);
+            });
+            try {
+                lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
             }
         } else {
-            // learn hard
-            for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-                lr = learnSync(instanceId, it);
-                if (lr) {
-                    break;
+            final Endpoint master = self.getMemberConfiguration().getMaster();
+            if (master != null) {
+                lr = learnSync(instanceId, master);
+            } else {
+                // learn hard
+                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
+                    lr = learnSync(instanceId, it);
+                    if (lr) {
+                        break;
+                    }
                 }
             }
         }
@@ -289,6 +293,7 @@ public class LearnerImpl implements Learner {
         List<LearnCallback> callbacks = learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
         if (callbacks != null) {
+            // Limit only one thread to execute learn
             return;
         }
         // else callbacks = null, do learn
@@ -421,14 +426,10 @@ public class LearnerImpl implements Learner {
                 checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
             }
 
-            final long finalCheckpoint = checkpoint;
-            applyCallback.keySet().stream().filter(it -> finalCheckpoint >= it).forEach(
-                    it -> {
-                        applyCallback.remove(it).forEach(r -> {
-                            r.apply(null, null);
-                        });
-                    }
-            );
+            long finalCheckpoint = checkpoint;
+            Set<Long> applied = applyCallback.keySet().stream().filter(it -> finalCheckpoint >= it).collect(Collectors.toSet());
+            applied.forEach(applyCallback::remove);
+
             return checkpoint;
         } catch (Throwable e) {
             LOG.error(e.getMessage());
@@ -439,11 +440,11 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(long instanceId, final ApplyCallback callback) {
+    public void confirm(long instanceId, final List<ProposeDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         applyCallback.putIfAbsent(instanceId, new ArrayList<>());
-        applyCallback.get(instanceId).add(callback);
+        applyCallback.get(instanceId).addAll(dons);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -537,6 +538,8 @@ public class LearnerImpl implements Learner {
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             return res.result(Sync.SINGLE).instance(instance).build();
         } else {
+            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId()
+                    , self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
             return res.result(Sync.NO_SUPPORT).build();
         }
     }

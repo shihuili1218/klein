@@ -27,7 +27,17 @@ public class Result<D extends Serializable> implements Serializable {
     private D data;
 
     public enum State {
+        /**
+         * negotiation done, and consensus data eq client’s data
+         */
         SUCCESS,
+        /**
+         * negotiation done, and consensus data not eq client’s data
+         */
+        FAILURE,
+        /**
+         * negotiation unknown
+         */
         UNKNOWN;
     }
 

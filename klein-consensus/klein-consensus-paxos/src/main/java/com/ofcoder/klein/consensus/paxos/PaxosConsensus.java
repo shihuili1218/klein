@@ -17,6 +17,8 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -51,8 +53,8 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private ConsensusProp prop;
 
-    private <E extends Serializable> void proposeAsync(final String group, final E data, final ProposeDone done) {
-        RoleAccessor.getProposer().propose(group, data, done);
+    private <E extends Serializable> void proposeAsync(final Proposal data, final ProposeDone done) {
+        RoleAccessor.getProposer().propose(data, done);
     }
 
     @Override
@@ -61,20 +63,26 @@ public class PaxosConsensus implements Consensus {
 
         CountDownLatch completed = new CountDownLatch(count);
         Result.Builder<D> builder = Result.Builder.aResult();
-        proposeAsync(group, data, new ProposeDone() {
+        Proposal proposal = new Proposal(group, data);
+        proposeAsync(proposal, new ProposeDone() {
             @Override
-            public void negotiationDone(Result.State result) {
-                builder.state(result);
+            public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
                 completed.countDown();
-                if (result == Result.State.UNKNOWN) {
+                if (result) {
+                    builder.state(consensusDatas.contains(proposal) ? Result.State.SUCCESS : Result.State.FAILURE);
+                } else {
+                    builder.state(Result.State.UNKNOWN);
                     completed.countDown();
                 }
             }
 
             @Override
-            public void applyDone(Object input, Object result) {
-                if (data.equals(input)) {
-                    builder.data((D) result);
+            public void applyDone(Map<Proposal, Object> applyResults) {
+                for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
+                    if (entry.getKey() == proposal) {
+                        builder.data((D) entry.getValue());
+                        break;
+                    }
                 }
                 completed.countDown();
             }

@@ -23,7 +23,6 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -46,7 +45,6 @@ import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
@@ -136,16 +134,15 @@ public class ProposerImpl implements Proposer {
      *
      * @param data client's data
      * @param done client's callbck
-     * @param <E>  client's data type, extend Serializable
      */
     @Override
-    public <E extends Serializable> void propose(final String group, final E data, final ProposeDone done) {
+    public <E extends Serializable> void propose(final Proposal data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
 
         final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
-            event.setProposal(new Proposal(group, data));
+            event.setProposal(data);
             event.setDone(done);
         };
         this.proposeQueue.publishEvent(translator);
@@ -254,57 +251,16 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public boolean boost(long instanceId, Proposal proposal) {
-        LOG.info("boosting instanceId: {}", instanceId);
-        if (self.getLastCheckpoint() >= instanceId) {
-            // this instance has reached consensus,
-            // but we don't know what the consensus value is
-            // fixme
-            return false;
-        }
-        Instance<Proposal> instance = logManager.getInstance(instanceId);
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            return instance.getGrantedValue().contains(proposal);
-        }
-
-        final CountDownLatch latch = new CountDownLatch(1);
-        if (boostLatch.putIfAbsent(instanceId, latch) != null) {
-            return blockBoost(instanceId, proposal);
-        }
-
-        tryBoost(instanceId, Lists.newArrayList(proposal), result -> latch.countDown());
-
-        return blockBoost(instanceId, proposal);
-    }
-
-    private boolean blockBoost(long instanceId, Proposal proposal) {
-        try {
-            CountDownLatch latch = boostLatch.get(instanceId);
-            if (latch != null) {
-                boolean await = latch.await(2000, TimeUnit.MILLISECONDS);
-                // It is not necessary to handle the return value,
-                // which is ProposerImpl.boost work content
-            }
-        } catch (InterruptedException e) {
-            LOG.warn("{}, boost instance[{}] failure, {}", e.getClass().getName(), instanceId, e.getMessage());
-        } finally {
-            boostLatch.remove(instanceId);
-        }
-        return boost(instanceId, proposal);
-    }
-
-
-    @Override
     public void tryBoost(final long instanceId, final List<Proposal> proposal, final ProposeDone done) {
 
         if (self.getLastCheckpoint() >= instanceId) {
-            done.negotiationDone(Result.State.SUCCESS);
+            done.negotiationDone(true, Lists.newArrayList());
             return;
         }
 
         Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            done.negotiationDone(Result.State.SUCCESS);
+            done.negotiationDone(true, instance.getGrantedValue());
             return;
         }
 
@@ -527,7 +483,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.submit(() -> {
                 for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(Result.State.UNKNOWN);
+                    event.getDone().negotiationDone(false, null);
                 }
             });
         }
@@ -543,24 +499,14 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.submit(() -> {
                 for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(Result.State.SUCCESS);
+                    event.getDone().negotiationDone(true, context.getConsensusData());
                 }
             });
 
             ThreadExecutor.submit(() -> {
-
                 // do confirm
-                // fixme output callback
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), (input, output) -> {
-                    for (ProposalWithDone done : context.getDataWithCallback()) {
-                        if (done.getProposal() == input) {
-                            LOG.info("apply callback, instance: {}", context.getInstanceId());
-                            done.getDone().applyDone(input.getData(), output);
-                            break;
-                        }
-                    }
-                });
-
+                List<ProposeDone> dons = context.getDataWithCallback().stream().map(ProposalWithDone::getDone).collect(Collectors.toList());
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
             });
 
         }
@@ -577,7 +523,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.submit(() -> {
                 for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(Result.State.UNKNOWN);
+                    event.getDone().negotiationDone(false, null);
                 }
             });
 
