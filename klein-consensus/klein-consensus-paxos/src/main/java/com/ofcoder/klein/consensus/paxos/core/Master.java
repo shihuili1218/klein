@@ -18,6 +18,8 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -53,6 +55,9 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @return whether accept the heartbeat
      */
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
+
+
+    NewMasterRes onReceiveNewMaster(final NewMasterReq request, boolean isSelf);
 
     /**
      * This is a callback method of master change.

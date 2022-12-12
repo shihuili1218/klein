@@ -23,7 +23,6 @@ import java.util.concurrent.TimeUnit;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -101,6 +100,13 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
 
     /**
+     * Keep consistent with the data in the cluster
+     *
+     * @return <code>true:</code> same data, <code>false:</code>: not the same
+     */
+    boolean healthy();
+
+    /**
      * Processing confirm message.
      * The confirm message is used to submit an instance.
      *
@@ -122,11 +128,6 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param req message
      */
     SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
-
-    interface ApplyCallback {
-        void apply(Proposal input, Object output);
-    }
-
 
     interface LearnCallback {
         void learned(boolean result);

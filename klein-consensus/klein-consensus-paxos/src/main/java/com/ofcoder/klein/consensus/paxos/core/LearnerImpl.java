@@ -251,12 +251,7 @@ public class LearnerImpl implements Learner {
 
         if (RoleAccessor.getMaster().electState().getState() >= Master.ElectState.UPGRADING) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, new ProposeDone() {
-                @Override
-                public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
-                    future.complete(result);
-                }
-            });
+            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, (result, consensusDatas) -> future.complete(result));
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
@@ -266,13 +261,14 @@ public class LearnerImpl implements Learner {
             if (master != null) {
                 lr = learnSync(instanceId, master);
             } else {
+                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
                 // learn hard
-                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-                    lr = learnSync(instanceId, it);
-                    if (lr) {
-                        break;
-                    }
-                }
+//                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
+//                    lr = learnSync(instanceId, it);
+//                    if (lr) {
+//                        break;
+//                    }
+//                }
             }
         }
         return lr;
@@ -364,32 +360,42 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId) {
-        LOG.info("keepSameData, target: {}, target[cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), checkpoint, maxAppliedInstanceId, self.getLastCheckpoint(), self.getCurAppliedInstanceId());
-        long curAppliedInstanceId = self.getCurAppliedInstanceId();
-        if (checkpoint > curAppliedInstanceId) {
+    public void keepSameData(final Endpoint target, final long targetCheckpoint, final long targetApplied) {
+        long localApplied = self.getCurAppliedInstanceId();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
+        if (targetCheckpoint > localApplied) {
             ThreadExecutor.submit(() -> snapSync(target));
         } else {
-            long diff = maxAppliedInstanceId - curAppliedInstanceId;
+            long diff = targetApplied - localApplied;
             if (diff > 0) {
                 ThreadExecutor.submit(() -> {
                     for (int i = 1; i <= diff; i++) {
-                        RoleAccessor.getLearner().learn(curAppliedInstanceId + i, target);
+                        RoleAccessor.getLearner().learn(localApplied + i, target);
                     }
                 });
             }
         }
     }
 
+    @Override
+    public boolean healthy() {
+        return true;
+    }
+
     private long snapSync(Endpoint target) {
         LOG.info("start snap sync from node-{}", target.getId());
+
+        long checkpoint = -1;
+        if (!snapLock.tryLock()) {
+            return checkpoint;
+        }
+
         try {
-            long checkpoint = -1;
-
-            if (!snapLock.tryLock()) {
-                return checkpoint;
-            }
-
             CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
@@ -422,7 +428,7 @@ public class LearnerImpl implements Learner {
 
             return checkpoint;
         } catch (Throwable e) {
-            LOG.error(e.getMessage());
+            LOG.error(e.getMessage(), e);
             return -1;
         } finally {
             snapLock.unlock();

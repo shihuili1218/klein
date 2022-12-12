@@ -296,11 +296,11 @@ public class ProposerImpl implements Proposer {
             return;
         }
 
-        LOG.info("limit prepare. instance: {}, skipPrepare: {}", ctxt.getInstanceId(), skipPrepare);
+        LOG.debug("limit prepare. instance: {}, skipPrepare: {}", ctxt.getInstanceId(), skipPrepare);
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {
-                    skipPrepare.wait();
+                    skipPrepare.wait(prepareTimeout);
                 } catch (InterruptedException e) {
                     throw new ConsensusException(e.getMessage(), e);
                 }

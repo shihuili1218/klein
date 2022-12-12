@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -45,6 +46,8 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -220,6 +223,43 @@ public class MasterImpl implements Master {
     private void boostInstance() {
         state = ElectState.BOOSTING;
 
+        stopAllTimer();
+
+        PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
+                .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .build();
+        PaxosQuorum quorum = PaxosQuorum.createInstance(memberConfiguration);
+        AtomicBoolean next = new AtomicBoolean(false);
+
+        // for self
+        quorum.grant(self.getSelf());
+
+        // for other members
+        memberConfiguration.getMembersWithoutSelf().forEach(it ->
+                client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
+                    @Override
+                    public void error(Throwable err) {
+                        quorum.refuse(it);
+                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+                            restartElect();
+                        }
+                    }
+
+                    @Override
+                    public void complete(NewMasterRes result) {
+                        self.updateCurInstanceId(result.getCurInstanceId());
+                        quorum.grant(it);
+                        if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+                            ThreadExecutor.submit(MasterImpl.this::_boosting);
+                        }
+                    }
+                }, 50L));
+    }
+
+    private void _boosting() {
         long miniInstanceId = self.getCurAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
         for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
@@ -329,20 +369,32 @@ public class MasterImpl implements Master {
         }
     }
 
+    @Override
+    public NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf) {
+        return NewMasterRes.Builder.aNewMasterRes()
+                .checkpoint(self.getLastCheckpoint())
+                .curInstanceId(self.getCurInstanceId())
+                .lastAppliedId(self.getCurAppliedInstanceId())
+                .build();
+    }
+
+    private void handleNewMasterResponse(NewMasterRes res, PaxosQuorum quorum) {
+
+    }
+
     private void checkAndUpdateInstance(Ping request) {
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
+        RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
+    }
 
-        if (request.getMaxAppliedInstanceId() > self.getCurAppliedInstanceId()) {
-            RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
-        }
+    private void stopAllTimer() {
+        sendHeartbeatTimer.stop();
+        electTimer.stop();
     }
 
     private void restartElect() {
         sendHeartbeatTimer.stop();
         electTimer.restart();
-        int timeoutMs = calculateElectionMasterInterval();
-        electTimer.reset(timeoutMs);
-        LOG.debug("reset elect timer, next interval: {}", timeoutMs);
     }
 
     private void restartHeartbeat() {
