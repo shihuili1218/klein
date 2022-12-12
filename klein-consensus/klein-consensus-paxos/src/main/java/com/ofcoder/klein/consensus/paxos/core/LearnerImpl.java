@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -135,6 +134,11 @@ public class LearnerImpl implements Learner {
                 return;
             }
             SM sm = sms.get(group);
+            if (sm == null) {
+                LOG.warn("load snap failure, group: {}, The state machine is not found." +
+                        " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                return;
+            }
 
             sm.loadSnap(lastSnap);
             self.updateLastCheckpoint(lastSnap.getCheckpoint());
@@ -369,15 +373,10 @@ public class LearnerImpl implements Learner {
 
         LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
         if (targetCheckpoint > localApplied) {
-            ThreadExecutor.submit(() -> snapSync(target));
+            snapSync(target);
         } else {
-            long diff = targetApplied - localApplied;
-            if (diff > 0) {
-                ThreadExecutor.submit(() -> {
-                    for (int i = 1; i <= diff; i++) {
-                        RoleAccessor.getLearner().learn(localApplied + i, target);
-                    }
-                });
+            for (; localApplied <= targetApplied; localApplied++) {
+                RoleAccessor.getLearner().learn(localApplied, target);
             }
         }
     }

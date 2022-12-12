@@ -378,13 +378,11 @@ public class MasterImpl implements Master {
                 .build();
     }
 
-    private void handleNewMasterResponse(NewMasterRes res, PaxosQuorum quorum) {
-
-    }
-
     private void checkAndUpdateInstance(Ping request) {
         Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
-        RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
+        ThreadExecutor.submit(() -> {
+            RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
+        });
     }
 
     private void stopAllTimer() {
