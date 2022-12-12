@@ -251,12 +251,7 @@ public class LearnerImpl implements Learner {
 
         if (RoleAccessor.getMaster().electState().getState() >= Master.ElectState.UPGRADING) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, new ProposeDone() {
-                @Override
-                public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
-                    future.complete(result);
-                }
-            });
+            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, (result, consensusDatas) -> future.complete(result));
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
