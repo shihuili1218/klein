@@ -30,6 +30,7 @@ import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
+import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
@@ -105,8 +106,16 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public boolean healthy() {
-        return RoleAccessor.getProposer().healthy();
+    public void setListener(LifecycleListener listener) {
+        RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
+            @Override
+            public void change(Master.ElectState healthy) {
+                if (Master.ElectState.PROPOSE_STATE.contains(healthy)){
+                    listener.prepared();
+                }
+            }
+        });
+
     }
 
     @Override

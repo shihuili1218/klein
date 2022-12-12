@@ -253,7 +253,7 @@ public class LearnerImpl implements Learner {
     private boolean learnHard(long instanceId, List<Proposal> defaultValue) {
         boolean lr = false;
 
-        if (RoleAccessor.getMaster().electState().getState() >= Master.ElectState.UPGRADING) {
+        if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, (result, consensusDatas) -> future.complete(result));
             try {
@@ -375,7 +375,8 @@ public class LearnerImpl implements Learner {
         if (targetCheckpoint > localApplied) {
             snapSync(target);
         } else {
-            for (; localApplied <= targetApplied; localApplied++) {
+            long next = ++localApplied;
+            for (; next <= targetApplied; next++) {
                 RoleAccessor.getLearner().learn(localApplied, target);
             }
         }
@@ -535,6 +536,11 @@ public class LearnerImpl implements Learner {
         } else {
             LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId()
                     , self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
+            if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+                List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
+                        ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
+                RoleAccessor.getProposer().tryBoost(request.getInstanceId(), defaultValue, new ProposeDone.DefaultProposeDone());
+            }
             return res.result(Sync.NO_SUPPORT).build();
         }
     }

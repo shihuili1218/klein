@@ -79,8 +79,7 @@ public class ProposerImpl implements Proposer {
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
-    private final ConcurrentMap<Long, CountDownLatch> boostLatch = new ConcurrentHashMap<>();
-    private boolean healthy = false;
+    private boolean allowPropose = false;
 
     public ProposerImpl(PaxosNode self) {
         this.self = self;
@@ -107,8 +106,8 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
         RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            ProposerImpl.this.healthy = healthy;
-            if (healthy) {
+            allowPropose = Master.ElectState.PROPOSE_STATE.contains(healthy);
+            if (allowPropose) {
                 eventHandler.triggerHandle();
             }
         });
@@ -243,11 +242,6 @@ public class ProposerImpl implements Proposer {
                 ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
             }
         }
-    }
-
-    @Override
-    public boolean healthy() {
-        return healthy;
     }
 
     @Override
@@ -407,7 +401,7 @@ public class ProposerImpl implements Proposer {
 
 
     public class ProposeEventHandler implements EventHandler<ProposalWithDone> {
-        private int batchSize;
+        private final int batchSize;
         private final List<ProposalWithDone> tasks = new Vector<>();
 
         public ProposeEventHandler(int batchSize) {
@@ -418,22 +412,15 @@ public class ProposerImpl implements Proposer {
             if (tasks.isEmpty()) {
                 return;
             }
-            syncHandle();
+            propose(Proposal.NOOP, new ProposeDone.DefaultProposeDone());
         }
 
-        private void syncHandle() {
-            List<ProposalWithDone> temp;
-            synchronized (tasks) {
-                temp = new ArrayList<>(tasks);
-                tasks.clear();
-            }
-            doHandle(temp);
-        }
+        private void handle() {
+            List<ProposalWithDone> temp = new ArrayList<>(tasks);
+            tasks.clear();
 
-        private void doHandle(List<ProposalWithDone> events) {
-            LOG.info("start negotiations, proposal size: {}", events.size());
-
-            final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(events);
+            LOG.info("start negotiations, proposal size: {}", temp.size());
+            final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(temp);
             ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration().createRef(), self.incrementInstanceId(), finalEvents);
 
             long curProposalNo = self.getCurProposalNo();
@@ -448,15 +435,15 @@ public class ProposerImpl implements Proposer {
         public void onEvent(ProposalWithDone event, long sequence, boolean endOfBatch) {
             if (event.getShutdownLatch() != null) {
                 if (!this.tasks.isEmpty()) {
-                    syncHandle();
+                    handle();
                 }
                 event.getShutdownLatch().countDown();
                 return;
             }
             this.tasks.add(event);
 
-            if (healthy() && (this.tasks.size() >= batchSize || endOfBatch)) {
-                syncHandle();
+            if (allowPropose && (this.tasks.size() >= batchSize || endOfBatch)) {
+                handle();
             }
         }
     }

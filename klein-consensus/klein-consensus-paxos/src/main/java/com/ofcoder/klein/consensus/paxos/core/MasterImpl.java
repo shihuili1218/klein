@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -177,8 +176,7 @@ public class MasterImpl implements Master {
     private void election() {
         LOG.debug("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
-        state = ElectState.ELECTING;
-        changeHealthy(false);
+        updateMasterState(ElectState.ELECTING);
         if (!electing.compareAndSet(false, true)) {
             return;
         }
@@ -221,7 +219,7 @@ public class MasterImpl implements Master {
     }
 
     private void boostInstance() {
-        state = ElectState.BOOSTING;
+        updateMasterState(ElectState.BOOSTING);
 
         stopAllTimer();
 
@@ -274,7 +272,7 @@ public class MasterImpl implements Master {
     }
 
     private void sendHeartbeat() {
-        state = ElectState.DOMINANT;
+        updateMasterState(ElectState.DOMINANT);
 
         final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
@@ -324,13 +322,6 @@ public class MasterImpl implements Master {
         }
     }
 
-
-    private void changeHealthy(boolean healthy) {
-        listeners.forEach(it -> {
-            it.change(healthy);
-        });
-    }
-
     @Override
     public void addHealthyListener(HealthyListener listener) {
         listeners.add(listener);
@@ -339,6 +330,11 @@ public class MasterImpl implements Master {
     @Override
     public ElectState electState() {
         return state;
+    }
+
+    private void updateMasterState(ElectState healthy) {
+        state = healthy;
+        listeners.forEach(it -> it.change(healthy));
     }
 
     @Override
@@ -350,14 +346,13 @@ public class MasterImpl implements Master {
         // check and update instance
         checkAndUpdateInstance(request);
 
-        if (memberConfiguration.getMaster() != null
-                && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
+        if ((memberConfiguration.getMaster() == null
+                || (memberConfiguration.getMaster() != null && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())))
                 && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
-            changeHealthy(true);
 
             // reset and restart election timer
             if (!isSelf) {
-                state = ElectState.FOLLOWING;
+                updateMasterState(ElectState.FOLLOWING);
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());

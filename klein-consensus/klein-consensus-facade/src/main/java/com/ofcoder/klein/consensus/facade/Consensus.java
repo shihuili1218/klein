@@ -33,15 +33,22 @@ public interface Consensus extends Lifecycle<ConsensusProp> {
      * read from W and only check self.lastApplyInstance if W > 1
      *
      * @param group group name
-     * @param data message
+     * @param data  message
      * @return whether success
      */
-    default <E extends Serializable, D extends Serializable> Result<D> read(final String group, final E data){
+    default <E extends Serializable, D extends Serializable> Result<D> read(final String group, final E data) {
         return propose(group, data, true);
     }
 
     void loadSM(final String group, final SM sm);
 
-    boolean healthy();
+    void setListener(LifecycleListener listener);
 
+    interface LifecycleListener {
+
+        /**
+         * initialized, ready to initiate a proposal
+         */
+        void prepared();
+    }
 }

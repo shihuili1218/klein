@@ -44,5 +44,4 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      */
     void tryBoost(final long instanceId, final List<Proposal> defaultProposal, final ProposeDone done);
 
-    boolean healthy();
 }
