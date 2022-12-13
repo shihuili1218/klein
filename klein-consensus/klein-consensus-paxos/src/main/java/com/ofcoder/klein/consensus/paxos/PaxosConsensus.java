@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,7 +111,7 @@ public class PaxosConsensus implements Consensus {
         RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
             @Override
             public void change(Master.ElectState healthy) {
-                if (Master.ElectState.PROPOSE_STATE.contains(healthy)){
+                if (Master.ElectState.PROPOSE_STATE.contains(healthy)) {
                     listener.prepared();
                 }
             }

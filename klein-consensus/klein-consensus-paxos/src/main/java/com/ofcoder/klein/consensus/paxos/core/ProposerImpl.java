@@ -214,7 +214,7 @@ public class ProposerImpl implements Proposer {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
             , final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote。instanceState: {}, result: {}"
+        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote.instanceState: {}, result: {}"
                 , result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState(), result.getResult());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
@@ -338,6 +338,8 @@ public class ProposerImpl implements Proposer {
         // for self
         PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(req, true);
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
+
+        LOG.info("================================={}",  memberConfiguration.getMembersWithoutSelf());
 
         // for other members
         memberConfiguration.getMembersWithoutSelf().forEach(it -> {

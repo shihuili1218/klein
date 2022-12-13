@@ -7,6 +7,6 @@ import java.nio.ByteBuffer;
  */
 public interface RpcContext {
     void response(ByteBuffer msg);
-    void response();
+
     String getRemoteAddress();
 }
