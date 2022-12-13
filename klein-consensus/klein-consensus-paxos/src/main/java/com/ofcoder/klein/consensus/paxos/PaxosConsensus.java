@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,6 +81,7 @@ public class PaxosConsensus implements Consensus {
 
             @Override
             public void applyDone(Map<Proposal, Object> applyResults) {
+                LOG.info("==================================={}", applyResults);
                 for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
                     if (entry.getKey() == proposal) {
                         builder.data((D) entry.getValue());

@@ -296,7 +296,7 @@ public class MasterImpl implements Master {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.debug("node: " + it.getId() + ", " + err.getMessage());
+                    LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
                         complete.complete(quorum.isGranted());

@@ -43,7 +43,7 @@ public class Main1 {
         Klein instance1 = Klein.getInstance();
         instance1.awaitInit();
 
-//        Thread.sleep(10000L);
+        Thread.sleep(15000L);
 
         String key = "hello";
         String value = "klein";

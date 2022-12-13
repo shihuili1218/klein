@@ -154,13 +154,13 @@ public class AcceptorImpl implements Acceptor {
 
     private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo
             , final BaseReq req, final boolean isSelf) {
-        boolean checkProposalNo = isSelf ? req.getProposalNo() < selfProposalNo : req.getProposalNo() <= selfProposalNo;
+        boolean checkProposalNo = isSelf ? req.getProposalNo() >= selfProposalNo : req.getProposalNo() > selfProposalNo;
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
-                || checkProposalNo) {
+                || !checkProposalNo) {
 
-            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}", req.getMemberConfigurationVersion()
-                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo);
+            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}, checkProposalNo: {}", req.getMemberConfigurationVersion()
+                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
             return false;
         }
         self.updateCurProposalNo(req.getProposalNo());
