@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
@@ -156,8 +156,8 @@ public class AcceptorImpl implements Acceptor {
     private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo
             , final BaseReq req, final boolean isSelf) {
         boolean checkProposalNo = isSelf ? req.getProposalNo() >= selfProposalNo : req.getProposalNo() > selfProposalNo;
-        if (!MemberManager.isValid(req.getNodeId())
-                || req.getMemberConfigurationVersion() < MemberManager.getVersion()
+        if (!paxosMemberConfiguration.isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || !checkProposalNo) {
 
             LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}, checkProposalNo: {}", req.getMemberConfigurationVersion()
@@ -170,8 +170,8 @@ public class AcceptorImpl implements Acceptor {
 
 
     private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, BaseReq req) {
-        if (!MemberManager.isValid(req.getNodeId())
-                || req.getMemberConfigurationVersion() < MemberManager.getVersion()
+        if (!paxosMemberConfiguration.isValid(req.getNodeId())
+                || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() < selfProposalNo) {
             return false;
         }

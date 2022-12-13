@@ -16,19 +16,12 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -39,81 +32,40 @@ public class MemberManager {
     private static final PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
     private static volatile Endpoint self;
 
-    public static int getVersion() {
-        return configuration.getVersion().get();
-    }
-
-    public static Set<Endpoint> getAllMembers() {
-        return new HashSet<>(configuration.getAllMembers().values());
-    }
-
-    public static Set<Endpoint> getMembersWithoutSelf() {
-        final String selfId = self.getId();
-        return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
-                .collect(Collectors.toSet());
-    }
-
-    public static Endpoint getEndpointById(String id) {
-        if (StringUtils.isEmpty(id)) {
-            return null;
-        }
-        return configuration.getAllMembers().getOrDefault(id, null);
-    }
-
-    public static boolean isValid(String nodeId) {
-        return configuration.getAllMembers().containsKey(nodeId);
-    }
-
     public static void init(List<Endpoint> nodes, Endpoint self) {
-        if (CollectionUtils.isEmpty(nodes)) {
-            return;
-        }
-        configuration.getAllMembers().putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        configuration.init(nodes);
         MemberManager.self = self;
-        configuration.getVersion().incrementAndGet();
-    }
-
-    public static void writeOn(Endpoint node) {
-        configuration.getAllMembers().put(node.getId(), node);
-        configuration.getVersion().incrementAndGet();
-    }
-
-    public static void writeOff(Endpoint node) {
-        configuration.getAllMembers().remove(node.getId());
-        configuration.getVersion().incrementAndGet();
-    }
-
-    public static Endpoint getMaster() {
-        return configuration.getMaster();
-    }
-
-    public static boolean changeMaster(String nodeId) {
-        if (isValid(nodeId)) {
-            configuration.setMaster(configuration.getAllMembers().get(nodeId));
-            configuration.getVersion().incrementAndGet();
-
-            RoleAccessor.getMaster().onChangeMaster(nodeId);
-            LOG.info("node-{} was promoted to master, version: {}", nodeId, configuration.getVersion().get());
-            return true;
-        } else {
-            return false;
-        }
     }
 
     public static void loadSnap(PaxosMemberConfiguration snap) {
-        configuration.setMaster(snap.getMaster());
-        configuration.setVersion(snap.getVersion());
-        configuration.setAllMembers(snap.getAllMembers());
+        configuration.loadSnap(snap);
+    }
+
+    public static boolean changeMaster(String nodeId) {
+        return configuration.changeMaster(nodeId);
+    }
+
+    public static void writeOn(Endpoint node) {
+        configuration.writeOn(node);
+    }
+
+    public static void writeOff(Endpoint node) {
+        configuration.writeOff(node);
+    }
+
+    public static Endpoint getEndpointById(String id) {
+        return configuration.getEndpointById(id);
     }
 
     public static PaxosMemberConfiguration createRef() {
-        PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.getAllMembers().putAll(configuration.getAllMembers());
-        Endpoint master = configuration.getMaster();
-        if (master != null) {
-            target.setMaster(new Endpoint(master.getId(), master.getIp(), master.getPort()));
-        }
-        target.setVersion(configuration.getVersion());
-        return target;
+        return configuration.createRef();
+    }
+
+    public static Set<Endpoint> getAllMembers() {
+        return configuration.getAllMembers();
+    }
+
+    public static boolean isValid(String nodeId) {
+        return configuration.isValid(nodeId);
     }
 }

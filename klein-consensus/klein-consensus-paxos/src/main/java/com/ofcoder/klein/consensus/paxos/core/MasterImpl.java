@@ -38,7 +38,6 @@ import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -46,6 +45,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
@@ -117,7 +117,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void addMember(Endpoint endpoint) {
-        if (MemberManager.isValid(endpoint.getId())) {
+        if (MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.ADD, endpoint);
@@ -125,7 +125,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void removeMember(Endpoint endpoint) {
-        if (!MemberManager.isValid(endpoint.getId())) {
+        if (!MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.REMOVE, endpoint);
@@ -228,7 +228,7 @@ public class MasterImpl implements Master {
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion().get())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
         PaxosQuorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         AtomicBoolean next = new AtomicBoolean(false);
@@ -237,7 +237,7 @@ public class MasterImpl implements Master {
         quorum.grant(self.getSelf());
 
         // for other members
-        MemberManager.getMembersWithoutSelf().forEach(it ->
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
                 client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
                     @Override
                     public void error(Throwable err) {
@@ -280,7 +280,7 @@ public class MasterImpl implements Master {
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion().get())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
                 .maxAppliedInstanceId(self.getCurAppliedInstanceId())
                 .lastCheckpoint(self.getLastCheckpoint())
                 .maxInstanceId(self.getCurInstanceId())
@@ -293,7 +293,7 @@ public class MasterImpl implements Master {
         }
 
         // for other members
-        MemberManager.getMembersWithoutSelf().forEach(it -> {
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
@@ -349,7 +349,7 @@ public class MasterImpl implements Master {
 
         if ((memberConfiguration.getMaster() == null
                 || (memberConfiguration.getMaster() != null && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())))
-                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion().get()) {
+                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
 
             // reset and restart election timer
             if (!isSelf) {

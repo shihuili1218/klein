@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 
 /**
  * @author 释慧利

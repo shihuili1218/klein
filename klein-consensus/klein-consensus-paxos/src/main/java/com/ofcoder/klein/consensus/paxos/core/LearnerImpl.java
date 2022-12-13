@@ -48,6 +48,7 @@ import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -262,7 +263,7 @@ public class LearnerImpl implements Learner {
             } catch (Exception e) {
             }
         } else {
-            final Endpoint master = MemberManager.getMaster();
+            final Endpoint master = MemberManager.createRef().getMaster();
             if (master != null) {
                 lr = learnSync(instanceId, master);
             } else {
@@ -401,7 +402,7 @@ public class LearnerImpl implements Learner {
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
-                    .memberConfigurationVersion(MemberManager.getVersion())
+                    .memberConfigurationVersion(MemberManager.createRef().getVersion())
                     .checkpoint(self.getLastCheckpoint())
                     .build();
             client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
@@ -448,6 +449,8 @@ public class LearnerImpl implements Learner {
         // Instead, using self.proposalNo allows you to more quickly advance a proposalNo for another member
         long curProposalNo = self.getCurProposalNo();
 
+        PaxosMemberConfiguration configuration = MemberManager.createRef();
+
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
@@ -458,7 +461,7 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req);
 
         // for other members
-        MemberManager.getMembersWithoutSelf().forEach(it -> {
+        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {

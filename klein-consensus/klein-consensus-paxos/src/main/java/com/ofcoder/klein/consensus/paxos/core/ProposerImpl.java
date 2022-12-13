@@ -47,7 +47,7 @@ import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
@@ -181,7 +181,7 @@ public class ProposerImpl implements Proposer {
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(ctxt.getGrantedProposalNo())
                 .data(ctxt.getConsensusData())
-                .memberConfigurationVersion(memberConfiguration.getVersion().get())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
         // for self
@@ -189,7 +189,7 @@ public class ProposerImpl implements Proposer {
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
-        MemberManager.getMembersWithoutSelf().forEach(it -> {
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -333,7 +333,7 @@ public class ProposerImpl implements Proposer {
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(proposalNo)
-                .memberConfigurationVersion(memberConfiguration.getVersion().get())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
         // for self
@@ -343,7 +343,7 @@ public class ProposerImpl implements Proposer {
         LOG.info("================================={}",  memberConfiguration.getAllMembers());
 
         // for other members
-        MemberManager.getMembersWithoutSelf().forEach(it -> {
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
