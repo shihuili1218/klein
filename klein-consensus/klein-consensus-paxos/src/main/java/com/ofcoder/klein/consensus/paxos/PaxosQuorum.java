@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
@@ -32,6 +33,6 @@ public class PaxosQuorum extends Quorum {
     }
 
     public static PaxosQuorum createInstance(PaxosMemberConfiguration memberConfiguration){
-        return new PaxosQuorum(memberConfiguration.getAllMembers());
+        return new PaxosQuorum(new HashSet<>(memberConfiguration.getAllMembers().values()));
     }
 }

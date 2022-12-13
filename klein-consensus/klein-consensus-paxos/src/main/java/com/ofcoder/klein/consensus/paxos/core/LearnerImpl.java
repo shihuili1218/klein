@@ -47,6 +47,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -261,7 +262,7 @@ public class LearnerImpl implements Learner {
             } catch (Exception e) {
             }
         } else {
-            final Endpoint master = self.getMemberConfiguration().getMaster();
+            final Endpoint master = MemberManager.getMaster();
             if (master != null) {
                 lr = learnSync(instanceId, master);
             } else {
@@ -400,7 +401,7 @@ public class LearnerImpl implements Learner {
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
-                    .memberConfigurationVersion(self.getMemberConfiguration().getVersion())
+                    .memberConfigurationVersion(MemberManager.getVersion())
                     .checkpoint(self.getLastCheckpoint())
                     .build();
             client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
@@ -457,7 +458,7 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req);
 
         // for other members
-        self.getMemberConfiguration().getMembersWithoutSelf().forEach(it -> {
+        MemberManager.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
@@ -491,7 +492,7 @@ public class LearnerImpl implements Learner {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                learn(req.getInstanceId(), self.getMemberConfiguration().getEndpointById(req.getNodeId()));
+                learn(req.getInstanceId(), MemberManager.getEndpointById(req.getNodeId()));
                 return;
             }
 

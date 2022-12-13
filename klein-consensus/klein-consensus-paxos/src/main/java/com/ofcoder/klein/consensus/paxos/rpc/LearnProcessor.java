@@ -25,6 +25,7 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -48,7 +49,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
 
     @Override
     public void handleRequest(LearnReq request, RpcContext context) {
-        if (!self.getMemberConfiguration().isValid(request.getNodeId())) {
+        if (!MemberManager.isValid(request.getNodeId())) {
             LOG.error("msg type: learn, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
             return;

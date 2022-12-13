@@ -28,10 +28,9 @@ import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 public class MasterSM extends AbstractSM {
     private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     public static final String GROUP = "master";
-    private PaxosMemberConfiguration configuration;
 
-    public MasterSM(PaxosMemberConfiguration configuration) {
-        this.configuration = configuration;
+    public MasterSM() {
+
     }
 
     @Override
@@ -50,10 +49,10 @@ public class MasterSM extends AbstractSM {
     private void changeMember(ChangeMemberOp op) {
         switch (op.getOp()) {
             case ChangeMemberOp.ADD:
-                configuration.writeOn(op.getTarget());
+                MemberManager.writeOn(op.getTarget());
                 break;
             case ChangeMemberOp.REMOVE:
-                configuration.writeOff(op.getTarget());
+                MemberManager.writeOff(op.getTarget());
                 break;
             default:
                 LOG.warn("MasterSM.changeMember, op[{}] is invalid", op.getOp());
@@ -62,12 +61,12 @@ public class MasterSM extends AbstractSM {
     }
 
     private void electMaster(ElectionOp op) {
-        configuration.changeMaster(op.getNodeId());
+        MemberManager.changeMaster(op.getNodeId());
     }
 
     @Override
     protected Object makeImage() {
-        return configuration.createRef();
+        return MemberManager.createRef();
     }
 
     @Override
@@ -77,8 +76,8 @@ public class MasterSM extends AbstractSM {
         }
         PaxosMemberConfiguration snapConfiguration = (PaxosMemberConfiguration) snap;
 
-        configuration.loadSnap(snapConfiguration);
+        MemberManager.loadSnap(snapConfiguration);
 
-        LOG.info("LOAD SNAP: {}", configuration);
+        LOG.info("LOAD SNAP: {}", snapConfiguration);
     }
 }

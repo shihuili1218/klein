@@ -45,6 +45,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
@@ -116,7 +117,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void addMember(Endpoint endpoint) {
-        if (self.getMemberConfiguration().isValid(endpoint.getId())) {
+        if (MemberManager.isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.ADD, endpoint);
@@ -124,7 +125,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void removeMember(Endpoint endpoint) {
-        if (!self.getMemberConfiguration().isValid(endpoint.getId())) {
+        if (!MemberManager.isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.REMOVE, endpoint);
@@ -223,11 +224,11 @@ public class MasterImpl implements Master {
 
         stopAllTimer();
 
-        PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .memberConfigurationVersion(memberConfiguration.getVersion().get())
                 .build();
         PaxosQuorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         AtomicBoolean next = new AtomicBoolean(false);
@@ -236,7 +237,7 @@ public class MasterImpl implements Master {
         quorum.grant(self.getSelf());
 
         // for other members
-        memberConfiguration.getMembersWithoutSelf().forEach(it ->
+        MemberManager.getMembersWithoutSelf().forEach(it ->
                 client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
                     @Override
                     public void error(Throwable err) {
@@ -274,12 +275,12 @@ public class MasterImpl implements Master {
     private void sendHeartbeat() {
         updateMasterState(ElectState.DOMINANT);
 
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .memberConfigurationVersion(memberConfiguration.getVersion().get())
                 .maxAppliedInstanceId(self.getCurAppliedInstanceId())
                 .lastCheckpoint(self.getLastCheckpoint())
                 .maxInstanceId(self.getCurInstanceId())
@@ -292,7 +293,7 @@ public class MasterImpl implements Master {
         }
 
         // for other members
-        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
+        MemberManager.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
@@ -339,7 +340,7 @@ public class MasterImpl implements Master {
 
     @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
         self.updateCurInstanceId(request.getMaxInstanceId());
 
@@ -348,7 +349,7 @@ public class MasterImpl implements Master {
 
         if ((memberConfiguration.getMaster() == null
                 || (memberConfiguration.getMaster() != null && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())))
-                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
+                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion().get()) {
 
             // reset and restart election timer
             if (!isSelf) {
@@ -374,7 +375,7 @@ public class MasterImpl implements Master {
     }
 
     private void checkAndUpdateInstance(Ping request) {
-        Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
+        Endpoint from = MemberManager.getEndpointById(request.getNodeId());
         ThreadExecutor.submit(() -> {
             RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
         });

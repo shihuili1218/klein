@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.Objects;
 
 import com.ofcoder.klein.consensus.facade.Node;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -34,7 +35,6 @@ public class PaxosNode extends Node {
     private long lastCheckpoint = 0;
     private final Object checkpointLock = new Object();
     private Endpoint self;
-    private PaxosMemberConfiguration memberConfiguration;
 
     /**
      * nextProposalNo = N * J + I
@@ -44,7 +44,7 @@ public class PaxosNode extends Node {
      */
     public long generateNextProposalNo() {
         long cur = this.curProposalNo;
-        int n = memberConfiguration.getAllMembers().size();
+        int n = MemberManager.getAllMembers().size();
         long j = cur / n;
         if (cur % n > 0) {
             j = j + 1;
@@ -93,10 +93,6 @@ public class PaxosNode extends Node {
         return self;
     }
 
-    public PaxosMemberConfiguration getMemberConfiguration() {
-        return memberConfiguration;
-    }
-
     public long getCurAppliedInstanceId() {
         return curAppliedInstanceId;
     }
@@ -126,12 +122,12 @@ public class PaxosNode extends Node {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PaxosNode node = (PaxosNode) o;
-        return getCurInstanceId() == node.getCurInstanceId() && getCurAppliedInstanceId() == node.getCurAppliedInstanceId() && getCurProposalNo() == node.getCurProposalNo() && lastCheckpoint == node.lastCheckpoint && Objects.equals(getSelf(), node.getSelf()) && Objects.equals(getMemberConfiguration(), node.getMemberConfiguration());
+        return getCurInstanceId() == node.getCurInstanceId() && getCurAppliedInstanceId() == node.getCurAppliedInstanceId() && getCurProposalNo() == node.getCurProposalNo() && lastCheckpoint == node.lastCheckpoint && Objects.equals(getSelf(), node.getSelf());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCurInstanceId(), getCurAppliedInstanceId(), getCurProposalNo(), lastCheckpoint, getSelf(), getMemberConfiguration());
+        return Objects.hash(getCurInstanceId(), getCurAppliedInstanceId(), getCurProposalNo(), lastCheckpoint, getSelf());
     }
 
     @Override
@@ -142,7 +138,6 @@ public class PaxosNode extends Node {
                 ", curProposalNo=" + curProposalNo +
                 ", lastCheckpoint=" + lastCheckpoint +
                 ", self=" + self +
-                ", memberConfiguration=" + memberConfiguration +
                 "} " + super.toString();
     }
 
@@ -156,7 +151,6 @@ public class PaxosNode extends Node {
         private long curProposalNo;
         private long lastCheckpoint;
         private Endpoint self;
-        private PaxosMemberConfiguration memberConfiguration;
 
         private Builder() {
         }
@@ -185,11 +179,6 @@ public class PaxosNode extends Node {
             return this;
         }
 
-        public Builder memberConfiguration(PaxosMemberConfiguration memberConfiguration) {
-            this.memberConfiguration = memberConfiguration;
-            return this;
-        }
-
         public Builder lastCheckpoint(long lastCheckpoint) {
             this.lastCheckpoint = lastCheckpoint;
             return this;
@@ -201,7 +190,6 @@ public class PaxosNode extends Node {
             paxosNode.curInstanceId = this.curInstanceId;
             paxosNode.curAppliedInstanceId = this.curAppliedInstanceId;
             paxosNode.self = this.self;
-            paxosNode.memberConfiguration = this.memberConfiguration;
             paxosNode.lastCheckpoint = this.lastCheckpoint;
             return paxosNode;
         }

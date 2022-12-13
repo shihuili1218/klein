@@ -16,13 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -36,35 +33,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return master;
     }
 
-    public boolean changeMaster(String nodeId) {
-        if (isValid(nodeId)) {
-            master = allMembers.get(nodeId);
-            version.incrementAndGet();
-            RoleAccessor.getMaster().onChangeMaster(nodeId);
-            LOG.info("node-{} was promoted to master, version: {}", nodeId, version.get());
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public void loadSnap(PaxosMemberConfiguration snap) {
-        this.version = snap.version;
-        this.allMembers = snap.allMembers;
-        this.master = snap.master;
-        this.self = snap.self;
-    }
-
-    @Override
-    public PaxosMemberConfiguration createRef() {
-        PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.allMembers.putAll(this.allMembers);
-        target.self = this.self;
-        if (this.master != null) {
-            target.master = new Endpoint(this.master.getId(), this.master.getIp(), this.master.getPort());
-        }
-        target.version = new AtomicInteger(this.version.get());
-        return target;
+    public void setMaster(Endpoint master) {
+        this.master = master;
     }
 
     @Override
@@ -73,7 +43,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
                 "master=" + master +
                 ", version=" + version +
                 ", allMembers=" + allMembers +
-                ", self=" + self +
                 '}';
     }
 }

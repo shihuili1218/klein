@@ -34,6 +34,7 @@ import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
@@ -123,9 +124,10 @@ public class PaxosConsensus implements Consensus {
     public void init(ConsensusProp op) {
         this.prop = op;
         loadNode();
+        loadMemberConfig();
         registerProcessor();
         RoleAccessor.create(prop, self);
-        loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfiguration()));
+        loadSM(MasterSM.GROUP, new MasterSM());
         RoleAccessor.getMaster().electingMaster();
 
         preheating();
@@ -137,23 +139,21 @@ public class PaxosConsensus implements Consensus {
 
     private void loadNode() {
         // reload self information from storage.
-
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
-        configuration.init(this.prop.getMembers(), this.prop.getSelf());
-
         this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
                 .curAppliedInstanceId(0)
                 .curProposalNo(0)
                 .lastCheckpoint(0)
                 .self(prop.getSelf())
-                .memberConfiguration(configuration)
                 .build());
 
         LOG.info("self info: {}", self);
     }
 
+    private void loadMemberConfig(){
+        MemberManager.init(this.prop.getMembers(), this.prop.getSelf());
+    }
 
     private void registerProcessor() {
         RpcEngine.registerProcessor(new PrepareProcessor(this.self));

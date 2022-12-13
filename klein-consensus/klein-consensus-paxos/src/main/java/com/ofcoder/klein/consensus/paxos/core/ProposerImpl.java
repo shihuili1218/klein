@@ -50,6 +50,7 @@ import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
@@ -173,14 +174,14 @@ public class ProposerImpl implements Proposer {
                 : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
 
         // todo get member configuration from ProposeContext
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(ctxt.getGrantedProposalNo())
                 .data(ctxt.getConsensusData())
-                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .memberConfigurationVersion(memberConfiguration.getVersion().get())
                 .build();
 
         // for self
@@ -188,7 +189,7 @@ public class ProposerImpl implements Proposer {
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
-        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
+        MemberManager.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -267,7 +268,7 @@ public class ProposerImpl implements Proposer {
             return event;
         }).collect(Collectors.toList());
 
-        ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration(), instanceId, proposalWithDones);
+        ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), instanceId, proposalWithDones);
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -325,24 +326,24 @@ public class ProposerImpl implements Proposer {
 
         final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
         LOG.info("start prepare phase, the {} retry, proposalNo: {}", context.getTimes(), proposalNo);
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(proposalNo)
-                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .memberConfigurationVersion(memberConfiguration.getVersion().get())
                 .build();
 
         // for self
         PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(req, true);
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
 
-        LOG.info("================================={}",  memberConfiguration.getMembersWithoutSelf());
+        LOG.info("================================={}",  memberConfiguration.getAllMembers());
 
         // for other members
-        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
+        MemberManager.getMembersWithoutSelf().forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(Throwable err) {
@@ -423,7 +424,7 @@ public class ProposerImpl implements Proposer {
 
             LOG.info("start negotiations, proposal size: {}", temp.size());
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(temp);
-            ProposeContext ctxt = new ProposeContext(self.getMemberConfiguration().createRef(), self.incrementInstanceId(), finalEvents);
+            ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), self.incrementInstanceId(), finalEvents);
 
             long curProposalNo = self.getCurProposalNo();
             if (ProposerImpl.this.skipPrepare.get() != PrepareState.PREPARED) {
