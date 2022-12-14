@@ -96,7 +96,6 @@ public interface Master extends Lifecycle<ConsensusProp> {
             return BOOSTING_STATE.contains(state);
         }
 
-
         public static boolean allowPropose(ElectState state){
             return PROPOSE_STATE.contains(state);
         }

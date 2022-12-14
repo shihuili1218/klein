@@ -52,6 +52,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
@@ -366,7 +367,14 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void keepSameData(final Endpoint target, final long targetCheckpoint, final long targetApplied) {
+    public void keepSameData(final NodeState state) {
+        final Endpoint target = MemberManager.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+
         long localApplied = self.getCurAppliedInstanceId();
         if (targetApplied <= localApplied) {
             // same data
@@ -393,9 +401,6 @@ public class LearnerImpl implements Learner {
         LOG.info("start snap sync from node-{}", target.getId());
 
         long checkpoint = -1;
-        if (!snapLock.tryLock()) {
-            return checkpoint;
-        }
 
         try {
             CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
@@ -419,6 +424,11 @@ public class LearnerImpl implements Learner {
             }, 1000);
 
             SnapSyncRes res = future.get(1010, TimeUnit.MILLISECONDS);
+
+            if (!snapLock.tryLock()) {
+                return checkpoint;
+            }
+
             for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
                 loadSnap(entry.getKey(), entry.getValue());
                 checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
@@ -431,9 +441,11 @@ public class LearnerImpl implements Learner {
             return checkpoint;
         } catch (Throwable e) {
             LOG.error(e.getMessage(), e);
-            return -1;
+            return checkpoint;
         } finally {
-            snapLock.unlock();
+            if (snapLock.isLocked() && snapLock.isHeldByCurrentThread()) {
+                snapLock.unlock();
+            }
         }
     }
 
@@ -543,6 +555,8 @@ public class LearnerImpl implements Learner {
             if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
+
+                LOG.info("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
                 RoleAccessor.getProposer().tryBoost(request.getInstanceId(), defaultValue, new ProposeDone.DefaultProposeDone());
             }
             return res.result(Sync.NO_SUPPORT).build();

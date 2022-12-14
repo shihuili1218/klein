@@ -48,6 +48,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -106,7 +107,9 @@ public class MasterImpl implements Master {
         sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
-                sendHeartbeat();
+                if (!sendHeartbeat()) {
+                    restartElect();
+                }
             }
         };
     }
@@ -272,18 +275,23 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void sendHeartbeat() {
-        updateMasterState(ElectState.DOMINANT);
-
+    private boolean sendHeartbeat() {
+        final long curInstanceId = self.getCurInstanceId();
+        long lastCheckpoint = self.getLastCheckpoint();
+        long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
-                .maxAppliedInstanceId(self.getCurAppliedInstanceId())
-                .lastCheckpoint(self.getLastCheckpoint())
-                .maxInstanceId(self.getCurInstanceId())
+                .nodeState(NodeState.Builder.aNodeState()
+                        .nodeId(self.getSelf().getId())
+                        .maxInstanceId(curInstanceId)
+                        .lastCheckpoint(lastCheckpoint)
+                        .lastAppliedInstanceId(curAppliedInstanceId)
+                        .build())
                 .build();
 
         final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
@@ -315,11 +323,9 @@ public class MasterImpl implements Master {
         });
         try {
             Quorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
-            if (grantResult != Quorum.GrantResult.PASS) {
-                restartElect();
-            }
+            return grantResult == Quorum.GrantResult.PASS;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            restartElect();
+            return false;
         }
     }
 
@@ -341,19 +347,17 @@ public class MasterImpl implements Master {
     @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        NodeState nodeState = request.getNodeState();
 
-        self.updateCurInstanceId(request.getMaxInstanceId());
+        self.updateCurInstanceId(nodeState.getMaxInstanceId());
 
         // check and update instance
-        checkAndUpdateInstance(request);
+        checkAndUpdateInstance(nodeState);
 
-        if ((memberConfiguration.getMaster() == null
-                || (memberConfiguration.getMaster() != null && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())))
-                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
+        if (request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
 
             // reset and restart election timer
             if (!isSelf) {
-                updateMasterState(ElectState.FOLLOWING);
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
@@ -374,10 +378,9 @@ public class MasterImpl implements Master {
                 .build();
     }
 
-    private void checkAndUpdateInstance(Ping request) {
-        Endpoint from = MemberManager.getEndpointById(request.getNodeId());
+    private void checkAndUpdateInstance(NodeState nodeState) {
         ThreadExecutor.submit(() -> {
-            RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
+            RoleAccessor.getLearner().keepSameData(nodeState);
         });
     }
 
@@ -398,9 +401,15 @@ public class MasterImpl implements Master {
 
     @Override
     public void onChangeMaster(final String newMaster) {
+        if (!sendHeartbeat()) {
+            LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
+            return;
+        }
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
+            updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
+            updateMasterState(ElectState.FOLLOWING);
             restartElect();
         }
     }

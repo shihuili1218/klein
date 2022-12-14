@@ -109,15 +109,11 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void setListener(LifecycleListener listener) {
-        RoleAccessor.getMaster().addHealthyListener(new Master.HealthyListener() {
-            @Override
-            public void change(Master.ElectState healthy) {
-                if (Master.ElectState.PROPOSE_STATE.contains(healthy)) {
-                    listener.prepared();
-                }
+        RoleAccessor.getMaster().addHealthyListener(healthy -> {
+            if (Master.ElectState.allowPropose(healthy)) {
+                listener.prepared();
             }
         });
-
     }
 
     @Override

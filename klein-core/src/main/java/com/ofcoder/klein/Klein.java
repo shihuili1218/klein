@@ -36,7 +36,7 @@ public class Klein {
             latch.countDown();
         });
         try {
-            boolean await = latch.await(10000L, TimeUnit.MILLISECONDS);
+            boolean await = latch.await(15000L, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
 
         }

@@ -47,10 +47,10 @@ import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
@@ -107,7 +107,7 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
         RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            allowPropose = Master.ElectState.PROPOSE_STATE.contains(healthy);
+            allowPropose = Master.ElectState.allowPropose(healthy);
             if (allowPropose) {
                 eventHandler.triggerHandle();
             }
@@ -340,8 +340,6 @@ public class ProposerImpl implements Proposer {
         PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(req, true);
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
 
-        LOG.info("================================={}",  memberConfiguration.getAllMembers());
-
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
@@ -384,7 +382,7 @@ public class ProposerImpl implements Proposer {
 
         if (result.getResult()) {
             boolean grant = ctxt.getPrepareQuorum().grant(it);
-            LOG.info("handling node-{}'s prepare response, grant: {}, {}", result.getNodeId(), grant, ctxt.getPrepareQuorum().isGranted());
+            LOG.debug("handling node-{}'s prepare response, grant: {}, {}", result.getNodeId(), grant, ctxt.getPrepareQuorum().isGranted());
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.PASS
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 // do accept phase.
@@ -392,13 +390,15 @@ public class ProposerImpl implements Proposer {
             }
         } else {
             boolean refuse = ctxt.getPrepareQuorum().refuse(it);
-            LOG.info("handling node-{}'s prepare response, refuse: {}, {}", result.getNodeId(), refuse, ctxt.getPrepareQuorum().isGranted());
+            LOG.debug("handling node-{}'s prepare response, refuse: {}, {}", result.getNodeId(), refuse, ctxt.getPrepareQuorum().isGranted());
 
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
             }
+
+            RoleAccessor.getLearner().keepSameData(result.getNodeState());
         }
     }
 

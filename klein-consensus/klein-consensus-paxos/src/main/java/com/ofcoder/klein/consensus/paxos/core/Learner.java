@@ -26,6 +26,7 @@ import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -91,13 +92,11 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void confirm(long instanceId, final List<ProposeDone> dons);
 
     /**
-     * Keep the data consistent with <code>target</code>
+     * Keep the data consistent with <code>state</code>
      *
-     * @param target               to be learned
-     * @param checkpoint           checkpoint of the last snapshot of <code>target</code>
-     * @param maxAppliedInstanceId maxAppliedInstanceId of <code>target</code>
+     * @param state target information
      */
-    void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
+    void keepSameData(final NodeState state);
 
     /**
      * Keep consistent with the data in the cluster

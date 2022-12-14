@@ -21,41 +21,17 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
  */
 public class Ping extends BaseReq {
 
-    private long maxAppliedInstanceId;
-    private long maxInstanceId;
-    private long lastCheckpoint;
+    private NodeState nodeState;
 
-    public long getMaxAppliedInstanceId() {
-        return maxAppliedInstanceId;
-    }
-
-    public void setMaxAppliedInstanceId(long maxAppliedInstanceId) {
-        this.maxAppliedInstanceId = maxAppliedInstanceId;
-    }
-
-    public long getMaxInstanceId() {
-        return maxInstanceId;
-    }
-
-    public void setMaxInstanceId(long maxInstanceId) {
-        this.maxInstanceId = maxInstanceId;
-    }
-
-    public long getLastCheckpoint() {
-        return lastCheckpoint;
-    }
-
-    public void setLastCheckpoint(long lastCheckpoint) {
-        this.lastCheckpoint = lastCheckpoint;
+    public NodeState getNodeState() {
+        return nodeState;
     }
 
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
-        private long maxAppliedInstanceId;
-        private long maxInstanceId;
-        private long lastCheckpoint;
+        private NodeState nodeState;
 
         private Builder() {
         }
@@ -79,18 +55,8 @@ public class Ping extends BaseReq {
             return this;
         }
 
-        public Builder maxAppliedInstanceId(long maxAppliedInstanceId) {
-            this.maxAppliedInstanceId = maxAppliedInstanceId;
-            return this;
-        }
-
-        public Builder maxInstanceId(long maxInstanceId) {
-            this.maxInstanceId = maxInstanceId;
-            return this;
-        }
-
-        public Builder lastCheckpoint(long lastCheckpoint) {
-            this.lastCheckpoint = lastCheckpoint;
+        public Builder nodeState(NodeState nodeState) {
+            this.nodeState = nodeState;
             return this;
         }
 
@@ -99,9 +65,7 @@ public class Ping extends BaseReq {
             ping.setNodeId(nodeId);
             ping.setProposalNo(proposalNo);
             ping.setMemberConfigurationVersion(memberConfigurationVersion);
-            ping.maxInstanceId = this.maxInstanceId;
-            ping.maxAppliedInstanceId = this.maxAppliedInstanceId;
-            ping.lastCheckpoint = this.lastCheckpoint;
+            ping.nodeState = this.nodeState;
             return ping;
         }
     }
