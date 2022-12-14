@@ -209,6 +209,7 @@ public class LearnerImpl implements Learner {
 
         try {
             Map<Proposal, Object> applyResult = new HashMap<>();
+            LOG.info("apply {}. grantedValue: {}", instanceId, localInstance.getGrantedValue());
             for (Proposal data : localInstance.getGrantedValue()) {
                 Object result = this._apply(localInstance.getInstanceId(), data);
                 applyResult.put(data, result);
