@@ -17,82 +17,22 @@ jobs:
           java-version: 1.8
       - name: Check format
         run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-
-  test_klein_common:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-common test
-          
-  test_klein_spi:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-spi test
-                    
-  test_klein_rpc:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-rpc test
-                    
-  test_klein_storage:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-storage test
-                    
-  test_klein_consensus:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-consensus test
-                    
-  test_klein_core:
-    needs: check_format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-      - name: Maven Test
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-          && mvn --projects klein-core test
+      - name: test_klein_common
+        run:  mvn --projects klein-common test
+        
+      - name: test_klein_spi
+        run:  mvn --projects klein-spi test
+        
+      - name: test_klein_rpc
+        run:  mvn --projects klein-rpc test        
+        
+      - name: test_klein_storage
+        run:  mvn --projects klein-storage test
+      
+      - name: test_klein_consensus
+        run:  mvn --projects klein-consensus test
+        
+      - name: test_klein_core
+        run:  mvn --projects klein-core test        
+  
                     
