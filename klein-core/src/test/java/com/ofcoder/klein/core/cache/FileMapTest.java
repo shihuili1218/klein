@@ -34,21 +34,28 @@ import org.mapdb.Serializer;
 
 import com.google.common.collect.Maps;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
+import junit.framework.TestCase;
 
 /**
  * @author 释慧利
  */
-public class FileMapTest {
+public class FileMapTest extends TestCase {
+    private DB db;
 
-    @Before
-    public void setup() {
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        db = DBMaker.fileDB("jvm.mdb").make();
+    }
 
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        db.close();
     }
 
     @Test
     public void testPutAndGet() {
-        DB db = DBMaker.fileDB("jvm.mdb").closeOnJvmShutdown().make();
-
         ConcurrentMap<String, String> map = db.hashMap("jvm.mdb", Serializer.STRING, new Serializer<String>() {
             @Override
             public void serialize(@NotNull DataOutput2 out, @NotNull String value) throws IOException {
@@ -70,7 +77,6 @@ public class FileMapTest {
 
     @Test
     public void testSerializable() throws Exception {
-        DB db = DBMaker.fileDB("jvm.mdb").closeOnJvmShutdown().make();
 
         ConcurrentMap<String, String> map = db.hashMap("jvm.mdb", Serializer.STRING, new Serializer<String>() {
             @Override
