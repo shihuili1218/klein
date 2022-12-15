@@ -44,8 +44,8 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      */
     void tryBoost(final long instanceId, final List<Proposal> defaultProposal, final ProposeDone done);
 
-    interface GenerateInstance {
-        long next();
+    interface InstanceHolder {
+        long get();
     }
 
 }

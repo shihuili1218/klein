@@ -504,7 +504,7 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null) {
+            if (localInstance == null || localInstance.getState() == Instance.State.PREPARED) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
