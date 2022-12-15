@@ -81,7 +81,6 @@ public class PaxosConsensus implements Consensus {
 
             @Override
             public void applyDone(Map<Proposal, Object> applyResults) {
-                LOG.info("==================================={}", applyResults);
                 for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
                     if (entry.getKey() == proposal) {
                         builder.data((D) entry.getValue());
