@@ -33,18 +33,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -103,7 +108,9 @@ public class MasterImpl implements Master {
         sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
-                sendHeartbeat();
+                if (!sendHeartbeat()) {
+                    restartElect();
+                }
             }
         };
     }
@@ -114,7 +121,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void addMember(Endpoint endpoint) {
-        if (self.getMemberConfiguration().isValid(endpoint.getId())) {
+        if (MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.ADD, endpoint);
@@ -122,7 +129,7 @@ public class MasterImpl implements Master {
 
     @Override
     public void removeMember(Endpoint endpoint) {
-        if (!self.getMemberConfiguration().isValid(endpoint.getId())) {
+        if (!MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.REMOVE, endpoint);
@@ -143,7 +150,12 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                                                    @Override
+                                                    protected Long create() {
+                                                        return self.incrementInstanceId();
+                                                    }
+                                                }, Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
                     , new ProposeDone() {
                         @Override
                         public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
@@ -174,8 +186,7 @@ public class MasterImpl implements Master {
     private void election() {
         LOG.debug("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
-        state = ElectState.ELECTING;
-        changeHealthy(false);
+        updateMasterState(ElectState.ELECTING);
         if (!electing.compareAndSet(false, true)) {
             return;
         }
@@ -187,7 +198,12 @@ public class MasterImpl implements Master {
 
             CountDownLatch latch = new CountDownLatch(1);
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(proposal)
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                                                    @Override
+                                                    protected Long create() {
+                                                        return self.incrementInstanceId();
+                                                    }
+                                                }, Lists.newArrayList(proposal)
                     , new ProposeDone() {
                         @Override
                         public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
@@ -218,8 +234,45 @@ public class MasterImpl implements Master {
     }
 
     private void boostInstance() {
-        state = ElectState.BOOSTING;
+        updateMasterState(ElectState.BOOSTING);
 
+        stopAllTimer();
+
+        PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
+                .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
+                .memberConfigurationVersion(memberConfiguration.getVersion())
+                .build();
+        PaxosQuorum quorum = PaxosQuorum.createInstance(memberConfiguration);
+        AtomicBoolean next = new AtomicBoolean(false);
+
+        // for self
+        quorum.grant(self.getSelf());
+
+        // for other members
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
+                client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
+                    @Override
+                    public void error(Throwable err) {
+                        quorum.refuse(it);
+                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+                            restartElect();
+                        }
+                    }
+
+                    @Override
+                    public void complete(NewMasterRes result) {
+                        self.updateCurInstanceId(result.getCurInstanceId());
+                        quorum.grant(it);
+                        if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+                            ThreadExecutor.submit(MasterImpl.this::_boosting);
+                        }
+                    }
+                }, 50L));
+    }
+
+    private void _boosting() {
         long miniInstanceId = self.getCurAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
         for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
@@ -229,22 +282,33 @@ public class MasterImpl implements Master {
             }
             List<Proposal> grantedValue = instance != null ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
             grantedValue = CollectionUtils.isNotEmpty(grantedValue) ? grantedValue : Lists.newArrayList(Proposal.NOOP);
-            RoleAccessor.getProposer().tryBoost(miniInstanceId, grantedValue, new ProposeDone.DefaultProposeDone());
+            long finalMiniInstanceId = miniInstanceId;
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return finalMiniInstanceId;
+                }
+            }, grantedValue, new ProposeDone.DefaultProposeDone());
         }
     }
 
-    private void sendHeartbeat() {
-        state = ElectState.DOMINANT;
+    private boolean sendHeartbeat() {
+        final long curInstanceId = self.getCurInstanceId();
+        long lastCheckpoint = self.getLastCheckpoint();
+        long curAppliedInstanceId = self.getCurAppliedInstanceId();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
-                .maxAppliedInstanceId(self.getCurAppliedInstanceId())
-                .lastCheckpoint(self.getLastCheckpoint())
-                .maxInstanceId(self.getCurInstanceId())
+                .nodeState(NodeState.Builder.aNodeState()
+                        .nodeId(self.getSelf().getId())
+                        .maxInstanceId(curInstanceId)
+                        .lastCheckpoint(lastCheckpoint)
+                        .lastAppliedInstanceId(curAppliedInstanceId)
+                        .build())
                 .build();
 
         final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
@@ -254,11 +318,11 @@ public class MasterImpl implements Master {
         }
 
         // for other members
-        memberConfiguration.getMembersWithoutSelf().forEach(it -> {
+        memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(Throwable err) {
-                    LOG.debug("node: " + it.getId() + ", " + err.getMessage());
+                    LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
                         complete.complete(quorum.isGranted());
@@ -276,19 +340,10 @@ public class MasterImpl implements Master {
         });
         try {
             Quorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
-            if (grantResult != Quorum.GrantResult.PASS) {
-                restartElect();
-            }
+            return grantResult == Quorum.GrantResult.PASS;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            restartElect();
+            return false;
         }
-    }
-
-
-    private void changeHealthy(boolean healthy) {
-        listeners.forEach(it -> {
-            it.change(healthy);
-        });
     }
 
     @Override
@@ -301,23 +356,25 @@ public class MasterImpl implements Master {
         return state;
     }
 
+    private void updateMasterState(ElectState healthy) {
+        state = healthy;
+        listeners.forEach(it -> it.change(healthy));
+    }
+
     @Override
     public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        NodeState nodeState = request.getNodeState();
 
-        self.updateCurInstanceId(request.getMaxInstanceId());
+        self.updateCurInstanceId(nodeState.getMaxInstanceId());
 
         // check and update instance
-        checkAndUpdateInstance(request);
+        checkAndUpdateInstance(nodeState);
 
-        if (memberConfiguration.getMaster() != null
-                && StringUtils.equals(request.getNodeId(), memberConfiguration.getMaster().getId())
-                && request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
-            changeHealthy(true);
+        if (request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
 
             // reset and restart election timer
             if (!isSelf) {
-                state = ElectState.FOLLOWING;
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
@@ -329,20 +386,29 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void checkAndUpdateInstance(Ping request) {
-        Endpoint from = self.getMemberConfiguration().getEndpointById(request.getNodeId());
+    @Override
+    public NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf) {
+        return NewMasterRes.Builder.aNewMasterRes()
+                .checkpoint(self.getLastCheckpoint())
+                .curInstanceId(self.getCurInstanceId())
+                .lastAppliedId(self.getCurAppliedInstanceId())
+                .build();
+    }
 
-        if (request.getMaxAppliedInstanceId() > self.getCurAppliedInstanceId()) {
-            RoleAccessor.getLearner().keepSameData(from, request.getLastCheckpoint(), request.getMaxAppliedInstanceId());
-        }
+    private void checkAndUpdateInstance(NodeState nodeState) {
+        ThreadExecutor.submit(() -> {
+            RoleAccessor.getLearner().keepSameData(nodeState);
+        });
+    }
+
+    private void stopAllTimer() {
+        sendHeartbeatTimer.stop();
+        electTimer.stop();
     }
 
     private void restartElect() {
         sendHeartbeatTimer.stop();
         electTimer.restart();
-        int timeoutMs = calculateElectionMasterInterval();
-        electTimer.reset(timeoutMs);
-        LOG.debug("reset elect timer, next interval: {}", timeoutMs);
     }
 
     private void restartHeartbeat() {
@@ -352,9 +418,15 @@ public class MasterImpl implements Master {
 
     @Override
     public void onChangeMaster(final String newMaster) {
+        if (!sendHeartbeat()) {
+            LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
+            return;
+        }
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
+            updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
+            updateMasterState(ElectState.FOLLOWING);
             restartElect();
         }
     }

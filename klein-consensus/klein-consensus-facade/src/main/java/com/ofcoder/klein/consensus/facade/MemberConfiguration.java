@@ -24,7 +24,6 @@ public abstract class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
     protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();
-    protected volatile Endpoint self;
 
     public int getVersion() {
         return version.get();
@@ -34,10 +33,13 @@ public abstract class MemberConfiguration implements Serializable {
         return new HashSet<>(allMembers.values());
     }
 
-    public Set<Endpoint> getMembersWithoutSelf() {
-        final String selfId = self.getId();
-        return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+    public Set<Endpoint> getMembersWithout(String selfId) {
+        return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
                 .collect(Collectors.toSet());
+    }
+
+    public boolean isValid(String nodeId) {
+        return allMembers.containsKey(nodeId);
     }
 
     public Endpoint getEndpointById(String id) {
@@ -47,38 +49,29 @@ public abstract class MemberConfiguration implements Serializable {
         return allMembers.getOrDefault(id, null);
     }
 
-    public boolean isValid(String nodeId) {
-        return allMembers.containsKey(nodeId);
-    }
-
-    public void init(List<Endpoint> nodes, Endpoint self) {
-        if (CollectionUtils.isEmpty(nodes)) {
-            return;
-        }
-        allMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
-        this.self = self;
-        version.incrementAndGet();
-
-    }
-
-    public void writeOn(Endpoint node) {
+    protected void writeOn(Endpoint node) {
         allMembers.put(node.getId(), node);
         version.incrementAndGet();
     }
 
-    public void writeOff(Endpoint node) {
+    protected void writeOff(Endpoint node) {
         allMembers.remove(node.getId());
         version.incrementAndGet();
     }
 
-    public abstract MemberConfiguration createRef();
+    protected void init(List<Endpoint> nodes) {
+        if (CollectionUtils.isEmpty(nodes)) {
+            return;
+        }
+        this.allMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.version.incrementAndGet();
+    }
 
     @Override
     public String toString() {
         return "MemberConfiguration{" +
                 "version=" + version +
                 ", allMembers=" + allMembers +
-                ", self=" + self +
                 '}';
     }
 }

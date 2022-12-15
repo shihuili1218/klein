@@ -9,7 +9,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 /**
  * @author far.liu
  */
-public class ConsensusEngine {
+public final class ConsensusEngine {
     private static final Logger LOG = LoggerFactory.getLogger(ConsensusEngine.class);
     private static Consensus consensus;
 

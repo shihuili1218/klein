@@ -41,16 +41,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
@@ -135,6 +138,11 @@ public class LearnerImpl implements Learner {
                 return;
             }
             SM sm = sms.get(group);
+            if (sm == null) {
+                LOG.warn("load snap failure, group: {}, The state machine is not found." +
+                        " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                return;
+            }
 
             sm.loadSnap(lastSnap);
             self.updateLastCheckpoint(lastSnap.getCheckpoint());
@@ -202,6 +210,7 @@ public class LearnerImpl implements Learner {
 
         try {
             Map<Proposal, Object> applyResult = new HashMap<>();
+            LOG.info("apply {}. grantedValue: {}", instanceId, localInstance.getGrantedValue());
             for (Proposal data : localInstance.getGrantedValue()) {
                 Object result = this._apply(localInstance.getInstanceId(), data);
                 applyResult.put(data, result);
@@ -249,30 +258,31 @@ public class LearnerImpl implements Learner {
     private boolean learnHard(long instanceId, List<Proposal> defaultValue) {
         boolean lr = false;
 
-        if (RoleAccessor.getMaster().electState().getState() >= Master.ElectState.UPGRADING) {
+        if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, new ProposeDone() {
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
                 @Override
-                public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
-                    future.complete(result);
+                protected Long create() {
+                    return instanceId;
                 }
-            });
+            }, defaultValue, (result, consensusDatas) -> future.complete(result));
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
             }
         } else {
-            final Endpoint master = self.getMemberConfiguration().getMaster();
+            final Endpoint master = MemberManager.createRef().getMaster();
             if (master != null) {
                 lr = learnSync(instanceId, master);
             } else {
+                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
                 // learn hard
-                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-                    lr = learnSync(instanceId, it);
-                    if (lr) {
-                        break;
-                    }
-                }
+//                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
+//                    lr = learnSync(instanceId, it);
+//                    if (lr) {
+//                        break;
+//                    }
+//                }
             }
         }
         return lr;
@@ -364,37 +374,47 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId) {
-        LOG.info("keepSameData, target: {}, target[cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), checkpoint, maxAppliedInstanceId, self.getLastCheckpoint(), self.getCurAppliedInstanceId());
-        long curAppliedInstanceId = self.getCurAppliedInstanceId();
-        if (checkpoint > curAppliedInstanceId) {
-            ThreadExecutor.submit(() -> snapSync(target));
+    public void keepSameData(final NodeState state) {
+        final Endpoint target = MemberManager.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+
+        long localApplied = self.getCurAppliedInstanceId();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
+        if (targetCheckpoint > localApplied) {
+            snapSync(target);
         } else {
-            long diff = maxAppliedInstanceId - curAppliedInstanceId;
-            if (diff > 0) {
-                ThreadExecutor.submit(() -> {
-                    for (int i = 1; i <= diff; i++) {
-                        RoleAccessor.getLearner().learn(curAppliedInstanceId + i, target);
-                    }
-                });
+            long next = ++localApplied;
+            for (; next <= targetApplied; next++) {
+                RoleAccessor.getLearner().learn(localApplied, target);
             }
         }
     }
 
+    @Override
+    public boolean healthy() {
+        return true;
+    }
+
     private long snapSync(Endpoint target) {
         LOG.info("start snap sync from node-{}", target.getId());
+
+        long checkpoint = -1;
+
         try {
-            long checkpoint = -1;
-
-            if (!snapLock.tryLock()) {
-                return checkpoint;
-            }
-
             CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
-                    .memberConfigurationVersion(self.getMemberConfiguration().getVersion())
+                    .memberConfigurationVersion(MemberManager.createRef().getVersion())
                     .checkpoint(self.getLastCheckpoint())
                     .build();
             client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
@@ -411,6 +431,11 @@ public class LearnerImpl implements Learner {
             }, 1000);
 
             SnapSyncRes res = future.get(1010, TimeUnit.MILLISECONDS);
+
+            if (!snapLock.tryLock()) {
+                return checkpoint;
+            }
+
             for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
                 loadSnap(entry.getKey(), entry.getValue());
                 checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
@@ -422,10 +447,12 @@ public class LearnerImpl implements Learner {
 
             return checkpoint;
         } catch (Throwable e) {
-            LOG.error(e.getMessage());
-            return -1;
+            LOG.error(e.getMessage(), e);
+            return checkpoint;
         } finally {
-            snapLock.unlock();
+            if (snapLock.isLocked() && snapLock.isHeldByCurrentThread()) {
+                snapLock.unlock();
+            }
         }
     }
 
@@ -441,6 +468,8 @@ public class LearnerImpl implements Learner {
         // Instead, using self.proposalNo allows you to more quickly advance a proposalNo for another member
         long curProposalNo = self.getCurProposalNo();
 
+        PaxosMemberConfiguration configuration = MemberManager.createRef();
+
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
@@ -451,7 +480,7 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req);
 
         // for other members
-        self.getMemberConfiguration().getMembersWithoutSelf().forEach(it -> {
+        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(Throwable err) {
@@ -481,11 +510,11 @@ public class LearnerImpl implements Learner {
             logManager.getLock().writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null) {
+            if (localInstance == null || localInstance.getState() == Instance.State.PREPARED) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                learn(req.getInstanceId(), self.getMemberConfiguration().getEndpointById(req.getNodeId()));
+                learn(req.getInstanceId(), MemberManager.getEndpointById(req.getNodeId()));
                 return;
             }
 
@@ -530,6 +559,18 @@ public class LearnerImpl implements Learner {
         } else {
             LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId()
                     , self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
+            if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+                List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
+                        ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
+
+                LOG.info("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
+                RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                    @Override
+                    protected Long create() {
+                        return request.getInstanceId();
+                    }
+                }, defaultValue, new ProposeDone.DefaultProposeDone());
+            }
             return res.result(Sync.NO_SUPPORT).build();
         }
     }

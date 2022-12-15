@@ -14,10 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;
+package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,37 +37,48 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     private volatile Endpoint master;
 
     public Endpoint getMaster() {
-        return master;
+        return this.master;
     }
 
-    public boolean changeMaster(String nodeId) {
+    protected boolean changeMaster(String nodeId) {
         if (isValid(nodeId)) {
-            master = allMembers.get(nodeId);
-            version.incrementAndGet();
+            this.master = getEndpointById(nodeId);
+            this.version.incrementAndGet();
+
             RoleAccessor.getMaster().onChangeMaster(nodeId);
-            LOG.info("node-{} was promoted to master, version: {}", nodeId, version.get());
+            LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
             return true;
         } else {
             return false;
         }
     }
 
-    public void loadSnap(PaxosMemberConfiguration snap) {
-        this.version = snap.version;
-        this.allMembers = snap.allMembers;
-        this.master = snap.master;
-        this.self = snap.self;
+    protected void writeOn(Endpoint node) {
+        super.writeOn(node);
     }
 
-    @Override
+    protected void writeOff(Endpoint node) {
+        super.writeOff(node);
+    }
+
+    protected void init(List<Endpoint> nodes) {
+        super.init(nodes);
+    }
+
+    protected void loadSnap(PaxosMemberConfiguration snap) {
+        this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
+        this.version = new AtomicInteger(snap.version.get());
+        this.allMembers.clear();
+        this.allMembers.putAll(snap.allMembers);
+    }
+
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.allMembers.putAll(this.allMembers);
-        target.self = this.self;
-        if (this.master != null) {
-            target.master = new Endpoint(this.master.getId(), this.master.getIp(), this.master.getPort());
+        target.allMembers.putAll(allMembers);
+        if (master != null) {
+            target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
         }
-        target.version = new AtomicInteger(this.version.get());
+        target.version = new AtomicInteger(version.get());
         return target;
     }
 
@@ -73,7 +88,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
                 "master=" + master +
                 ", version=" + version +
                 ", allMembers=" + allMembers +
-                ", self=" + self +
                 '}';
     }
 }

@@ -14,18 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
-
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+package com.ofcoder.klein.common;
 
 /**
  * @author 释慧利
  */
-public class RunningQueue {
+public abstract class Holder<T> {
+    private volatile T t;
+    private final Object lock = new Object();
 
-    private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
+    protected abstract T create();
 
+    public T get() {
+        if (t == null) {
+            synchronized (lock) {
+                if (t == null) {
+                    t = create();
+                }
+            }
+        }
+        return t;
+    }
 
 }

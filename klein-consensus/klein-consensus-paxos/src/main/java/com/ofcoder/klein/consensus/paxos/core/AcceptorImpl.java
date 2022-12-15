@@ -24,12 +24,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.BaseReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -68,7 +70,7 @@ public class AcceptorImpl implements Acceptor {
 
             final long selfProposalNo = self.getCurProposalNo();
             final long selfInstanceId = self.getCurInstanceId();
-            final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
+            final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
             if (req.getInstanceId() <= self.getLastCheckpoint()) {
                 return AcceptRes.Builder.anAcceptRes()
@@ -137,12 +139,20 @@ public class AcceptorImpl implements Acceptor {
         LOG.info("processing the prepare message from node-{}, isSelf: {}", req.getNodeId(), isSelf);
         final long curProposalNo = self.getCurProposalNo();
         final long curInstanceId = self.getCurInstanceId();
-        final PaxosMemberConfiguration memberConfiguration = self.getMemberConfiguration().createRef();
+        long lastCheckpoint = self.getLastCheckpoint();
+        long curAppliedInstanceId = self.getCurAppliedInstanceId();
+        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
         PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
                 .nodeId(self.getSelf().getId())
                 .curProposalNo(curProposalNo)
-                .curInstanceId(curInstanceId);
+                .curInstanceId(curInstanceId)
+                .nodeState(NodeState.Builder.aNodeState()
+                        .nodeId(self.getSelf().getId())
+                        .maxInstanceId(curInstanceId)
+                        .lastCheckpoint(lastCheckpoint)
+                        .lastAppliedInstanceId(curAppliedInstanceId)
+                        .build());
 
         if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
             return res.result(false).instances(new ArrayList<>()).build();
@@ -154,13 +164,13 @@ public class AcceptorImpl implements Acceptor {
 
     private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo
             , final BaseReq req, final boolean isSelf) {
-        boolean checkProposalNo = isSelf ? req.getProposalNo() < selfProposalNo : req.getProposalNo() <= selfProposalNo;
+        boolean checkProposalNo = isSelf ? req.getProposalNo() >= selfProposalNo : req.getProposalNo() > selfProposalNo;
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
-                || checkProposalNo) {
+                || !checkProposalNo) {
 
-            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}", req.getMemberConfigurationVersion()
-                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo);
+            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}, checkProposalNo: {}", req.getMemberConfigurationVersion()
+                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
             return false;
         }
         self.updateCurProposalNo(req.getProposalNo());

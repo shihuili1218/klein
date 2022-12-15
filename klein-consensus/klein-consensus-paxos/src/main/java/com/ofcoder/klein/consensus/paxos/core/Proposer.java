@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 import java.io.Serializable;
 import java.util.List;
 
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -39,10 +40,9 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      * Try to boost instance
      * Boost the copy of the proposal to the majority and the confirm status is reached
      *
-     * @param instanceId id of the instance that you want to boost
-     * @param done       boost callback, NOTICE: it may be called multiple times
+     * @param instanceHolder id of the instance that you want to boost
+     * @param done           boost callback, NOTICE: it may be called multiple times
      */
-    void tryBoost(final long instanceId, final List<Proposal> defaultProposal, final ProposeDone done);
+    void tryBoost(final Holder<Long> instanceHolder, final List<Proposal> defaultProposal, final ProposeDone done);
 
-    boolean healthy();
 }

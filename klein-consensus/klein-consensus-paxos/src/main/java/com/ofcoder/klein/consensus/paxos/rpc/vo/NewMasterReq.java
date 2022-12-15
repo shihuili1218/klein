@@ -19,24 +19,18 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 /**
  * @author 释慧利
  */
-public class Ping extends BaseReq {
+public class NewMasterReq extends BaseReq {
 
-    private NodeState nodeState;
-
-    public NodeState getNodeState() {
-        return nodeState;
-    }
 
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
-        private NodeState nodeState;
 
         private Builder() {
         }
 
-        public static Builder aPing() {
+        public static Builder aNewMasterReq() {
             return new Builder();
         }
 
@@ -55,18 +49,12 @@ public class Ping extends BaseReq {
             return this;
         }
 
-        public Builder nodeState(NodeState nodeState) {
-            this.nodeState = nodeState;
-            return this;
-        }
-
-        public Ping build() {
-            Ping ping = new Ping();
-            ping.setNodeId(nodeId);
-            ping.setProposalNo(proposalNo);
-            ping.setMemberConfigurationVersion(memberConfigurationVersion);
-            ping.nodeState = this.nodeState;
-            return ping;
+        public NewMasterReq build() {
+            NewMasterReq newMasterReq = new NewMasterReq();
+            newMasterReq.setNodeId(nodeId);
+            newMasterReq.setProposalNo(proposalNo);
+            newMasterReq.setMemberConfigurationVersion(memberConfigurationVersion);
+            return newMasterReq;
         }
     }
 }

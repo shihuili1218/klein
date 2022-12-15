@@ -18,44 +18,34 @@ package com.ofcoder.klein.consensus.paxos.rpc;
 
 import java.nio.ByteBuffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * @author 释慧利
  */
-public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
-    private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
-    private final PaxosNode self;
+public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
+    private PaxosNode self;
 
-    public PrepareProcessor(PaxosNode self) {
+    public NewMasterProcessor(PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public String service() {
-        return PrepareReq.class.getSimpleName();
+    public void handleRequest(NewMasterReq request, RpcContext context) {
+        NewMasterRes newMasterRes = RoleAccessor.getMaster().onReceiveNewMaster(request, false);
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(newMasterRes)));
     }
 
     @Override
-    public void handleRequest(PrepareReq request, RpcContext context) {
-
-        if (!MemberManager.isValid(request.getNodeId())) {
-            LOG.error("msg type: prepare, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
-                    request.getNodeId());
-            return;
-        }
-        PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(prepareRes)));
+    public String service() {
+        return NewMasterReq.class.getSimpleName();
     }
-
 }

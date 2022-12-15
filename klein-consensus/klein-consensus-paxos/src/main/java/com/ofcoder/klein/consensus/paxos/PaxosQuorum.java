@@ -16,10 +16,11 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.HashSet;
 import java.util.Set;
 
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**

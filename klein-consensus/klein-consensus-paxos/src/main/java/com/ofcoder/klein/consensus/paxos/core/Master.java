@@ -16,8 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -54,6 +59,9 @@ public interface Master extends Lifecycle<ConsensusProp> {
      */
     boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
 
+
+    NewMasterRes onReceiveNewMaster(final NewMasterReq request, boolean isSelf);
+
     /**
      * This is a callback method of master change.
      *
@@ -71,7 +79,7 @@ public interface Master extends Lifecycle<ConsensusProp> {
     ElectState electState();
 
     interface HealthyListener {
-        void change(boolean healthy);
+        void change(ElectState healthy);
     }
 
     enum ElectState {
@@ -81,7 +89,16 @@ public interface Master extends Lifecycle<ConsensusProp> {
         DOMINANT(2),
         ;
         private int state;
-        public static final int UPGRADING = ElectState.BOOSTING.state;
+        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
+        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
+
+        public static boolean allowBoost(ElectState state){
+            return BOOSTING_STATE.contains(state);
+        }
+
+        public static boolean allowPropose(ElectState state){
+            return PROPOSE_STATE.contains(state);
+        }
 
         ElectState(int state) {
             this.state = state;

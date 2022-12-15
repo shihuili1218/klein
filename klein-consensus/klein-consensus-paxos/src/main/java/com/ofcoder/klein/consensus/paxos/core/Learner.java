@@ -23,10 +23,10 @@ import java.util.concurrent.TimeUnit;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -92,13 +92,18 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void confirm(long instanceId, final List<ProposeDone> dons);
 
     /**
-     * Keep the data consistent with <code>target</code>
+     * Keep the data consistent with <code>state</code>
      *
-     * @param target               to be learned
-     * @param checkpoint           checkpoint of the last snapshot of <code>target</code>
-     * @param maxAppliedInstanceId maxAppliedInstanceId of <code>target</code>
+     * @param state target information
      */
-    void keepSameData(final Endpoint target, final long checkpoint, final long maxAppliedInstanceId);
+    void keepSameData(final NodeState state);
+
+    /**
+     * Keep consistent with the data in the cluster
+     *
+     * @return <code>true:</code> same data, <code>false:</code>: not the same
+     */
+    boolean healthy();
 
     /**
      * Processing confirm message.
@@ -122,11 +127,6 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param req message
      */
     SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
-
-    interface ApplyCallback {
-        void apply(Proposal input, Object output);
-    }
-
 
     interface LearnCallback {
         void learned(boolean result);

@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author far.liu
  */
-public class RpcEngine {
+public final class RpcEngine {
     private static final Logger LOG = LoggerFactory.getLogger(RpcEngine.class);
     private static RpcServer server;
     private static RpcClient client;
