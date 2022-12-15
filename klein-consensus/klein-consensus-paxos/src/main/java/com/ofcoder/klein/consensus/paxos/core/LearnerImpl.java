@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -259,7 +260,12 @@ public class LearnerImpl implements Learner {
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(instanceId, defaultValue, (result, consensusDatas) -> future.complete(result));
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return instanceId;
+                }
+            }, defaultValue, (result, consensusDatas) -> future.complete(result));
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
@@ -558,7 +564,12 @@ public class LearnerImpl implements Learner {
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
 
                 LOG.info("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
-                RoleAccessor.getProposer().tryBoost(request.getInstanceId(), defaultValue, new ProposeDone.DefaultProposeDone());
+                RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                    @Override
+                    protected Long create() {
+                        return request.getInstanceId();
+                    }
+                }, defaultValue, new ProposeDone.DefaultProposeDone());
             }
             return res.result(Sync.NO_SUPPORT).build();
         }

@@ -38,6 +38,7 @@ import com.lmax.disruptor.EventTranslator;
 import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
@@ -246,7 +247,9 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public void tryBoost(final long instanceId, final List<Proposal> proposal, final ProposeDone done) {
+    public void tryBoost(final Holder<Long> instanceHolder, final List<Proposal> proposal, final ProposeDone done) {
+
+        final long instanceId = instanceHolder.get();
 
         if (self.getLastCheckpoint() >= instanceId) {
             done.negotiationDone(true, Lists.newArrayList());
@@ -268,7 +271,7 @@ public class ProposerImpl implements Proposer {
             return event;
         }).collect(Collectors.toList());
 
-        ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), instanceId, proposalWithDones);
+        ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), instanceHolder, proposalWithDones);
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -424,7 +427,12 @@ public class ProposerImpl implements Proposer {
 
             LOG.info("start negotiations, proposal size: {}", temp.size());
             final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(temp);
-            ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), self.incrementInstanceId(), finalEvents);
+            ProposeContext ctxt = new ProposeContext(MemberManager.createRef(), new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return self.incrementInstanceId();
+                }
+            }, finalEvents);
 
             long curProposalNo = self.getCurProposalNo();
             if (ProposerImpl.this.skipPrepare.get() != PrepareState.PREPARED) {

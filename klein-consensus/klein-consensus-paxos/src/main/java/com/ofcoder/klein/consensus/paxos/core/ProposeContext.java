@@ -20,10 +20,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
  * @author 释慧利
@@ -32,7 +33,7 @@ public class ProposeContext {
     /**
      * The instance that stores data
      */
-    private final long instanceId;
+    private final Holder<Long> instanceIdHolder;
     /**
      * Origin data and callback
      */
@@ -55,9 +56,9 @@ public class ProposeContext {
     private final Quorum acceptQuorum;
     private final AtomicBoolean acceptNexted;
 
-    public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final long instanceId, final List<ProposalWithDone> events) {
+    public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final Holder<Long> instanceIdHolder, final List<ProposalWithDone> events) {
         this.memberConfiguration = memberConfiguration;
-        this.instanceId = instanceId;
+        this.instanceIdHolder = instanceIdHolder;
         this.dataWithCallback = ImmutableList.copyOf(events);
         this.prepareQuorum = PaxosQuorum.createInstance(memberConfiguration);
         this.prepareNexted = new AtomicBoolean(false);
@@ -70,7 +71,7 @@ public class ProposeContext {
     }
 
     public long getInstanceId() {
-        return instanceId;
+        return instanceIdHolder.get();
     }
 
     public List<ProposalWithDone> getDataWithCallback() {
@@ -124,7 +125,7 @@ public class ProposeContext {
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
      */
     public ProposeContext createUntappedRef() {
-        ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceId, this.dataWithCallback);
+        ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceIdHolder, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
         target.grantedProposalNo = 0;

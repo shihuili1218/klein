@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -149,7 +150,12 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                                                    @Override
+                                                    protected Long create() {
+                                                        return self.incrementInstanceId();
+                                                    }
+                                                }, Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
                     , new ProposeDone() {
                         @Override
                         public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
@@ -192,7 +198,12 @@ public class MasterImpl implements Master {
 
             CountDownLatch latch = new CountDownLatch(1);
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
-            RoleAccessor.getProposer().tryBoost(self.incrementInstanceId(), Lists.newArrayList(proposal)
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                                                    @Override
+                                                    protected Long create() {
+                                                        return self.incrementInstanceId();
+                                                    }
+                                                }, Lists.newArrayList(proposal)
                     , new ProposeDone() {
                         @Override
                         public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
@@ -271,7 +282,13 @@ public class MasterImpl implements Master {
             }
             List<Proposal> grantedValue = instance != null ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
             grantedValue = CollectionUtils.isNotEmpty(grantedValue) ? grantedValue : Lists.newArrayList(Proposal.NOOP);
-            RoleAccessor.getProposer().tryBoost(miniInstanceId, grantedValue, new ProposeDone.DefaultProposeDone());
+            long finalMiniInstanceId = miniInstanceId;
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return finalMiniInstanceId;
+                }
+            }, grantedValue, new ProposeDone.DefaultProposeDone());
         }
     }
 
