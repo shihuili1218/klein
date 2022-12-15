@@ -248,23 +248,7 @@ public class ProposerImpl implements Proposer {
 
     @Override
     public void tryBoost(final Holder<Long> instanceHolder, final List<Proposal> proposal, final ProposeDone done) {
-
-        final long instanceId = instanceHolder.get();
-
-        if (self.getLastCheckpoint() >= instanceId) {
-            done.negotiationDone(true, Lists.newArrayList());
-            return;
-        }
-
-        Instance<Proposal> instance = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin().getInstance(instanceId);
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            done.negotiationDone(true, instance.getGrantedValue());
-            return;
-        }
-
-        List<Proposal> localValue = instance != null ? instance.getGrantedValue() : null;
-        localValue = CollectionUtils.isEmpty(localValue) ? proposal : localValue;
-        List<ProposalWithDone> proposalWithDones = localValue.stream().map(it -> {
+        List<ProposalWithDone> proposalWithDones = proposal.stream().map(it -> {
             ProposalWithDone event = new ProposalWithDone();
             event.setProposal(it);
             event.setDone(done);
@@ -294,7 +278,7 @@ public class ProposerImpl implements Proposer {
             return;
         }
 
-        LOG.debug("limit prepare. instance: {}, skipPrepare: {}", ctxt.getInstanceId(), skipPrepare);
+        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
         if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
             synchronized (skipPrepare) {
                 try {

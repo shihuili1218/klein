@@ -72,7 +72,7 @@ public class AcceptorImpl implements Acceptor {
             final long selfInstanceId = self.getCurInstanceId();
             final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
 
-            if (req.getInstanceId() <= self.getLastCheckpoint()) {
+            if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= self.getCurAppliedInstanceId()) {
                 return AcceptRes.Builder.anAcceptRes()
                         .nodeId(self.getSelf().getId())
                         .result(false)

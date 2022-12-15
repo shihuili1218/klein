@@ -280,8 +280,8 @@ public class MasterImpl implements Master {
             if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
                 continue;
             }
-            List<Proposal> grantedValue = instance != null ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
-            grantedValue = CollectionUtils.isNotEmpty(grantedValue) ? grantedValue : Lists.newArrayList(Proposal.NOOP);
+            List<Proposal> grantedValue = instance != null && CollectionUtils.isNotEmpty(instance.getGrantedValue())
+                    ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
             long finalMiniInstanceId = miniInstanceId;
             RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
                 @Override
