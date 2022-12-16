@@ -31,7 +31,7 @@ import com.ofcoder.klein.common.util.Requires;
  *
  * @author boyan(boyan@antfin.com)
  */
-public class DisruptorBuilder<T> {
+public final class DisruptorBuilder<T> {
     private EventFactory<T> eventFactory;
     private Integer ringBufferSize;
     private ThreadFactory threadFactory = KleinThreadFactory.create("disruptor-", true);
