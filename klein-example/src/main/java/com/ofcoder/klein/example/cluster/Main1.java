@@ -16,19 +16,23 @@
  */
 package com.ofcoder.klein.example.cluster;
 
-import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
 /**
+ * Main: operate cache.
+ *
  * @author 释慧利
  */
 public class Main1 {
-    public static void main(String[] args) throws Exception {
+    private static final Logger LOG = LoggerFactory.getLogger(Main1.class);
+
+    public static void main(final String[] args) throws Exception {
         KleinProp prop1 = KleinProp.loadIfPresent();
         prop1.getConsensusProp().setMembers(
                 Lists.newArrayList(
@@ -49,26 +53,25 @@ public class Main1 {
         String value = "klein";
         long start = System.currentTimeMillis();
         instance1.getCache().put("hello1", "klein1");
-        System.out.println("++++++++++first put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++first put: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
         instance1.getCache().put("hello2", "klein2");
-        System.out.println("++++++++++second put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++second put: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
         instance1.getCache().put("hello3", "klein3");
-        System.out.println("++++++++++third put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++third put: " + (System.currentTimeMillis() - start));
 
-
-        System.out.println("----------get hello3: " + instance1.getCache().get("hello3"));
-        System.out.println("----------get hello4: " + instance1.getCache().get("hello4"));
-        System.out.println("----------exist hello3: " + instance1.getCache().exist("hello3"));
-        System.out.println("----------exist hello4: " + instance1.getCache().exist("hello4"));
-        System.out.println("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));
-        System.out.println("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4.1"));
+        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
+        LOG.info("----------get hello4: " + instance1.getCache().get("hello4"));
+        LOG.info("----------exist hello3: " + instance1.getCache().exist("hello3"));
+        LOG.info("----------exist hello4: " + instance1.getCache().exist("hello4"));
+        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));
+        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4.1"));
         instance1.getCache().invalidate("hello3");
-        System.out.println("----------invalidate hello3");
-        System.out.println("----------get hello3: " + instance1.getCache().get("hello3"));
+        LOG.info("----------invalidate hello3");
+        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
 
         System.in.read();
     }

@@ -18,17 +18,23 @@ package com.ofcoder.klein.example.cluster;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
 /**
+ * Main2: cluster member.
+ *
  * @author 释慧利
  */
 public class Main2 {
-    public static void main(String[] args) throws IOException {
+    private static final Logger LOG = LoggerFactory.getLogger(Main2.class);
+
+    public static void main(final String[] args) throws IOException {
         System.setProperty("klein.id", "2");
         System.setProperty("klein.port", "1219");
         System.setProperty("klein.ip", "127.0.0.1");

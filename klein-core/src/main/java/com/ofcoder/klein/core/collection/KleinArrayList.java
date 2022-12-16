@@ -28,7 +28,7 @@ import org.jetbrains.annotations.NotNull;
  *
  * @author 释慧利
  */
-public class KleinList<E> implements List<E> {
+public class KleinArrayList<E> implements List<E> {
     @Override
     public int size() {
         return 0;
@@ -68,8 +68,18 @@ public class KleinList<E> implements List<E> {
     }
 
     @Override
+    public void add(final int index, final E element) {
+
+    }
+
+    @Override
     public boolean remove(final Object o) {
         return false;
+    }
+
+    @Override
+    public E remove(final int index) {
+        return null;
     }
 
     @Override
@@ -109,16 +119,6 @@ public class KleinList<E> implements List<E> {
 
     @Override
     public E set(final int index, final E element) {
-        return null;
-    }
-
-    @Override
-    public void add(final int index, final E element) {
-
-    }
-
-    @Override
-    public E remove(final int index) {
         return null;
     }
 
