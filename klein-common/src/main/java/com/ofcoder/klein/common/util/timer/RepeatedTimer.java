@@ -29,6 +29,7 @@ import com.ofcoder.klein.common.util.Requires;
 
 /**
  * Repeatable timer based on java.util.Timer.
+ *
  * <p>
  * Forked from <a href="https://github.com/sofastack/sofa-jraft">sofa-jraft</a>.
  */
@@ -46,14 +47,6 @@ public abstract class RepeatedTimer {
     private volatile int timeoutMs;
     private final String name;
 
-    public boolean isRunning() {
-        return running;
-    }
-
-    public int getTimeoutMs() {
-        return this.timeoutMs;
-    }
-
     public RepeatedTimer(final String name, final int timeoutMs) {
         this(name, timeoutMs, new HashedWheelTimer(KleinThreadFactory.create(name, true), 1, TimeUnit.MILLISECONDS, 512));
     }
@@ -64,6 +57,24 @@ public abstract class RepeatedTimer {
         this.timeoutMs = timeoutMs;
         this.stopped = true;
         this.timer = Requires.requireNonNull(timer, "timer");
+    }
+
+    /**
+     * current timer is running.
+     *
+     * @return true: running
+     */
+    public boolean isRunning() {
+        return running;
+    }
+
+    /**
+     * get timeout.
+     *
+     * @return timeout
+     */
+    public int getTimeoutMs() {
+        return this.timeoutMs;
     }
 
     /**
@@ -82,6 +93,9 @@ public abstract class RepeatedTimer {
         return timeoutMs;
     }
 
+    /**
+     * do task.
+     */
     public void run() {
         this.invoking = true;
         try {
@@ -158,8 +172,6 @@ public abstract class RepeatedTimer {
      * It will be started if it's stopped, and it will be restarted if it's running.
      *
      * @author Qing Wang (kingchin1218@gmail.com)
-     * <p>
-     * 2020-Mar-26 20:38:37 PM
      */
     public void restart() {
         this.lock.lock();
@@ -210,7 +222,7 @@ public abstract class RepeatedTimer {
     }
 
     /**
-     * Reset timer with current timeoutMs
+     * Reset timer with current timeoutMs.
      */
     public void reset() {
         this.lock.lock();
@@ -222,7 +234,7 @@ public abstract class RepeatedTimer {
     }
 
     /**
-     * Destroy timer
+     * Destroy timer.
      */
     public void destroy() {
         boolean invokeDestroyed = false;
@@ -256,7 +268,7 @@ public abstract class RepeatedTimer {
     }
 
     /**
-     * Stop timer
+     * Stop timer.
      */
     public void stop() {
         this.lock.lock();

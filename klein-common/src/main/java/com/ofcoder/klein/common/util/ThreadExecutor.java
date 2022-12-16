@@ -32,21 +32,29 @@ import org.slf4j.LoggerFactory;
 public class ThreadExecutor {
     private static final Logger LOG = LoggerFactory.getLogger(ThreadExecutor.class);
     // fixme to user custom
-    private final static ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
+    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(),
             KleinThreadFactory.create("common-thread", true));
-
 
     private static int cpus() {
         return Runtime.getRuntime().availableProcessors();
     }
 
-    public static void submit(Runnable task) {
+    /**
+     * submit task to thread pool.
+     *
+     * @param task runnable
+     */
+    public static void submit(final Runnable task) {
         EXECUTOR.execute(task);
     }
 
     /**
+     * graceful shutdown.
+     *
+     * @param pool need close pool
+     * @return is closed
      * @see #shutdownAndAwaitTermination(ExecutorService, long)
      */
     public static boolean shutdownAndAwaitTermination(final ExecutorService pool) {
@@ -58,6 +66,10 @@ public class ThreadExecutor {
      * phases, first by calling {@code shutdown} to reject incoming tasks,
      * and then calling {@code shutdownNow}, if necessary, to cancel any
      * lingering tasks.
+     *
+     * @param pool          need close pool
+     * @param timeoutMillis close timeout
+     * @return is closed
      */
     public static boolean shutdownAndAwaitTermination(final ExecutorService pool, final long timeoutMillis) {
         if (pool == null) {

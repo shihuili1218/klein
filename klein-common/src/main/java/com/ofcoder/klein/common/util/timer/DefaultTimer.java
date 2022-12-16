@@ -29,14 +29,16 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 
 
 /**
+ * default timer.
+ *
  * @author jiachun.fjc
  */
 public class DefaultTimer implements Timer {
 
     private final ScheduledExecutorService scheduledExecutorService;
 
-    public DefaultTimer(int workerNum, String name) {
-        this.scheduledExecutorService = new ScheduledThreadPoolExecutor(workerNum,KleinThreadFactory.create(name, true));
+    public DefaultTimer(final int workerNum, final String name) {
+        this.scheduledExecutorService = new ScheduledThreadPoolExecutor(workerNum, KleinThreadFactory.create(name, true));
     }
 
     @Override
@@ -56,13 +58,13 @@ public class DefaultTimer implements Timer {
         return Collections.emptySet();
     }
 
-    private class TimeoutTask implements Runnable {
+    private final class TimeoutTask implements Runnable {
 
-        private final TimerTask             task;
-        private final Timeout               timeout;
+        private final TimerTask task;
+        private final Timeout timeout;
         private volatile ScheduledFuture<?> future;
 
-        private TimeoutTask(TimerTask task) {
+        private TimeoutTask(final TimerTask task) {
             this.task = task;
             this.timeout = new Timeout() {
 
@@ -78,7 +80,8 @@ public class DefaultTimer implements Timer {
 
                 @Override
                 public boolean isExpired() {
-                    return false; // never use
+                    // never use
+                    return false;
                 }
 
                 @Override
@@ -103,7 +106,7 @@ public class DefaultTimer implements Timer {
             return future;
         }
 
-        public void setFuture(ScheduledFuture<?> future) {
+        public void setFuture(final ScheduledFuture<?> future) {
             this.future = future;
         }
 
