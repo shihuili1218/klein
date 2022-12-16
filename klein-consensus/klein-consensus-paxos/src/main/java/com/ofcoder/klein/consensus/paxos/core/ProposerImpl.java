@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -31,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslator;
@@ -63,6 +61,8 @@ import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
+ * Proposer implement.
+ *
  * @author far.liu
  */
 public class ProposerImpl implements Proposer {
@@ -83,12 +83,12 @@ public class ProposerImpl implements Proposer {
     private LogManager<Proposal> logManager;
     private boolean allowPropose = false;
 
-    public ProposerImpl(PaxosNode self) {
+    public ProposerImpl(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void init(ConsensusProp op) {
+    public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.prepareTimeout = (long) (op.getRoundTimeout() * 0.4);
@@ -99,7 +99,7 @@ public class ProposerImpl implements Proposer {
         Disruptor<ProposalWithDone> proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
                 .setEventFactory(ProposalWithDone::new)
-                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
+                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true))
                 .setProducerType(ProducerType.MULTI)
                 .setWaitStrategy(new BlockingWaitStrategy())
                 .build();
@@ -137,7 +137,7 @@ public class ProposerImpl implements Proposer {
      * @param done client's callbck
      */
     @Override
-    public <E extends Serializable> void propose(final Proposal data, final ProposeDone done) {
+    public void propose(final Proposal data, final ProposeDone done) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
@@ -157,16 +157,16 @@ public class ProposerImpl implements Proposer {
      *                          Because:
      *                          * T1: PREPARED
      *                          * T2: PREPARED → NO_PREPARE
-     *                          * T2: increment self.curProposalNo enter pre<proposalNo = 2>
+     *                          * T2: increment self.curProposalNo enter pre(proposalNo = 2)
      *                          * T2: processing...
-     *                          * T1: enter accept phase, acc<proposalNo = self.curProposalNo = 2>
+     *                          * T1: enter accept phase, acc(proposalNo = self.curProposalNo = 2)
      *                          * This is incorrect because 2 has not been PREPARED yet and it is not known whether other members are granted other grantedValue
      * @param ctxt              Negotiation Context
      * @param callback          Callback of accept phase,
      *                          if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
      *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, Endpoint)}
      */
-    private void accept(final long grantedProposalNo, final ProposeContext ctxt, PhaseCallback.AcceptPhaseCallback callback) {
+    private void accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
@@ -193,7 +193,7 @@ public class ProposerImpl implements Proposer {
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
-                public void error(Throwable err) {
+                public void error(final Throwable err) {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
 
                     ctxt.getAcceptQuorum().refuse(it);
@@ -206,7 +206,7 @@ public class ProposerImpl implements Proposer {
                 }
 
                 @Override
-                public void complete(AcceptRes result) {
+                public void complete(final AcceptRes result) {
                     handleAcceptResponse(ctxt, callback, result, it);
                 }
             }, acceptTimeout);
@@ -214,10 +214,10 @@ public class ProposerImpl implements Proposer {
 
     }
 
-    private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback
-            , final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote.instanceState: {}, result: {}"
-                , result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState(), result.getResult());
+    private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback,
+                                      final AcceptRes result, final Endpoint it) {
+        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote.instanceState: {}, result: {}",
+                result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getInstanceState(), result.getResult());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
@@ -331,7 +331,7 @@ public class ProposerImpl implements Proposer {
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
-                public void error(Throwable err) {
+                public void error(final Throwable err) {
                     LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
@@ -341,17 +341,16 @@ public class ProposerImpl implements Proposer {
                 }
 
                 @Override
-                public void complete(PrepareRes result) {
+                public void complete(final PrepareRes result) {
                     handlePrepareResponse(proposalNo, ctxt, callback, result, it);
                 }
             }, prepareTimeout);
         });
 
-
     }
 
-    private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback
-            , final PrepareRes result, final Endpoint it) {
+    private void handlePrepareResponse(final long proposalNo, final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback,
+                                       final PrepareRes result, final Endpoint it) {
         LOG.info("handling node-{}'s prepare response, proposalNo: {}, result: {}", result.getNodeId(), result.getCurProposalNo(), result.getResult());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
@@ -389,12 +388,12 @@ public class ProposerImpl implements Proposer {
         }
     }
 
-
     public class ProposeEventHandler implements EventHandler<ProposalWithDone> {
+
         private final int batchSize;
         private final List<ProposalWithDone> tasks = new Vector<>();
 
-        public ProposeEventHandler(int batchSize) {
+        public ProposeEventHandler(final int batchSize) {
             this.batchSize = batchSize;
         }
 
@@ -427,7 +426,7 @@ public class ProposerImpl implements Proposer {
         }
 
         @Override
-        public void onEvent(ProposalWithDone event, long sequence, boolean endOfBatch) {
+        public void onEvent(final ProposalWithDone event, final long sequence, final boolean endOfBatch) {
             if (event.getShutdownLatch() != null) {
                 if (!this.tasks.isEmpty()) {
                     handle();
@@ -446,7 +445,7 @@ public class ProposerImpl implements Proposer {
     public class PrepareCallback implements PhaseCallback.PreparePhaseCallback {
 
         @Override
-        public void granted(long grantedProposalNo, ProposeContext context) {
+        public void granted(final long grantedProposalNo, final ProposeContext context) {
             LOG.debug("prepare granted. proposalNo: {}", grantedProposalNo);
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
@@ -456,7 +455,7 @@ public class ProposerImpl implements Proposer {
         }
 
         @Override
-        public void refused(ProposeContext context) {
+        public void refused(final ProposeContext context) {
             LOG.info("prepare refuse.");
             synchronized (skipPrepare) {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
@@ -474,7 +473,7 @@ public class ProposerImpl implements Proposer {
     public class AcceptCallback implements PhaseCallback.AcceptPhaseCallback {
 
         @Override
-        public void granted(ProposeContext context) {
+        public void granted(final ProposeContext context) {
             LOG.debug("accept granted. proposalNo: {}, instance: {}", context.getGrantedProposalNo(), context.getInstanceId());
 
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
@@ -494,7 +493,7 @@ public class ProposerImpl implements Proposer {
         }
 
         @Override
-        public void learn(ProposeContext context, Endpoint it) {
+        public void learn(final ProposeContext context, final Endpoint it) {
             LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), it.getId());
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
@@ -514,12 +513,13 @@ public class ProposerImpl implements Proposer {
 
 
     /**
+     * Prepare State.
+     *
      * @author 释慧利
      */
     public enum PrepareState {
         NO_PREPARE,
         PREPARING,
-        PREPARED,
-        ;
+        PREPARED;
     }
 }

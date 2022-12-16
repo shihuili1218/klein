@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import com.ofcoder.klein.consensus.facade.Quorum;
@@ -24,15 +23,23 @@ import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Paxos Quorum Checker.
+ *
  * @author 释慧利
  */
-public class PaxosQuorum extends Quorum {
+public final class PaxosQuorum extends Quorum {
 
-    private PaxosQuorum(Set<Endpoint> allMembers) {
+    private PaxosQuorum(final Set<Endpoint> allMembers) {
         super(allMembers);
     }
 
-    public static PaxosQuorum createInstance(PaxosMemberConfiguration memberConfiguration){
+    /**
+     * create new Quorum checker.
+     *
+     * @param memberConfiguration member config
+     * @return new Quorum checker
+     */
+    public static PaxosQuorum createInstance(final PaxosMemberConfiguration memberConfiguration) {
         return new PaxosQuorum(memberConfiguration.getAllMembers());
     }
 }

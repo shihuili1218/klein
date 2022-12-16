@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * NodeState.
+ *
  * @author 释慧利
  */
 public class NodeState implements Serializable {
@@ -43,7 +45,6 @@ public class NodeState implements Serializable {
         return lastCheckpoint;
     }
 
-
     public static final class Builder {
         private String nodeId;
         private long maxInstanceId;
@@ -53,30 +54,64 @@ public class NodeState implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aNodeState.
+         *
+         * @return Builder
+         */
         public static Builder aNodeState() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder maxInstanceId(long maxInstanceId) {
+        /**
+         * maxInstanceId.
+         *
+         * @param maxInstanceId maxInstanceId
+         * @return Builder
+         */
+        public Builder maxInstanceId(final long maxInstanceId) {
             this.maxInstanceId = maxInstanceId;
             return this;
         }
 
-        public Builder lastAppliedInstanceId(long lastAppliedInstanceId) {
+        /**
+         * lastAppliedInstanceId.
+         *
+         * @param lastAppliedInstanceId lastAppliedInstanceId
+         * @return Builder
+         */
+        public Builder lastAppliedInstanceId(final long lastAppliedInstanceId) {
             this.lastAppliedInstanceId = lastAppliedInstanceId;
             return this;
         }
 
-        public Builder lastCheckpoint(long lastCheckpoint) {
+        /**
+         * lastCheckpoint.
+         *
+         * @param lastCheckpoint lastCheckpoint
+         * @return Builder
+         */
+        public Builder lastCheckpoint(final long lastCheckpoint) {
             this.lastCheckpoint = lastCheckpoint;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return NodeState
+         */
         public NodeState build() {
             NodeState nodeState = new NodeState();
             nodeState.nodeId = this.nodeId;

@@ -22,6 +22,8 @@ import java.util.Map;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
+ * SnapSync response data.
+ *
  * @author 释慧利
  */
 public class SnapSyncRes implements Serializable {
@@ -32,7 +34,7 @@ public class SnapSyncRes implements Serializable {
         return checkpoint;
     }
 
-    public void setCheckpoint(long checkpoint) {
+    public void setCheckpoint(final long checkpoint) {
         this.checkpoint = checkpoint;
     }
 
@@ -40,7 +42,7 @@ public class SnapSyncRes implements Serializable {
         return images;
     }
 
-    public void setImages(Map<String, Snap> images) {
+    public void setImages(final Map<String, Snap> images) {
         this.images = images;
     }
 
@@ -51,20 +53,42 @@ public class SnapSyncRes implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aSnapSyncRes.
+         *
+         * @return Builder
+         */
         public static Builder aSnapSyncRes() {
             return new Builder();
         }
 
-        public Builder checkpoint(long checkpoint) {
+        /**
+         * checkpoint.
+         *
+         * @param checkpoint checkpoint
+         * @return Builder
+         */
+        public Builder checkpoint(final long checkpoint) {
             this.checkpoint = checkpoint;
             return this;
         }
 
-        public Builder images(Map<String, Snap> images) {
+        /**
+         * images.
+         *
+         * @param images images
+         * @return Builder
+         */
+        public Builder images(final Map<String, Snap> images) {
             this.images = images;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return SnapSyncRes
+         */
         public SnapSyncRes build() {
             SnapSyncRes snapSyncRes = new SnapSyncRes();
             snapSyncRes.images = this.images;

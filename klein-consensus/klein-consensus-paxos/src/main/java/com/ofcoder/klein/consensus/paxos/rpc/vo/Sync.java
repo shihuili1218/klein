@@ -17,6 +17,8 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * Sync.
+ *
  * @author 释慧利
  */
 public enum Sync {

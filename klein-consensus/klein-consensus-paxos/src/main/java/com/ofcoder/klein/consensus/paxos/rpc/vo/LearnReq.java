@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * learn request data.
+ *
  * @author 释慧利
  */
 public class LearnReq implements Serializable {
@@ -29,7 +31,7 @@ public class LearnReq implements Serializable {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
@@ -37,7 +39,7 @@ public class LearnReq implements Serializable {
         return instanceId;
     }
 
-    public void setInstanceId(long instanceId) {
+    public void setInstanceId(final long instanceId) {
         this.instanceId = instanceId;
     }
 
@@ -48,20 +50,42 @@ public class LearnReq implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aLearnReq.
+         *
+         * @return Builder
+         */
         public static Builder aLearnReq() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder instanceId(long instanceId) {
+        /**
+         * instanceId.
+         *
+         * @param instanceId instanceId
+         * @return Builder
+         */
+        public Builder instanceId(final long instanceId) {
             this.instanceId = instanceId;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return LearnReq
+         */
         public LearnReq build() {
             LearnReq learnReq = new LearnReq();
             learnReq.instanceId = this.instanceId;

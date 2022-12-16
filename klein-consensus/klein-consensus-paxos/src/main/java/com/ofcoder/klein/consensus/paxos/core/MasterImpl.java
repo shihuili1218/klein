@@ -59,6 +59,8 @@ import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
+ * Master implement.
+ *
  * @author 释慧利
  */
 public class MasterImpl implements Master {
@@ -74,7 +76,7 @@ public class MasterImpl implements Master {
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
 
-    public MasterImpl(PaxosNode self) {
+    public MasterImpl(final PaxosNode self) {
         this.self = self;
     }
 
@@ -89,7 +91,7 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void init(ConsensusProp op) {
+    public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
@@ -100,7 +102,7 @@ public class MasterImpl implements Master {
             }
 
             @Override
-            protected int adjustTimeout(int timeoutMs) {
+            protected int adjustTimeout(final int timeoutMs) {
                 return calculateElectionMasterInterval();
             }
         };
@@ -120,7 +122,7 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void addMember(Endpoint endpoint) {
+    public void addMember(final Endpoint endpoint) {
         if (MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
@@ -128,14 +130,14 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void removeMember(Endpoint endpoint) {
+    public void removeMember(final Endpoint endpoint) {
         if (!MemberManager.createRef().isValid(endpoint.getId())) {
             return;
         }
         changeMember(ChangeMemberOp.REMOVE, endpoint);
     }
 
-    private void changeMember(byte op, Endpoint endpoint) {
+    private void changeMember(final byte op, final Endpoint endpoint) {
         LOG.info("start add member.");
 
         try {
@@ -150,22 +152,23 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
-                                                    @Override
-                                                    protected Long create() {
-                                                        return self.incrementInstanceId();
-                                                    }
-                                                }, Lists.newArrayList(new Proposal(MasterSM.GROUP, req))
-                    , new ProposeDone() {
+            RoleAccessor.getProposer().tryBoost(
+                    new Holder<Long>() {
                         @Override
-                        public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                        protected Long create() {
+                            return self.incrementInstanceId();
+                        }
+                    },
+                    Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
+                        @Override
+                        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                             if (!result) {
                                 latch.countDown();
                             }
                         }
 
                         @Override
-                        public void applyDone(Map<Proposal, Object> applyResults) {
+                        public void applyDone(final Map<Proposal, Object> applyResults) {
                             latch.countDown();
                         }
                     });
@@ -198,15 +201,16 @@ public class MasterImpl implements Master {
 
             CountDownLatch latch = new CountDownLatch(1);
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
-                                                    @Override
-                                                    protected Long create() {
-                                                        return self.incrementInstanceId();
-                                                    }
-                                                }, Lists.newArrayList(proposal)
-                    , new ProposeDone() {
+            RoleAccessor.getProposer().tryBoost(
+                    new Holder<Long>() {
                         @Override
-                        public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                        protected Long create() {
+                            return self.incrementInstanceId();
+                        }
+                    }, Lists.newArrayList(proposal),
+                    new ProposeDone() {
+                        @Override
+                        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                             LOG.info("electing master, negotiationDone: {}", result);
                             if (result && consensusDatas.contains(proposal)) {
                                 ThreadExecutor.submit(MasterImpl.this::boostInstance);
@@ -216,7 +220,7 @@ public class MasterImpl implements Master {
                         }
 
                         @Override
-                        public void applyDone(Map<Proposal, Object> applyResults) {
+                        public void applyDone(final Map<Proposal, Object> applyResults) {
                             LOG.info("electing master, applyDone: {}", applyResults);
                             latch.countDown();
                         }
@@ -254,7 +258,7 @@ public class MasterImpl implements Master {
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
                 client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
                     @Override
-                    public void error(Throwable err) {
+                    public void error(final Throwable err) {
                         quorum.refuse(it);
                         if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
                             restartElect();
@@ -262,7 +266,7 @@ public class MasterImpl implements Master {
                     }
 
                     @Override
-                    public void complete(NewMasterRes result) {
+                    public void complete(final NewMasterRes result) {
                         self.updateCurInstanceId(result.getCurInstanceId());
                         quorum.grant(it);
                         if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
@@ -321,7 +325,7 @@ public class MasterImpl implements Master {
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
                 @Override
-                public void error(Throwable err) {
+                public void error(final Throwable err) {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
@@ -330,7 +334,7 @@ public class MasterImpl implements Master {
                 }
 
                 @Override
-                public void complete(Pong result) {
+                public void complete(final Pong result) {
                     quorum.grant(it);
                     if (quorum.isGranted() == Quorum.GrantResult.PASS) {
                         complete.complete(quorum.isGranted());
@@ -347,7 +351,7 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void addHealthyListener(HealthyListener listener) {
+    public void addHealthyListener(final HealthyListener listener) {
         listeners.add(listener);
     }
 
@@ -356,13 +360,13 @@ public class MasterImpl implements Master {
         return state;
     }
 
-    private void updateMasterState(ElectState healthy) {
+    private void updateMasterState(final ElectState healthy) {
         state = healthy;
         listeners.forEach(it -> it.change(healthy));
     }
 
     @Override
-    public boolean onReceiveHeartbeat(Ping request, boolean isSelf) {
+    public boolean onReceiveHeartbeat(final Ping request, final boolean isSelf) {
         final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
         NodeState nodeState = request.getNodeState();
 
@@ -380,14 +384,14 @@ public class MasterImpl implements Master {
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
             return true;
         } else {
-            LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId()
-                    , memberConfiguration, request.getMemberConfigurationVersion());
+            LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
+                    memberConfiguration, request.getMemberConfigurationVersion());
             return false;
         }
     }
 
     @Override
-    public NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf) {
+    public NewMasterRes onReceiveNewMaster(final NewMasterReq request, final boolean isSelf) {
         return NewMasterRes.Builder.aNewMasterRes()
                 .checkpoint(self.getLastCheckpoint())
                 .curInstanceId(self.getCurInstanceId())
@@ -395,7 +399,7 @@ public class MasterImpl implements Master {
                 .build();
     }
 
-    private void checkAndUpdateInstance(NodeState nodeState) {
+    private void checkAndUpdateInstance(final NodeState nodeState) {
         ThreadExecutor.submit(() -> {
             RoleAccessor.getLearner().keepSameData(nodeState);
         });

@@ -24,22 +24,22 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * NewMaster Request Processor.
+ *
  * @author 释慧利
  */
 public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
     private PaxosNode self;
 
-    public NewMasterProcessor(PaxosNode self) {
+    public NewMasterProcessor(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void handleRequest(NewMasterReq request, RpcContext context) {
+    public void handleRequest(final NewMasterReq request, final RpcContext context) {
         NewMasterRes newMasterRes = RoleAccessor.getMaster().onReceiveNewMaster(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(newMasterRes)));
     }

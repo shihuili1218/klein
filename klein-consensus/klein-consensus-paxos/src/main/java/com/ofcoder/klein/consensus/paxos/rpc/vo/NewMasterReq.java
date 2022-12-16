@@ -17,11 +17,11 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * NewMaster Request data.
+ *
  * @author 释慧利
  */
 public class NewMasterReq extends BaseReq {
-
-
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
@@ -30,25 +30,53 @@ public class NewMasterReq extends BaseReq {
         private Builder() {
         }
 
+        /**
+         * aNewMasterReq.
+         *
+         * @return Builder
+         */
         public static Builder aNewMasterReq() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        /**
+         * proposalNo.
+         *
+         * @param proposalNo proposalNo
+         * @return Builder
+         */
+        public Builder proposalNo(final long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder memberConfigurationVersion(int memberConfigurationVersion) {
+        /**
+         * memberConfigurationVersion.
+         *
+         * @param memberConfigurationVersion memberConfigurationVersion
+         * @return Builder
+         */
+        public Builder memberConfigurationVersion(final int memberConfigurationVersion) {
             this.memberConfigurationVersion = memberConfigurationVersion;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return NewMasterReq
+         */
         public NewMasterReq build() {
             NewMasterReq newMasterReq = new NewMasterReq();
             newMasterReq.setNodeId(nodeId);

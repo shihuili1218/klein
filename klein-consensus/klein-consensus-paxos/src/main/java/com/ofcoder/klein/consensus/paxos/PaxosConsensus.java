@@ -48,6 +48,8 @@ import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
+ * Paxos Consensus.
+ *
  * @author far.liu
  */
 @Join
@@ -56,7 +58,7 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private ConsensusProp prop;
 
-    private <E extends Serializable> void proposeAsync(final Proposal data, final ProposeDone done) {
+    private void proposeAsync(final Proposal data, final ProposeDone done) {
         RoleAccessor.getProposer().propose(data, done);
     }
 
@@ -69,7 +71,7 @@ public class PaxosConsensus implements Consensus {
         Proposal proposal = new Proposal(group, data);
         proposeAsync(proposal, new ProposeDone() {
             @Override
-            public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+            public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                 completed.countDown();
                 if (result) {
                     builder.state(consensusDatas.contains(proposal) ? Result.State.SUCCESS : Result.State.FAILURE);
@@ -80,7 +82,7 @@ public class PaxosConsensus implements Consensus {
             }
 
             @Override
-            public void applyDone(Map<Proposal, Object> applyResults) {
+            public void applyDone(final Map<Proposal, Object> applyResults) {
                 for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
                     if (entry.getKey() == proposal) {
                         builder.data((D) entry.getValue());
@@ -102,12 +104,12 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void loadSM(final String group, SM sm) {
+    public void loadSM(final String group, final SM sm) {
         RoleAccessor.getLearner().loadSM(group, sm);
     }
 
     @Override
-    public void setListener(LifecycleListener listener) {
+    public void setListener(final LifecycleListener listener) {
         RoleAccessor.getMaster().addHealthyListener(healthy -> {
             if (Master.ElectState.allowPropose(healthy)) {
                 listener.prepared();
@@ -116,7 +118,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void init(ConsensusProp op) {
+    public void init(final ConsensusProp op) {
         this.prop = op;
         loadNode();
         loadMemberConfig();
@@ -146,7 +148,7 @@ public class PaxosConsensus implements Consensus {
         LOG.info("self info: {}", self);
     }
 
-    private void loadMemberConfig(){
+    private void loadMemberConfig() {
         MemberManager.init(this.prop.getMembers(), this.prop.getSelf());
     }
 
@@ -159,7 +161,6 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
     }
-
 
     @Override
     public void shutdown() {

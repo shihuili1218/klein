@@ -27,26 +27,28 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Master Role.
+ *
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
 
     /**
-     * Change member, add <code>endpoint</code> to the cluster
+     * Change member, add <code>endpoint</code> to the cluster.
      *
      * @param endpoint new member
      */
     void addMember(Endpoint endpoint);
 
     /**
-     * Change member, remove <code>endpoint</code> from cluster
+     * Change member, remove <code>endpoint</code> from cluster.
      *
      * @param endpoint delete member
      */
     void removeMember(Endpoint endpoint);
 
     /**
-     * Election master
+     * Election master.
      */
     void electingMaster();
 
@@ -57,25 +59,36 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @param isSelf  whether heartbeat come from themselves
      * @return whether accept the heartbeat
      */
-    boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
+    boolean onReceiveHeartbeat(Ping request, boolean isSelf);
 
-
-    NewMasterRes onReceiveNewMaster(final NewMasterReq request, boolean isSelf);
+    /**
+     * handle NewMaster request.
+     *
+     * @param request msg data
+     * @param isSelf  from self
+     * @return handle result
+     */
+    NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf);
 
     /**
      * This is a callback method of master change.
      *
      * @param newMaster new master
      */
-    void onChangeMaster(final String newMaster);
+    void onChangeMaster(String newMaster);
 
     /**
-     * Added master health listener
+     * Added master health listener.
      *
      * @param listener listener
      */
-    void addHealthyListener(final HealthyListener listener);
+    void addHealthyListener(HealthyListener listener);
 
+    /**
+     * get elect state.
+     *
+     * @return elect state
+     */
     ElectState electState();
 
     interface HealthyListener {
@@ -86,22 +99,21 @@ public interface Master extends Lifecycle<ConsensusProp> {
         ELECTING(-1),
         FOLLOWING(0),
         BOOSTING(1),
-        DOMINANT(2),
-        ;
-        private int state;
+        DOMINANT(2);
         public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
         public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
+        private int state;
 
-        public static boolean allowBoost(ElectState state){
+        ElectState(final int state) {
+            this.state = state;
+        }
+
+        public static boolean allowBoost(final ElectState state) {
             return BOOSTING_STATE.contains(state);
         }
 
-        public static boolean allowPropose(ElectState state){
+        public static boolean allowPropose(final ElectState state) {
             return PROPOSE_STATE.contains(state);
-        }
-
-        ElectState(int state) {
-            this.state = state;
         }
 
         public int getState() {

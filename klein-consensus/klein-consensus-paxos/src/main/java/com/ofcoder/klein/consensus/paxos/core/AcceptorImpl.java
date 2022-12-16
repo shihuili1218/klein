@@ -39,6 +39,8 @@ import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
+ * Acceptor implement.
+ *
  * @author far.liu
  */
 public class AcceptorImpl implements Acceptor {
@@ -47,12 +49,12 @@ public class AcceptorImpl implements Acceptor {
     private final PaxosNode self;
     private LogManager<Proposal> logManager;
 
-    public AcceptorImpl(PaxosNode self) {
+    public AcceptorImpl(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void init(ConsensusProp op) {
+    public void init(final ConsensusProp op) {
         logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
     }
 
@@ -62,7 +64,7 @@ public class AcceptorImpl implements Acceptor {
     }
 
     @Override
-    public AcceptRes handleAcceptRequest(AcceptReq req) {
+    public AcceptRes handleAcceptRequest(final AcceptReq req) {
         LOG.info("processing the accept message from node-{}, instanceId: {}, data.size: {}", req.getNodeId(), req.getInstanceId(), req.getData().size());
 
         try {
@@ -135,7 +137,7 @@ public class AcceptorImpl implements Acceptor {
     }
 
     @Override
-    public PrepareRes handlePrepareRequest(PrepareReq req, boolean isSelf) {
+    public PrepareRes handlePrepareRequest(final PrepareReq req, final boolean isSelf) {
         LOG.info("processing the prepare message from node-{}, isSelf: {}", req.getNodeId(), isSelf);
         final long curProposalNo = self.getCurProposalNo();
         final long curInstanceId = self.getCurInstanceId();
@@ -162,23 +164,23 @@ public class AcceptorImpl implements Acceptor {
         }
     }
 
-    private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo
-            , final BaseReq req, final boolean isSelf) {
+    private boolean checkPrepareReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration,
+                                            final long selfProposalNo, final BaseReq req,
+                                            final boolean isSelf) {
         boolean checkProposalNo = isSelf ? req.getProposalNo() >= selfProposalNo : req.getProposalNo() > selfProposalNo;
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || !checkProposalNo) {
 
-            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}, checkProposalNo: {}", req.getMemberConfigurationVersion()
-                    , paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
+            LOG.info("checkPrepareReqValidity, req.version: {}, local.version: {}, req.proposalNo: {}, local.proposalNo: {}, checkProposalNo: {}",
+                    req.getMemberConfigurationVersion(), paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
             return false;
         }
         self.updateCurProposalNo(req.getProposalNo());
         return true;
     }
 
-
-    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, BaseReq req) {
+    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, final BaseReq req) {
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() < selfProposalNo) {

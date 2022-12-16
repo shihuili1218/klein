@@ -20,6 +20,8 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 
 /**
+ * Role Accessor.
+ *
  * @author 释慧利
  */
 public class RoleAccessor {
@@ -45,31 +47,37 @@ public class RoleAccessor {
         return master;
     }
 
-    public static void create(ConsensusProp prop, PaxosNode self) {
+    /**
+     * create master, learner, acceptor, proposer.
+     *
+     * @param prop property
+     * @param self node information
+     */
+    public static void create(final ConsensusProp prop, final PaxosNode self) {
         initMaster(prop, self);
         initLearner(prop, self);
         initAcceptor(prop, self);
         initProposer(prop, self);
     }
-    private static void initMaster(ConsensusProp prop, PaxosNode self) {
+
+    private static void initMaster(final ConsensusProp prop, final PaxosNode self) {
         master = new MasterImpl(self);
         master.init(prop);
     }
 
-    private static void initLearner(ConsensusProp prop, PaxosNode self) {
+    private static void initLearner(final ConsensusProp prop, final PaxosNode self) {
         learner = new LearnerImpl(self);
         learner.init(prop);
     }
 
-    private static void initAcceptor(ConsensusProp prop, PaxosNode self) {
+    private static void initAcceptor(final ConsensusProp prop, final PaxosNode self) {
         acceptor = new AcceptorImpl(self);
         acceptor.init(prop);
     }
 
-    private static void initProposer(ConsensusProp prop, PaxosNode self) {
+    private static void initProposer(final ConsensusProp prop, final PaxosNode self) {
         proposer = new ProposerImpl(self);
         proposer.init(prop);
     }
-
 
 }

@@ -23,14 +23,22 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 
 /**
+ * rpc processor.
+ *
  * @author 释慧利
  */
 public abstract class AbstractRpcProcessor<REQ> implements RpcProcessor {
 
+    /**
+     * handle request.
+     *
+     * @param request request param
+     * @param context rpc context
+     */
     public abstract void handleRequest(REQ request, RpcContext context);
 
     @Override
-    public void handleRequest(ByteBuffer request, RpcContext context) {
+    public void handleRequest(final ByteBuffer request, final RpcContext context) {
         REQ deserialize = Hessian2Util.deserialize(request.array());
         handleRequest(deserialize, context);
     }

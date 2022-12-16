@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * NewMaster Request Data.
+ *
  * @author 释慧利
  */
 public class NewMasterRes implements Serializable {
@@ -30,7 +32,7 @@ public class NewMasterRes implements Serializable {
         return curInstanceId;
     }
 
-    public void setCurInstanceId(long curInstanceId) {
+    public void setCurInstanceId(final long curInstanceId) {
         this.curInstanceId = curInstanceId;
     }
 
@@ -38,7 +40,7 @@ public class NewMasterRes implements Serializable {
         return lastAppliedId;
     }
 
-    public void setLastAppliedId(long lastAppliedId) {
+    public void setLastAppliedId(final long lastAppliedId) {
         this.lastAppliedId = lastAppliedId;
     }
 
@@ -46,17 +48,17 @@ public class NewMasterRes implements Serializable {
         return checkpoint;
     }
 
-    public void setCheckpoint(long checkpoint) {
+    public void setCheckpoint(final long checkpoint) {
         this.checkpoint = checkpoint;
     }
 
     @Override
     public String toString() {
-        return "NewMasterRes{" +
-                "curInstanceId=" + curInstanceId +
-                ", lastAppliedId=" + lastAppliedId +
-                ", checkpoint=" + checkpoint +
-                '}';
+        return "NewMasterRes{"
+                + "curInstanceId=" + curInstanceId
+                + ", lastAppliedId=" + lastAppliedId
+                + ", checkpoint=" + checkpoint
+                + '}';
     }
 
     public static final class Builder {
@@ -67,25 +69,53 @@ public class NewMasterRes implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aNewMasterRes.
+         *
+         * @return Builder
+         */
         public static Builder aNewMasterRes() {
             return new Builder();
         }
 
-        public Builder curInstanceId(long curInstanceId) {
+        /**
+         * curInstanceId.
+         *
+         * @param curInstanceId curInstanceId
+         * @return Builder
+         */
+        public Builder curInstanceId(final long curInstanceId) {
             this.curInstanceId = curInstanceId;
             return this;
         }
 
-        public Builder lastAppliedId(long lastAppliedId) {
+        /**
+         * lastAppliedId.
+         *
+         * @param lastAppliedId lastAppliedId
+         * @return Builder
+         */
+        public Builder lastAppliedId(final long lastAppliedId) {
             this.lastAppliedId = lastAppliedId;
             return this;
         }
 
-        public Builder checkpoint(long checkpoint) {
+        /**
+         * checkpoint.
+         *
+         * @param checkpoint checkpoint
+         * @return Builder
+         */
+        public Builder checkpoint(final long checkpoint) {
             this.checkpoint = checkpoint;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return NewMasterRes
+         */
         public NewMasterRes build() {
             NewMasterRes newMasterRes = new NewMasterRes();
             newMasterRes.lastAppliedId = this.lastAppliedId;

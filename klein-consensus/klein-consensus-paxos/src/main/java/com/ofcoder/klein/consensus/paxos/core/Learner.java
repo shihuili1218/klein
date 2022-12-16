@@ -32,20 +32,22 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Learner Role.
+ *
  * @author 释慧利
  */
 public interface Learner extends Lifecycle<ConsensusProp> {
 
     /**
-     * Load SM, one group will only load one SM
+     * Load SM, one group will only load one SM.
      *
      * @param group group
      * @param sm    state machine
      */
-    void loadSM(final String group, final SM sm);
+    void loadSM(String group, SM sm);
 
     /**
-     * Send the learn message to <code>target</code>
+     * Send the learn message to <code>target</code>.
      *
      * @param instanceId instance to learn
      * @param target     learn objective
@@ -54,7 +56,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void learn(long instanceId, Endpoint target, LearnCallback callback);
 
     /**
-     * Send the learn message to <code>target</code>
+     * Send the learn message to <code>target</code>.
      *
      * @param instanceId instance to learn
      * @param target     learn objective
@@ -65,7 +67,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     }
 
     /**
-     * Synchronous learning
+     * Synchronous learning.
      *
      * @param instanceId instance to learn
      * @param target     learn objective
@@ -89,17 +91,17 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param instanceId id of the instance
      * @param dons       call ProposeDone#applyDone(java.util.Map) when apply done
      */
-    void confirm(long instanceId, final List<ProposeDone> dons);
+    void confirm(long instanceId, List<ProposeDone> dons);
 
     /**
-     * Keep the data consistent with <code>state</code>
+     * Keep the data consistent with <code>state</code>.
      *
      * @param state target information
      */
-    void keepSameData(final NodeState state);
+    void keepSameData(NodeState state);
 
     /**
-     * Keep consistent with the data in the cluster
+     * Keep consistent with the data in the cluster.
      *
      * @return <code>true:</code> same data, <code>false:</code>: not the same
      */
@@ -118,6 +120,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Other members learn the specified instance from themselves.
      *
      * @param req message
+     * @return handle result
      */
     LearnRes handleLearnRequest(LearnReq req);
 
@@ -125,6 +128,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Processing Snapshot Synchronization message.
      *
      * @param req message
+     * @return handle result
      */
     SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
 
@@ -134,7 +138,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
 
     class DefaultLearnCallback implements LearnCallback {
         @Override
-        public void learned(boolean result) {
+        public void learned(final boolean result) {
 
         }
     }

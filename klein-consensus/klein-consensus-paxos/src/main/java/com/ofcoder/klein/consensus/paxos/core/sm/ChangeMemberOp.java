@@ -22,6 +22,8 @@ import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * system operator for change member.
+ *
  * @author 释慧利
  */
 public class ChangeMemberOp implements SystemOp {
@@ -31,12 +33,11 @@ public class ChangeMemberOp implements SystemOp {
     private byte op;
     private Endpoint target;
 
-
     public String getNodeId() {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
@@ -44,7 +45,7 @@ public class ChangeMemberOp implements SystemOp {
         return op;
     }
 
-    public void setOp(byte op) {
+    public void setOp(final byte op) {
         this.op = op;
     }
 
@@ -52,14 +53,18 @@ public class ChangeMemberOp implements SystemOp {
         return target;
     }
 
-    public void setTarget(Endpoint target) {
+    public void setTarget(final Endpoint target) {
         this.target = target;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ChangeMemberOp that = (ChangeMemberOp) o;
         return getOp() == that.getOp() && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getTarget(), that.getTarget());
     }

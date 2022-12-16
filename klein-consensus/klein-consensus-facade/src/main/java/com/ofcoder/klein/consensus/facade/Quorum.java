@@ -23,6 +23,8 @@ import java.util.Set;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Quorum.
+ *
  * @author 释慧利
  */
 public abstract class Quorum {
@@ -48,21 +50,33 @@ public abstract class Quorum {
         }
     }
 
-    public boolean grant(Endpoint node) {
+    /**
+     * the node pass, grant current request.
+     *
+     * @param node pass node
+     * @return grant result
+     */
+    public boolean grant(final Endpoint node) {
         if (!allMembers.contains(node)) {
             return false;
         }
         return grantedMembers.add(node);
     }
 
-    public boolean refuse(Endpoint node) {
+    /**
+     * the node refuse, refuse current request.
+     *
+     * @param node refuse node
+     * @return refuse result
+     */
+    public boolean refuse(final Endpoint node) {
         if (!allMembers.contains(node)) {
             return false;
         }
         return failedMembers.add(node);
     }
 
-    public static enum GrantResult {
+    public enum GrantResult {
         PASS,
         REFUSE,
         GRANTING

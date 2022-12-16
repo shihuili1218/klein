@@ -20,6 +20,8 @@ import com.ofcoder.klein.common.disruptor.DisruptorEvent;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
+ * Proposal and Propose Callback.
+ *
  * @author 释慧利
  */
 public class ProposalWithDone extends DisruptorEvent {
@@ -30,7 +32,7 @@ public class ProposalWithDone extends DisruptorEvent {
         return proposal;
     }
 
-    public void setProposal(Proposal proposal) {
+    public void setProposal(final Proposal proposal) {
         this.proposal = proposal;
     }
 
@@ -38,7 +40,7 @@ public class ProposalWithDone extends DisruptorEvent {
         return done;
     }
 
-    public void setDone(ProposeDone done) {
+    public void setDone(final ProposeDone done) {
         this.done = done;
     }
 }

@@ -23,6 +23,8 @@ import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
+ * Add Snapshot and Checkpoint in SM.
+ *
  * @author 释慧利
  */
 public abstract class AbstractSM implements SM {
@@ -31,7 +33,7 @@ public abstract class AbstractSM implements SM {
     private static Long checkpoint = 0L;
 
     @Override
-    public Object apply(long instanceId, Object data) {
+    public Object apply(final long instanceId, final Object data) {
         if (SNAP.get()) {
             try {
                 SNAP_LOCK.lock();
@@ -46,8 +48,15 @@ public abstract class AbstractSM implements SM {
         }
     }
 
+    /**
+     * apply instance.
+     *
+     * @param data proposal's data
+     * @return apply result
+     */
     protected abstract Object apply(Object data);
 
+    @Override
     public Snap snapshot() {
         if (SNAP.compareAndSet(false, true)) {
             try {
@@ -64,10 +73,15 @@ public abstract class AbstractSM implements SM {
         }
     }
 
+    /**
+     * take a photo.
+     *
+     * @return image
+     */
     protected abstract Object makeImage();
 
     @Override
-    public void loadSnap(Snap snap) {
+    public void loadSnap(final Snap snap) {
         if (SNAP.compareAndSet(false, true)) {
             try {
                 SNAP_LOCK.lock();
@@ -82,6 +96,11 @@ public abstract class AbstractSM implements SM {
         }
     }
 
+    /**
+     * load image.
+     *
+     * @param snap image
+     */
     protected abstract void loadImage(Object snap);
 
     @Override

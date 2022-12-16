@@ -31,13 +31,15 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * Prepare Request Processor.
+ *
  * @author 释慧利
  */
 public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
     private final PaxosNode self;
 
-    public PrepareProcessor(PaxosNode self) {
+    public PrepareProcessor(final PaxosNode self) {
         this.self = self;
     }
 
@@ -47,7 +49,7 @@ public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     }
 
     @Override
-    public void handleRequest(PrepareReq request, RpcContext context) {
+    public void handleRequest(final PrepareReq request, final RpcContext context) {
 
         if (!MemberManager.isValid(request.getNodeId())) {
             LOG.error("msg type: prepare, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",

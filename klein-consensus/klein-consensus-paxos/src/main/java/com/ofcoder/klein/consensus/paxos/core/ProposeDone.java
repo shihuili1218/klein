@@ -22,11 +22,13 @@ import java.util.Map;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
+ * propose callback.
+ *
  * @author 释慧利
  */
 public interface ProposeDone {
     /**
-     * call the method when negotiation done
+     * call the method when negotiation done.
      *
      * @param result         negotiation result
      * @param consensusDatas consensus data
@@ -34,7 +36,7 @@ public interface ProposeDone {
     void negotiationDone(boolean result, List<Proposal> consensusDatas);
 
     /**
-     * call the method when apply done
+     * call the method when apply done.
      *
      * @param applyResults Key: enter the value of the state machine
      *                     Value: state machine output
@@ -43,9 +45,9 @@ public interface ProposeDone {
         // for subclass
     }
 
-    class DefaultProposeDone implements ProposeDone{
+    class DefaultProposeDone implements ProposeDone {
         @Override
-        public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
             // do nothing.
         }
     }
