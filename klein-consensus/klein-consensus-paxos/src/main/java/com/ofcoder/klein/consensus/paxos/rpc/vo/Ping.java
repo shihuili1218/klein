@@ -17,10 +17,11 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * ping request data.
+ *
  * @author 释慧利
  */
 public class Ping extends BaseReq {
-
     private NodeState nodeState;
 
     public NodeState getNodeState() {
@@ -36,30 +37,64 @@ public class Ping extends BaseReq {
         private Builder() {
         }
 
+        /**
+         * a ping .
+         *
+         * @return Builder
+         */
         public static Builder aPing() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        /**
+         * proposalNo.
+         *
+         * @param proposalNo proposalNo
+         * @return Builder
+         */
+        public Builder proposalNo(final long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder memberConfigurationVersion(int memberConfigurationVersion) {
+        /**
+         * memberConfigurationVersion.
+         *
+         * @param memberConfigurationVersion memberConfigurationVersion
+         * @return Builder
+         */
+        public Builder memberConfigurationVersion(final int memberConfigurationVersion) {
             this.memberConfigurationVersion = memberConfigurationVersion;
             return this;
         }
 
-        public Builder nodeState(NodeState nodeState) {
+        /**
+         * nodeState.
+         *
+         * @param nodeState nodeState
+         * @return Builder
+         */
+        public Builder nodeState(final NodeState nodeState) {
             this.nodeState = nodeState;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return Ping
+         */
         public Ping build() {
             Ping ping = new Ping();
             ping.setNodeId(nodeId);

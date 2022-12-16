@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * pong.
+ *
  * @author 释慧利
  */
 public class Pong implements Serializable {

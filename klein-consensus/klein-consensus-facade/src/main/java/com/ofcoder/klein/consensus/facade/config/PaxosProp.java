@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.facade.config;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
+ * paxox property.
+ *
  * @author 释慧利
  */
 public class PaxosProp {
@@ -34,7 +36,7 @@ public class PaxosProp {
         return masterHeartbeatInterval;
     }
 
-    public void setMasterHeartbeatInterval(int masterHeartbeatInterval) {
+    public void setMasterHeartbeatInterval(final int masterHeartbeatInterval) {
         this.masterHeartbeatInterval = masterHeartbeatInterval;
     }
 
@@ -42,7 +44,7 @@ public class PaxosProp {
         return masterElectMinInterval;
     }
 
-    public void setMasterElectMinInterval(int masterElectMinInterval) {
+    public void setMasterElectMinInterval(final int masterElectMinInterval) {
         this.masterElectMinInterval = masterElectMinInterval;
     }
 
@@ -50,7 +52,7 @@ public class PaxosProp {
         return masterElectMaxInterval;
     }
 
-    public void setMasterElectMaxInterval(int masterElectMaxInterval) {
+    public void setMasterElectMaxInterval(final int masterElectMaxInterval) {
         this.masterElectMaxInterval = masterElectMaxInterval;
     }
 
@@ -58,7 +60,7 @@ public class PaxosProp {
         return onlyMasterWrite;
     }
 
-    public void setOnlyMasterWrite(boolean onlyMasterWrite) {
+    public void setOnlyMasterWrite(final boolean onlyMasterWrite) {
         this.onlyMasterWrite = onlyMasterWrite;
     }
 
@@ -66,7 +68,7 @@ public class PaxosProp {
         return onlyMasterRead;
     }
 
-    public void setOnlyMasterRead(boolean onlyMasterRead) {
+    public void setOnlyMasterRead(final boolean onlyMasterRead) {
         this.onlyMasterRead = onlyMasterRead;
     }
 }

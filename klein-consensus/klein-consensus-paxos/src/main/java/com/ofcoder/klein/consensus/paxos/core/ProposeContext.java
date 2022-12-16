@@ -27,27 +27,28 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
+ * Propose Context.
  * @author 释慧利
  */
 public class ProposeContext {
     /**
-     * The instance that stores data
+     * The instance that stores data.
      */
     private final Holder<Long> instanceIdHolder;
     /**
-     * Origin data and callback
+     * Origin data and callback.
      */
     private final List<ProposalWithDone> dataWithCallback;
     /**
-     * The data on which consensus was reached
+     * The data on which consensus was reached.
      */
     private List<Proposal> consensusData;
     /**
-     * This is a proposalNo that has executed the prepare phase;
+     * This is a proposalNo that has executed the prepare phase.
      */
     private long grantedProposalNo;
     /**
-     * Current retry times
+     * Current retry times.
      */
     private int times = 0;
     private final PaxosMemberConfiguration memberConfiguration;
@@ -82,7 +83,7 @@ public class ProposeContext {
         return consensusData;
     }
 
-    public void setConsensusData(List<Proposal> consensusData) {
+    public void setConsensusData(final List<Proposal> consensusData) {
         this.consensusData = consensusData;
     }
 
@@ -90,7 +91,7 @@ public class ProposeContext {
         return grantedProposalNo;
     }
 
-    public void setGrantedProposalNo(long grantedProposalNo) {
+    public void setGrantedProposalNo(final long grantedProposalNo) {
         this.grantedProposalNo = grantedProposalNo;
     }
 
@@ -119,7 +120,7 @@ public class ProposeContext {
     }
 
     /**
-     * Creating a new reference
+     * Creating a new reference.
      * Keep news of the last round's lateness from clouding this round's decision-making
      *
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}

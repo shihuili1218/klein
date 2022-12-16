@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.core;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Phase Callback.
+ *
  * @author 释慧利
  */
 public interface PhaseCallback {
@@ -29,13 +31,11 @@ public interface PhaseCallback {
         void refused(ProposeContext context);
     }
 
-
     interface AcceptPhaseCallback {
         void granted(ProposeContext context);
 
         void learn(ProposeContext context, Endpoint it);
 
     }
-
 
 }

@@ -22,6 +22,8 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**
+ * learn response data.
+ *
  * @author 释慧利
  */
 public class LearnRes implements Serializable {
@@ -33,7 +35,7 @@ public class LearnRes implements Serializable {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
@@ -41,7 +43,7 @@ public class LearnRes implements Serializable {
         return instance;
     }
 
-    public void setInstance(Instance<Proposal> instance) {
+    public void setInstance(final Instance<Proposal> instance) {
         this.instance = instance;
     }
 
@@ -49,7 +51,7 @@ public class LearnRes implements Serializable {
         return result;
     }
 
-    public void setResult(Sync result) {
+    public void setResult(final Sync result) {
         this.result = result;
     }
 
@@ -61,25 +63,53 @@ public class LearnRes implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aLearnRes.
+         *
+         * @return Builder
+         */
         public static Builder aLearnRes() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder result(Sync result) {
+        /**
+         * result.
+         *
+         * @param result result
+         * @return Builder
+         */
+        public Builder result(final Sync result) {
             this.result = result;
             return this;
         }
 
-        public Builder instance(Instance<Proposal> instance) {
+        /**
+         * instance.
+         *
+         * @param instance instance
+         * @return Builder
+         */
+        public Builder instance(final Instance<Proposal> instance) {
             this.instance = instance;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return LearnRes
+         */
         public LearnRes build() {
             LearnRes learnRes = new LearnRes();
             learnRes.setNodeId(nodeId);

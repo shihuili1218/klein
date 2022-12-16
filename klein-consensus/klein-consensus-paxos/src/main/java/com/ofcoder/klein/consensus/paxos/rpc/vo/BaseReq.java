@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * Base request data.
  * @author 释慧利
  */
 public class BaseReq implements Serializable {
@@ -30,7 +31,7 @@ public class BaseReq implements Serializable {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
@@ -38,7 +39,7 @@ public class BaseReq implements Serializable {
         return proposalNo;
     }
 
-    public void setProposalNo(long proposalNo) {
+    public void setProposalNo(final long proposalNo) {
         this.proposalNo = proposalNo;
     }
 
@@ -46,7 +47,7 @@ public class BaseReq implements Serializable {
         return memberConfigurationVersion;
     }
 
-    public void setMemberConfigurationVersion(int memberConfigurationVersion) {
+    public void setMemberConfigurationVersion(final int memberConfigurationVersion) {
         this.memberConfigurationVersion = memberConfigurationVersion;
     }
 }

@@ -22,18 +22,20 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 
 /**
+ * master sm.
+ *
  * @author 释慧利
  */
 public class MasterSM extends AbstractSM {
-    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     public static final String GROUP = "master";
+    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
 
     public MasterSM() {
 
     }
 
     @Override
-    protected Object apply(Object data) {
+    protected Object apply(final Object data) {
         LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
         if (data instanceof ElectionOp) {
             electMaster((ElectionOp) data);
@@ -45,7 +47,7 @@ public class MasterSM extends AbstractSM {
         return null;
     }
 
-    private void changeMember(ChangeMemberOp op) {
+    private void changeMember(final ChangeMemberOp op) {
         switch (op.getOp()) {
             case ChangeMemberOp.ADD:
                 MemberManager.writeOn(op.getTarget());
@@ -59,7 +61,7 @@ public class MasterSM extends AbstractSM {
         }
     }
 
-    private void electMaster(ElectionOp op) {
+    private void electMaster(final ElectionOp op) {
         MemberManager.changeMaster(op.getNodeId());
     }
 
@@ -69,7 +71,7 @@ public class MasterSM extends AbstractSM {
     }
 
     @Override
-    protected void loadImage(Object snap) {
+    protected void loadImage(final Object snap) {
         if (!(snap instanceof PaxosMemberConfiguration)) {
             return;
         }

@@ -25,47 +25,98 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * member manager.
+ *
  * @author 释慧利
  */
 public class MemberManager {
     private static final Logger LOG = LoggerFactory.getLogger(MemberManager.class);
-    private static final PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
+    private static final PaxosMemberConfiguration CONFIGURATION = new PaxosMemberConfiguration();
     private static volatile Endpoint self;
 
-    public static void init(List<Endpoint> nodes, Endpoint self) {
-        configuration.init(nodes);
+    /**
+     * init configuration.
+     *
+     * @param nodes all members
+     * @param self  self information
+     */
+    public static void init(final List<Endpoint> nodes, final Endpoint self) {
+        CONFIGURATION.init(nodes);
         MemberManager.self = self;
     }
 
-    public static void loadSnap(PaxosMemberConfiguration snap) {
-        configuration.loadSnap(snap);
+    /**
+     * load snapshot.
+     *
+     * @param snap snapshot
+     */
+    public static void loadSnap(final PaxosMemberConfiguration snap) {
+        CONFIGURATION.loadSnap(snap);
     }
 
-    public static boolean changeMaster(String nodeId) {
-        return configuration.changeMaster(nodeId);
+    /**
+     * change master.
+     *
+     * @param nodeId new master id
+     * @return change result
+     */
+    public static boolean changeMaster(final String nodeId) {
+        return CONFIGURATION.changeMaster(nodeId);
     }
 
-    public static void writeOn(Endpoint node) {
-        configuration.writeOn(node);
+    /**
+     * add member.
+     *
+     * @param node new member
+     */
+    public static void writeOn(final Endpoint node) {
+        CONFIGURATION.writeOn(node);
     }
 
-    public static void writeOff(Endpoint node) {
-        configuration.writeOff(node);
+    /**
+     * remove member.
+     *
+     * @param node error member
+     */
+    public static void writeOff(final Endpoint node) {
+        CONFIGURATION.writeOff(node);
     }
 
-    public static Endpoint getEndpointById(String id) {
-        return configuration.getEndpointById(id);
+    /**
+     * get endpoint info by node id.
+     *
+     * @param id node id
+     * @return endpoint
+     */
+    public static Endpoint getEndpointById(final String id) {
+        return CONFIGURATION.getEndpointById(id);
     }
 
+    /**
+     * create an object with the same data.
+     *
+     * @return new reference
+     */
     public static PaxosMemberConfiguration createRef() {
-        return configuration.createRef();
+        return CONFIGURATION.createRef();
     }
 
+    /**
+     * get all members.
+     *
+     * @return all members
+     */
     public static Set<Endpoint> getAllMembers() {
-        return configuration.getAllMembers();
+        return CONFIGURATION.getAllMembers();
     }
 
-    public static boolean isValid(String nodeId) {
-        return configuration.isValid(nodeId);
+    /**
+     * check node is valid.
+     *
+     * @param nodeId check node id
+     * @return is valid
+     */
+    public static boolean isValid(final String nodeId) {
+        return CONFIGURATION.isValid(nodeId);
     }
 }

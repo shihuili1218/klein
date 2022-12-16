@@ -16,12 +16,12 @@
  */
 package com.ofcoder.klein.consensus.facade.config;
 
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
-
 /**
+ * snap prop.
+ *
  * @author 释慧利
  */
 public class SnapProp {
-    private long generateSnapInterval ;
+    private long generateSnapInterval;
 
 }

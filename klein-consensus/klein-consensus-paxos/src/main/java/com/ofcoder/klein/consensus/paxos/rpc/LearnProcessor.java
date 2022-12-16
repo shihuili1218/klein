@@ -31,6 +31,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * Learn Request Processor.
+ *
  * @author 释慧利
  */
 public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
@@ -38,7 +40,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
 
     private final PaxosNode self;
 
-    public LearnProcessor(PaxosNode self) {
+    public LearnProcessor(final PaxosNode self) {
         this.self = self;
     }
 
@@ -48,7 +50,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
     }
 
     @Override
-    public void handleRequest(LearnReq request, RpcContext context) {
+    public void handleRequest(final LearnReq request, final RpcContext context) {
         if (!MemberManager.isValid(request.getNodeId())) {
             LOG.error("msg type: learn, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());

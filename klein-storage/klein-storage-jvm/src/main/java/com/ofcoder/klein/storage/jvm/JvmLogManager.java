@@ -42,22 +42,24 @@ import com.ofcoder.klein.storage.facade.exception.LockException;
 import com.ofcoder.klein.storage.facade.exception.StorageException;
 
 /**
+ * Jvm LogManager.
+ *
  * @author 释慧利
  */
 @Join
 public class JvmLogManager<P extends Serializable> implements LogManager<P> {
+    private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
+    private static String selfPath;
+    private static String metaPath;
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ReentrantReadWriteLock lock;
-    private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
-    private static String SELF_PATH;
-    private static String META_PATH;
 
     private MetaData metadata;
 
     @Override
-    public void init(StorageProp op) {
+    public void init(final StorageProp op) {
         File file = new File(BASE_PATH);
         if (!file.exists()) {
             boolean mkdir = file.mkdir();
@@ -68,14 +70,14 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         confirmedInstances = new ConcurrentHashMap<>();
         lock = new ReentrantReadWriteLock(true);
 
-        SELF_PATH = BASE_PATH + File.separator + op.getId();
-        File selfFile = new File(SELF_PATH);
+        selfPath = BASE_PATH + File.separator + op.getId();
+        File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
             boolean mkdir = selfFile.mkdir();
             // do nothing for mkdir result
         }
 
-        META_PATH = SELF_PATH + File.separator + "mate";
+        metaPath = selfPath + File.separator + "mate";
     }
 
     @Override
@@ -90,7 +92,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public Instance<P> getInstance(long id) {
+    public Instance<P> getInstance(final long id) {
         if (runningInstances.containsKey(id)) {
             return runningInstances.get(id);
         }
@@ -106,7 +108,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public void updateInstance(Instance<P> instance) {
+    public void updateInstance(final Instance<P> instance) {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
@@ -119,11 +121,10 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         saveMetaData();
     }
 
-
     @Override
-    public MetaData loadMetaData(MetaData defaultValue) {
+    public MetaData loadMetaData(final MetaData defaultValue) {
 
-        File file = new File(META_PATH);
+        File file = new File(metaPath);
         if (!file.exists()) {
             this.metadata = defaultValue;
             return this.metadata;
@@ -143,7 +144,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     private void saveMetaData() {
         FileOutputStream mateOut = null;
         try {
-            mateOut = new FileOutputStream(META_PATH);
+            mateOut = new FileOutputStream(metaPath);
             IOUtils.write(Hessian2Util.serialize(this.metadata), mateOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
@@ -153,8 +154,8 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public void saveSnap(String group, Snap snap) {
-        String bastPath = SELF_PATH + File.separator + group + File.separator;
+    public void saveSnap(final String group, final Snap snap) {
+        String bastPath = selfPath + File.separator + group + File.separator;
         File snapFile = new File(bastPath + snap.getCheckpoint());
         if (snapFile.exists()) {
             return;
@@ -184,14 +185,14 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         saveMetaData();
     }
 
-    private void truncCheckpoint(long checkpoint) {
+    private void truncCheckpoint(final long checkpoint) {
         Set<Long> removeKeys = confirmedInstances.keySet().stream().filter(it -> it <= checkpoint).collect(Collectors.toSet());
         removeKeys.forEach(confirmedInstances::remove);
     }
 
     @Override
-    public Snap getLastSnap(String group) {
-        String bastPath = SELF_PATH + File.separator + group + File.separator;
+    public Snap getLastSnap(final String group) {
+        String bastPath = selfPath + File.separator + group + File.separator;
         File file = new File(bastPath + "last");
         if (!file.exists()) {
             return null;
@@ -213,6 +214,5 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
             StreamUtil.close(snapIn);
         }
     }
-
 
 }

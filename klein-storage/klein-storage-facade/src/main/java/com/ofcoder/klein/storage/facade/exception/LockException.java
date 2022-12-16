@@ -17,14 +17,16 @@
 package com.ofcoder.klein.storage.facade.exception;
 
 /**
+ * Lock Exception.
+ *
  * @author 释慧利
  */
 public class LockException extends StorageException {
-    public LockException(String message) {
+    public LockException(final String message) {
         super(message);
     }
 
-    public LockException(String message, Throwable cause) {
+    public LockException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

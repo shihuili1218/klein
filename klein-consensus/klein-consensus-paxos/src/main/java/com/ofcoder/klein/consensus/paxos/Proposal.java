@@ -20,6 +20,8 @@ import java.io.Serializable;
 import java.util.Objects;
 
 /**
+ * Proposal.
+ *
  * @author 释慧利
  */
 public class Proposal implements Serializable {
@@ -30,7 +32,7 @@ public class Proposal implements Serializable {
     public Proposal() {
     }
 
-    public Proposal(String group, Object data) {
+    public Proposal(final String group, final Object data) {
         this.group = group;
         this.data = data;
     }
@@ -39,7 +41,7 @@ public class Proposal implements Serializable {
         return group;
     }
 
-    public void setGroup(String group) {
+    public void setGroup(final String group) {
         this.group = group;
     }
 
@@ -47,14 +49,18 @@ public class Proposal implements Serializable {
         return data;
     }
 
-    public void setData(Object data) {
+    public void setData(final Object data) {
         this.data = data;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         Proposal proposal = (Proposal) o;
         return Objects.equals(getGroup(), proposal.getGroup()) && Objects.equals(getData(), proposal.getData());
     }
@@ -65,7 +71,7 @@ public class Proposal implements Serializable {
     }
 
     /**
-     * No operation proposal
+     * No operation proposal.
      */
     public static class Noop implements Serializable {
         public static final Noop DEFAULT = new Noop();

@@ -18,10 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +27,8 @@ import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * paxos member configuration.
+ *
  * @author 释慧利
  */
 public class PaxosMemberConfiguration extends MemberConfiguration {
@@ -40,7 +39,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return this.master;
     }
 
-    protected boolean changeMaster(String nodeId) {
+    protected boolean changeMaster(final String nodeId) {
         if (isValid(nodeId)) {
             this.master = getEndpointById(nodeId);
             this.version.incrementAndGet();
@@ -53,25 +52,30 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         }
     }
 
-    protected void writeOn(Endpoint node) {
+    protected void writeOn(final Endpoint node) {
         super.writeOn(node);
     }
 
-    protected void writeOff(Endpoint node) {
+    protected void writeOff(final Endpoint node) {
         super.writeOff(node);
     }
 
-    protected void init(List<Endpoint> nodes) {
+    protected void init(final List<Endpoint> nodes) {
         super.init(nodes);
     }
 
-    protected void loadSnap(PaxosMemberConfiguration snap) {
+    protected void loadSnap(final PaxosMemberConfiguration snap) {
         this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
         this.version = new AtomicInteger(snap.version.get());
         this.allMembers.clear();
         this.allMembers.putAll(snap.allMembers);
     }
 
+    /**
+     * Create an object with the same data.
+     *
+     * @return new object
+     */
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
         target.allMembers.putAll(allMembers);
@@ -84,10 +88,10 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
 
     @Override
     public String toString() {
-        return "PaxosMemberConfiguration{" +
-                "master=" + master +
-                ", version=" + version +
-                ", allMembers=" + allMembers +
-                '}';
+        return "PaxosMemberConfiguration{"
+                + "master=" + master
+                + ", version=" + version
+                + ", allMembers=" + allMembers
+                + '}';
     }
 }

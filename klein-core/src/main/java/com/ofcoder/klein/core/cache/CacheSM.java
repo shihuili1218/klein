@@ -37,22 +37,24 @@ import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 import com.ofcoder.klein.core.config.CacheProp;
 
 /**
+ * Cache SM.
+ *
  * @author 释慧利
  */
 public class CacheSM extends AbstractSM {
-    private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
     public static final String GROUP = "cache";
+    private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
     private final LRUMap container;
     private final CacheProp cacheProp;
 
-    public CacheSM(CacheProp cacheProp) {
+    public CacheSM(final CacheProp cacheProp) {
         this.cacheProp = cacheProp;
         this.container = new LRUMap(cacheProp.getMemorySize(), cacheProp.getDataPath() + "." + cacheProp.getId());
     }
 
     @Override
-    public Object apply(Object data) {
+    public Object apply(final Object data) {
         LOG.info("apply data: {}", data);
         if (!(data instanceof Message)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
@@ -88,7 +90,7 @@ public class CacheSM extends AbstractSM {
     }
 
     @Override
-    public void loadImage(Object snap) {
+    public void loadImage(final Object snap) {
         container.clear();
         container.loadImage(snap);
     }
@@ -103,24 +105,24 @@ public class CacheSM extends AbstractSM {
         private final ConcurrentMap<String, MetaData> file;
         private final DB db;
 
-        public LRUMap(int size, String dataPath) {
+        public LRUMap(final int size, final String dataPath) {
             memory = new MemoryMap<>(size);
             db = DBMaker.fileDB(dataPath).make();
             this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData>() {
                 @Override
-                public void serialize(@NotNull DataOutput2 out, @NotNull MetaData value) throws IOException {
+                public void serialize(@NotNull final DataOutput2 out, @NotNull final MetaData value) throws IOException {
                     out.write(Hessian2Util.serialize(value));
                 }
 
                 @Override
-                public MetaData deserialize(@NotNull DataInput2 input, int available) throws IOException {
+                public MetaData deserialize(@NotNull final DataInput2 input, final int available) throws IOException {
                     return Hessian2Util.deserialize(input.internalByteArray());
                 }
             }).createOrOpen();
 
         }
 
-        private boolean checkExpire(String key, MetaData metaData) {
+        private boolean checkExpire(final String key, final MetaData metaData) {
             if (metaData == null) {
                 return false;
             }
@@ -135,7 +137,7 @@ public class CacheSM extends AbstractSM {
             }
         }
 
-        private MetaData getValueFormMemberOrFile(String key) {
+        private MetaData getValueFormMemberOrFile(final String key) {
             MetaData metaData = null;
             if (memory.containsKey(key)) {
                 metaData = memory.get(key);
@@ -147,12 +149,12 @@ public class CacheSM extends AbstractSM {
             return metaData;
         }
 
-        public boolean exist(String key) {
+        private boolean exist(final String key) {
             MetaData metaData = getValueFormMemberOrFile(key);
             return checkExpire(key, metaData);
         }
 
-        public Object get(String key) {
+        private Object get(final String key) {
             MetaData metaData = getValueFormMemberOrFile(key);
             if (checkExpire(key, metaData)) {
                 return metaData.getData();
@@ -161,7 +163,7 @@ public class CacheSM extends AbstractSM {
             }
         }
 
-        public synchronized void put(String key, Serializable data) {
+        private synchronized void put(final String key, final Serializable data) {
             MetaData value = new MetaData();
             value.setExpire(Message.TTL_PERPETUITY);
             value.setData(data);
@@ -170,7 +172,7 @@ public class CacheSM extends AbstractSM {
             memory.put(key, value);
         }
 
-        public synchronized void put(String key, Serializable data, long expire) {
+        private synchronized void put(final String key, final Serializable data, final long expire) {
             MetaData value = new MetaData();
             value.setExpire(expire);
             value.setData(data);
@@ -179,7 +181,7 @@ public class CacheSM extends AbstractSM {
             memory.put(key, value);
         }
 
-        public synchronized Object putIfAbsent(String key, Serializable data, long expire) {
+        private synchronized Object putIfAbsent(final String key, final Serializable data, final long expire) {
             MetaData value = new MetaData();
             value.setExpire(expire);
             value.setData(data);
@@ -191,21 +193,21 @@ public class CacheSM extends AbstractSM {
             return metaData.getData();
         }
 
-        public synchronized void remove(String key) {
+        private synchronized void remove(final String key) {
             file.remove(key);
             memory.remove(key);
         }
 
-        public synchronized void clear() {
+        private synchronized void clear() {
             file.clear();
             memory.clear();
         }
 
-        public Object makeImage() {
+        private Object makeImage() {
             return new HashMap<>(file);
         }
 
-        public synchronized void loadImage(Object image) {
+        private synchronized void loadImage(final Object image) {
             if (!(image instanceof Map)) {
                 return;
             }
@@ -214,7 +216,8 @@ public class CacheSM extends AbstractSM {
             file.putAll(snap);
             memory.putAll(snap);
         }
-        private void close(){
+
+        private void close() {
             db.close();
         }
     }
@@ -222,12 +225,12 @@ public class CacheSM extends AbstractSM {
     protected static class MemoryMap<K, V> extends LinkedHashMap<K, V> {
         private final int capacity;
 
-        public MemoryMap(int initialCapacity) {
+        public MemoryMap(final int initialCapacity) {
             super(initialCapacity, 0.75f, true);
             this.capacity = initialCapacity;
         }
 
-        protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+        protected boolean removeEldestEntry(final Map.Entry<K, V> eldest) {
             return size() > capacity;
         }
     }

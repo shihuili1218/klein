@@ -27,17 +27,19 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * SnapSync Request Processor.
+ *
  * @author 释慧利
  */
 public class SnapSyncProcessor extends AbstractRpcProcessor<SnapSyncReq> {
     private PaxosNode self;
 
-    public SnapSyncProcessor(PaxosNode self) {
+    public SnapSyncProcessor(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void handleRequest(SnapSyncReq request, RpcContext context) {
+    public void handleRequest(final SnapSyncReq request, final RpcContext context) {
         SnapSyncRes snapSyncRes = RoleAccessor.getLearner().handleSnapSyncRequest(request);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(snapSyncRes)));
     }

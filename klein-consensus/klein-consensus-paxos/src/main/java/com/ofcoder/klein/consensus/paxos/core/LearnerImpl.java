@@ -65,6 +65,8 @@ import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
+ * learner implement.
+ *
  * @author 释慧利
  */
 public class LearnerImpl implements Learner {
@@ -77,16 +79,16 @@ public class LearnerImpl implements Learner {
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private CountDownLatch shutdownLatch;
     private final Map<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
 
-    public LearnerImpl(PaxosNode self) {
+    public LearnerImpl(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void init(ConsensusProp op) {
+    public void init(final ConsensusProp op) {
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
@@ -127,7 +129,7 @@ public class LearnerImpl implements Learner {
         }
     }
 
-    private void loadSnap(String group, Snap lastSnap) {
+    private void loadSnap(final String group, final Snap lastSnap) {
         if (lastSnap == null) {
             return;
         }
@@ -139,8 +141,8 @@ public class LearnerImpl implements Learner {
             }
             SM sm = sms.get(group);
             if (sm == null) {
-                LOG.warn("load snap failure, group: {}, The state machine is not found." +
-                        " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                LOG.warn("load snap failure, group: {}, The state machine is not found."
+                        + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
                 return;
             }
 
@@ -164,7 +166,7 @@ public class LearnerImpl implements Learner {
         loadSnap(group, lastSnap);
     }
 
-    private void apply(long instanceId) {
+    private void apply(final long instanceId) {
         final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(maxAppliedInstanceId, lastCheckpoint);
@@ -225,7 +227,7 @@ public class LearnerImpl implements Learner {
         }
     }
 
-    private Object _apply(long instance, Proposal data) {
+    private Object _apply(final long instance, final Proposal data) {
         LOG.info("doing apply instance[{}]", instance);
         if (data.getData() instanceof Proposal.Noop) {
             //do nothing
@@ -255,7 +257,7 @@ public class LearnerImpl implements Learner {
 
     }
 
-    private boolean learnHard(long instanceId, List<Proposal> defaultValue) {
+    private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
         boolean lr = false;
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
@@ -269,6 +271,7 @@ public class LearnerImpl implements Learner {
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
+                // do nothing, lr = false
             }
         } else {
             final Endpoint master = MemberManager.createRef().getMaster();
@@ -289,7 +292,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void learn(long instanceId, Endpoint target, LearnCallback callback) {
+    public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
         List<LearnCallback> callbacks = learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
         if (callbacks != null) {
@@ -311,7 +314,7 @@ public class LearnerImpl implements Learner {
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
         client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
             @Override
-            public void error(Throwable err) {
+            public void error(final Throwable err) {
                 LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
                 List<LearnCallback> remove = learningCallbacks.remove(instanceId);
                 if (remove != null) {
@@ -320,7 +323,7 @@ public class LearnerImpl implements Learner {
             }
 
             @Override
-            public void complete(LearnRes result) {
+            public void complete(final LearnRes result) {
                 if (result.isResult() == Sync.SNAP) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
                     long checkpoint = snapSync(target);
@@ -388,7 +391,8 @@ public class LearnerImpl implements Learner {
             return;
         }
 
-        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]", target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
         if (targetCheckpoint > localApplied) {
             snapSync(target);
         } else {
@@ -404,7 +408,7 @@ public class LearnerImpl implements Learner {
         return true;
     }
 
-    private long snapSync(Endpoint target) {
+    private long snapSync(final Endpoint target) {
         LOG.info("start snap sync from node-{}", target.getId());
 
         long checkpoint = -1;
@@ -419,13 +423,13 @@ public class LearnerImpl implements Learner {
                     .build();
             client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
                 @Override
-                public void error(Throwable err) {
+                public void error(final Throwable err) {
                     LOG.error("snap sync from node-{}, {}", target.getId(), err.getMessage());
                     future.completeExceptionally(err);
                 }
 
                 @Override
-                public void complete(SnapSyncRes result) {
+                public void complete(final SnapSyncRes result) {
                     future.complete(result);
                 }
             }, 1000);
@@ -457,7 +461,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(long instanceId, final List<ProposeDone> dons) {
+    public void confirm(final long instanceId, final List<ProposeDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         applyCallback.putIfAbsent(instanceId, new ArrayList<>());
@@ -483,13 +487,13 @@ public class LearnerImpl implements Learner {
         configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
             client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
                 @Override
-                public void error(Throwable err) {
+                public void error(final Throwable err) {
                     LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
                     // do nothing
                 }
 
                 @Override
-                public void complete(Serializable result) {
+                public void complete(final Serializable result) {
                     // do nothing
                 }
             }, 1000);
@@ -497,7 +501,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void handleConfirmRequest(ConfirmReq req) {
+    public void handleConfirmRequest(final ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
         if (req.getInstanceId() <= self.getLastCheckpoint()) {
@@ -545,7 +549,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public LearnRes handleLearnRequest(LearnReq request) {
+    public LearnRes handleLearnRequest(final LearnReq request) {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
         LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
 
@@ -557,8 +561,8 @@ public class LearnerImpl implements Learner {
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             return res.result(Sync.SINGLE).instance(instance).build();
         } else {
-            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId()
-                    , self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
+            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId(),
+                    self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
             if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
@@ -576,7 +580,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public SnapSyncRes handleSnapSyncRequest(SnapSyncReq req) {
+    public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
         LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
                 .images(new HashMap<>())
@@ -590,4 +594,5 @@ public class LearnerImpl implements Learner {
         }
         return res;
     }
+
 }

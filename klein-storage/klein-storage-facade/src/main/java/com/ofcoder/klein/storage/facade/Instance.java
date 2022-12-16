@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
+ * Instance information.
+ *
  * @author 释慧利
  */
 public class Instance<D extends Serializable> implements Serializable {
@@ -31,47 +33,97 @@ public class Instance<D extends Serializable> implements Serializable {
     private State state = State.PREPARED;
     private AtomicBoolean applied = new AtomicBoolean(false);
 
+    /**
+     * get instance id.
+     *
+     * @return instance id
+     */
     public long getInstanceId() {
         return instanceId;
     }
 
-    public void setInstanceId(long instanceId) {
+    /**
+     * set instance id.
+     *
+     * @param instanceId instance id
+     */
+    public void setInstanceId(final long instanceId) {
         this.instanceId = instanceId;
     }
 
+    /**
+     * get instance’s proposalNo.
+     *
+     * @return proposalNo
+     */
     public long getProposalNo() {
         return proposalNo;
     }
 
-    public void setProposalNo(long proposalNo) {
+    /**
+     * set instance’s proposalNo.
+     *
+     * @param proposalNo proposalNo
+     */
+    public void setProposalNo(final long proposalNo) {
         this.proposalNo = proposalNo;
     }
 
+    /**
+     * get granted value.
+     *
+     * @return granted value
+     */
     public List<D> getGrantedValue() {
         return grantedValue;
     }
 
-    public void setGrantedValue(List<D> grantedValue) {
+    /**
+     * set granted value.
+     *
+     * @param grantedValue granted value
+     */
+    public void setGrantedValue(final List<D> grantedValue) {
         this.grantedValue = grantedValue;
     }
 
+    /**
+     * get instance's state.
+     *
+     * @return instance's state.
+     */
     public State getState() {
         return state;
     }
 
-    public void setState(State state) {
+    /**
+     * set instance's state.
+     *
+     * @param state instance's state.
+     */
+    public void setState(final State state) {
         this.state = state;
     }
 
+    /**
+     * get apply state.
+     *
+     * @return apply state
+     */
     public AtomicBoolean getApplied() {
         return applied;
     }
 
-    public void setApplied(AtomicBoolean applied) {
+    /**
+     * set apply state.
+     *
+     * @param applied apply state
+     */
+    public void setApplied(final AtomicBoolean applied) {
         this.applied = applied;
     }
 
-    public static enum State {
+    public enum State {
         PREPARED, ACCEPTED, CONFIRMED;
     }
 
@@ -85,35 +137,76 @@ public class Instance<D extends Serializable> implements Serializable {
         private Builder() {
         }
 
+        /**
+         * anInstance.
+         *
+         * @param <B> Instance data type
+         * @return Builder
+         */
         public static <B extends Serializable> Builder<B> anInstance() {
             return new Builder<>();
         }
 
-        public Builder<B> instanceId(long instanceId) {
+        /**
+         * instanceId.
+         *
+         * @param instanceId instanceId
+         * @return Builder
+         */
+        public Builder<B> instanceId(final long instanceId) {
             this.instanceId = instanceId;
             return this;
         }
 
-        public Builder<B> proposalNo(long proposalNo) {
+        /**
+         * proposalNo.
+         *
+         * @param proposalNo proposalNo
+         * @return Builder
+         */
+        public Builder<B> proposalNo(final long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder<B> grantedValue(List<B> grantedValue) {
+        /**
+         * grantedValue.
+         *
+         * @param grantedValue grantedValue
+         * @return Builder
+         */
+        public Builder<B> grantedValue(final List<B> grantedValue) {
             this.grantedValue = grantedValue;
             return this;
         }
 
-        public Builder<B> state(State state) {
+        /**
+         * state.
+         *
+         * @param state state
+         * @return Builder
+         */
+        public Builder<B> state(final State state) {
             this.state = state;
             return this;
         }
 
-        public Builder<B> applied(AtomicBoolean applied) {
+        /**
+         * applied.
+         *
+         * @param applied applied
+         * @return Builder
+         */
+        public Builder<B> applied(final AtomicBoolean applied) {
             this.applied = applied;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return Instance
+         */
         public Instance<B> build() {
             Instance<B> instance = new Instance<>();
             instance.setInstanceId(instanceId);

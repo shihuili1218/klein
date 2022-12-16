@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.consensus.facade;
 
 import java.io.Serializable;
@@ -18,6 +34,8 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * MemberConfiguration.
+ *
  * @author far.liu
  */
 public abstract class MemberConfiguration implements Serializable {
@@ -33,33 +51,33 @@ public abstract class MemberConfiguration implements Serializable {
         return new HashSet<>(allMembers.values());
     }
 
-    public Set<Endpoint> getMembersWithout(String selfId) {
+    public Set<Endpoint> getMembersWithout(final String selfId) {
         return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
                 .collect(Collectors.toSet());
     }
 
-    public boolean isValid(String nodeId) {
+    public boolean isValid(final String nodeId) {
         return allMembers.containsKey(nodeId);
     }
 
-    public Endpoint getEndpointById(String id) {
+    public Endpoint getEndpointById(final String id) {
         if (StringUtils.isEmpty(id)) {
             return null;
         }
         return allMembers.getOrDefault(id, null);
     }
 
-    protected void writeOn(Endpoint node) {
+    protected void writeOn(final Endpoint node) {
         allMembers.put(node.getId(), node);
         version.incrementAndGet();
     }
 
-    protected void writeOff(Endpoint node) {
+    protected void writeOff(final Endpoint node) {
         allMembers.remove(node.getId());
         version.incrementAndGet();
     }
 
-    protected void init(List<Endpoint> nodes) {
+    protected void init(final List<Endpoint> nodes) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
@@ -69,9 +87,9 @@ public abstract class MemberConfiguration implements Serializable {
 
     @Override
     public String toString() {
-        return "MemberConfiguration{" +
-                "version=" + version +
-                ", allMembers=" + allMembers +
-                '}';
+        return "MemberConfiguration{"
+                + "version=" + version
+                + ", allMembers=" + allMembers
+                + '}';
     }
 }

@@ -17,14 +17,16 @@
 package com.ofcoder.klein.consensus.facade.exception;
 
 /**
+ * StateMachine Exception.
+ *
  * @author: 释慧利
  */
-public class StateMachineException extends ConsensusException{
-    public StateMachineException(String message) {
+public class StateMachineException extends ConsensusException {
+    public StateMachineException(final String message) {
         super(message);
     }
 
-    public StateMachineException(String message, Throwable cause) {
+    public StateMachineException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

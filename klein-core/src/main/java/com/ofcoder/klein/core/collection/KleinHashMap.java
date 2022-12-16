@@ -24,9 +24,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
+ * KleinHashMap.
+ *
  * @author 释慧利
  */
-public class KleinHashMap<K,V> implements Map<K,V> {
+public class KleinHashMap<K, V> implements Map<K, V> {
     @Override
     public int size() {
         return 0;
@@ -38,33 +40,33 @@ public class KleinHashMap<K,V> implements Map<K,V> {
     }
 
     @Override
-    public boolean containsKey(Object key) {
+    public boolean containsKey(final Object key) {
         return false;
     }
 
     @Override
-    public boolean containsValue(Object value) {
+    public boolean containsValue(final Object value) {
         return false;
     }
 
     @Override
-    public V get(Object key) {
+    public V get(final Object key) {
         return null;
     }
 
     @Nullable
     @Override
-    public V put(K key, V value) {
+    public V put(final K key, final V value) {
         return null;
     }
 
     @Override
-    public V remove(Object key) {
+    public V remove(final Object key) {
         return null;
     }
 
     @Override
-    public void putAll(@NotNull Map<? extends K, ? extends V> m) {
+    public void putAll(@NotNull final Map<? extends K, ? extends V> m) {
 
     }
 
