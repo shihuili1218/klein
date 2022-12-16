@@ -1,0 +1,42 @@
+name: mvn_test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check_format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+      - name: Check code style
+        run: mvn clean compile
+        
+      - name: Package
+        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+        
+      - name: Test klein-common
+        run:  mvn --projects klein-common test
+        
+      - name: Test klein-spi
+        run:  mvn --projects klein-spi test
+        
+      - name: Test klein-rpc
+        run:  mvn --projects klein-rpc test        
+        
+      - name: Test klein-storage
+        run:  mvn --projects klein-storage test
+      
+      - name: Test klein-consensus
+        run:  mvn --projects klein-consensus test
+         
+      - name: Test klein-core
+        run:  mvn --projects klein-core test        
+  
+                    
