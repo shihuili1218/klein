@@ -17,14 +17,26 @@
 package com.ofcoder.klein.common;
 
 /**
+ * Bean Holder.
+ *
  * @author 释慧利
  */
 public abstract class Holder<T> {
     private volatile T t;
     private final Object lock = new Object();
 
+    /**
+     * Create Bean.
+     *
+     * @return bean
+     */
     protected abstract T create();
 
+    /**
+     * Get Bean.
+     *
+     * @return bean
+     */
     public T get() {
         if (t == null) {
             synchronized (lock) {

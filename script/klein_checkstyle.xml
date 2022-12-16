@@ -241,7 +241,9 @@
             <property name="tagOrder" value="@param, @return, @throws, @deprecated"/>
         </module>
         <module name="NonEmptyAtclauseDescription"/>
-        <module name="JavadocParagraph"/>
+        <module name="JavadocParagraph">
+            <property name="allowNewlineParagraph" value="false"/>
+        </module>
         <module name="JavadocStyle"/>
         <module name="JavadocTagContinuationIndentation"/>
         <module name="SingleLineJavadoc"/>

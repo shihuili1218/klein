@@ -25,45 +25,50 @@ import com.lmax.disruptor.ExceptionHandler;
  * Disruptor exception handler.
  *
  * @author boyan (boyan@alibaba-inc.com)
- *
- * 2018-Apr-05 9:31:28 PM
  */
 public final class DisruptorExceptionHandler<T> implements ExceptionHandler<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(DisruptorExceptionHandler.class);
 
-    public interface OnEventException<T> {
-
-        void onException(T event, Throwable ex);
-    }
-
-    private final String              name;
+    private final String name;
     private final OnEventException<T> onEventException;
 
-    public DisruptorExceptionHandler(String name) {
+    public DisruptorExceptionHandler(final String name) {
         this(name, null);
     }
 
-    public DisruptorExceptionHandler(String name, OnEventException<T> onEventException) {
+    public DisruptorExceptionHandler(final String name, final OnEventException<T> onEventException) {
         this.name = name;
         this.onEventException = onEventException;
     }
 
     @Override
-    public void handleOnStartException(Throwable ex) {
+    public void handleOnStartException(final Throwable ex) {
         LOG.error("Fail to start {} disruptor", this.name, ex);
     }
 
     @Override
-    public void handleOnShutdownException(Throwable ex) {
+    public void handleOnShutdownException(final Throwable ex) {
         LOG.error("Fail to shutdown {} disruptor", this.name, ex);
     }
 
     @Override
-    public void handleEventException(Throwable ex, long sequence, T event) {
+    public void handleEventException(final Throwable ex, final long sequence, final T event) {
         LOG.error("Handle {} disruptor event error, event is {}", this.name, event, ex);
         if (this.onEventException != null) {
             this.onEventException.onException(event, ex);
         }
     }
+
+    public interface OnEventException<T> {
+
+        /**
+         * Occur exception.
+         *
+         * @param event event
+         * @param ex    exception
+         */
+        void onException(T event, Throwable ex);
+    }
+
 }

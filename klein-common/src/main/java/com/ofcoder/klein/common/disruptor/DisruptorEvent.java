@@ -19,16 +19,28 @@ package com.ofcoder.klein.common.disruptor;
 import java.util.concurrent.CountDownLatch;
 
 /**
+ * Disruptor Event.
+ *
  * @author 释慧利
  */
 public class DisruptorEvent {
     private CountDownLatch shutdownLatch;
 
+    /**
+     * Get ShutdownLatch.
+     *
+     * @return ShutdownLatch
+     */
     public CountDownLatch getShutdownLatch() {
         return shutdownLatch;
     }
 
-    public void setShutdownLatch(CountDownLatch shutdownLatch) {
+    /**
+     * Set ShutdownLatch.
+     *
+     * @param shutdownLatch ShutdownLatch
+     */
+    public void setShutdownLatch(final CountDownLatch shutdownLatch) {
         this.shutdownLatch = shutdownLatch;
     }
 }

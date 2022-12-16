@@ -19,10 +19,13 @@ package com.ofcoder.klein.common.util;
 /**
  * Simple static methods to be called at the start of your own methods to verify
  * correct arguments and state.
+ *
  * <p>
  * Forked from <a href="https://github.com/sofastack/sofa-jraft">sofa-jraft</a>.
  */
 public final class Requires {
+    private Requires() {
+    }
 
     /**
      * Checks that the specified object reference is not {@code null}.
@@ -32,7 +35,7 @@ public final class Requires {
      * @return {@code obj} if not {@code null}
      * @throws NullPointerException if {@code obj} is {@code null}
      */
-    public static <T> T requireNonNull(T obj) {
+    public static <T> T requireNonNull(final T obj) {
         if (obj == null) {
             throw new NullPointerException();
         }
@@ -50,7 +53,7 @@ public final class Requires {
      * @return {@code obj} if not {@code null}
      * @throws NullPointerException if {@code obj} is {@code null}
      */
-    public static <T> T requireNonNull(T obj, String message) {
+    public static <T> T requireNonNull(final T obj, final String message) {
         if (obj == null) {
             throw new NullPointerException(message);
         }
@@ -64,7 +67,7 @@ public final class Requires {
      * @param expression a boolean expression
      * @throws IllegalArgumentException if {@code expression} is false
      */
-    public static void requireTrue(boolean expression) {
+    public static void requireTrue(final boolean expression) {
         if (!expression) {
             throw new IllegalArgumentException();
         }
@@ -80,7 +83,7 @@ public final class Requires {
      *                   {@link String#valueOf(Object)}
      * @throws IllegalArgumentException if {@code expression} is false
      */
-    public static void requireTrue(boolean expression, Object message) {
+    public static void requireTrue(final boolean expression, final Object message) {
         if (!expression) {
             throw new IllegalArgumentException(String.valueOf(message));
         }
@@ -96,12 +99,10 @@ public final class Requires {
      *                   string
      * @throws IllegalArgumentException if {@code expression} is false
      */
-    public static void requireTrue(boolean expression, String fmt, Object... args) {
+    public static void requireTrue(final boolean expression, final String fmt, final Object... args) {
         if (!expression) {
             throw new IllegalArgumentException(String.format(fmt, args));
         }
     }
 
-    private Requires() {
-    }
 }
