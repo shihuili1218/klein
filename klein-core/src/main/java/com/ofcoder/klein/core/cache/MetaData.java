@@ -19,17 +19,18 @@ package com.ofcoder.klein.core.cache;
 import java.io.Serializable;
 
 /**
+ * MetaData.
+ *
  * @author 释慧利
  */
-public
-class MetaData implements Serializable {
+public class MetaData implements Serializable {
     private long expire = -1;
     private Serializable data;
 
     public MetaData() {
     }
 
-    public MetaData(long expire, Serializable data) {
+    public MetaData(final long expire, final Serializable data) {
         this.expire = expire;
         this.data = data;
     }
@@ -38,7 +39,7 @@ class MetaData implements Serializable {
         return expire;
     }
 
-    public void setExpire(long expire) {
+    public void setExpire(final long expire) {
         this.expire = expire;
     }
 
@@ -46,7 +47,7 @@ class MetaData implements Serializable {
         return data;
     }
 
-    public void setData(Serializable data) {
+    public void setData(final Serializable data) {
         this.data = data;
     }
 }

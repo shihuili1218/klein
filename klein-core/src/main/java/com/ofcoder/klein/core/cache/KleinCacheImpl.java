@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.core.cache;
 
 import java.io.Serializable;
@@ -12,18 +28,20 @@ import com.ofcoder.klein.core.GroupWrapper;
 import com.ofcoder.klein.core.config.CacheProp;
 
 /**
+ * Klein Cache Implement.
+ *
  * @author 释慧利
  */
 public class KleinCacheImpl implements KleinCache {
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected GroupWrapper consensus;
 
-    public KleinCacheImpl(CacheProp cacheProp) {
+    public KleinCacheImpl(final CacheProp cacheProp) {
         this.consensus = new GroupWrapper(CacheSM.GROUP, new CacheSM(cacheProp));
     }
 
     @Override
-    public boolean exist(String key) {
+    public boolean exist(final String key) {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.EXIST);
@@ -35,7 +53,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> boolean put(String key, D data) {
+    public <D extends Serializable> boolean put(final String key, final D data) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
@@ -45,7 +63,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> boolean put(String key, D data, Long ttl, TimeUnit unit) {
+    public <D extends Serializable> boolean put(final String key, final D data, final Long ttl, final TimeUnit unit) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
@@ -57,7 +75,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> D putIfPresent(String key, D data) {
+    public <D extends Serializable> D putIfPresent(final String key, final D data) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
@@ -70,7 +88,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> D putIfPresent(String key, D data, Long ttl, TimeUnit unit) {
+    public <D extends Serializable> D putIfPresent(final String key, final D data, final Long ttl, final TimeUnit unit) {
         Message message = new Message();
         message.setData(data);
         message.setKey(key);
@@ -84,7 +102,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> D get(String key) {
+    public <D extends Serializable> D get(final String key) {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.GET);
@@ -96,7 +114,7 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public void invalidate(String key) {
+    public void invalidate(final String key) {
         Message message = new Message();
         message.setKey(key);
         message.setOp(Message.INVALIDATE);

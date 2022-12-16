@@ -21,6 +21,8 @@ import java.io.File;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
+ * Cache Property.
+ *
  * @author 释慧利
  */
 public class CacheProp {
@@ -34,7 +36,7 @@ public class CacheProp {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(final String id) {
         this.id = id;
     }
 
@@ -42,7 +44,7 @@ public class CacheProp {
         return memorySize;
     }
 
-    public void setMemorySize(int memorySize) {
+    public void setMemorySize(final int memorySize) {
         this.memorySize = memorySize;
     }
 
@@ -50,7 +52,7 @@ public class CacheProp {
         return dataPath;
     }
 
-    public void setDataPath(String dataPath) {
+    public void setDataPath(final String dataPath) {
         this.dataPath = dataPath;
     }
 }

@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.core.config;
 
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
@@ -6,6 +22,7 @@ import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 
 /**
+ * Klein Prop.
  * @author 释慧利
  */
 public class KleinProp {
@@ -24,7 +41,7 @@ public class KleinProp {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(final String id) {
         this.id = id;
     }
 
@@ -32,7 +49,7 @@ public class KleinProp {
         return port;
     }
 
-    public void setPort(int port) {
+    public void setPort(final int port) {
         this.port = port;
     }
 
@@ -40,7 +57,7 @@ public class KleinProp {
         return ip;
     }
 
-    public void setIp(String ip) {
+    public void setIp(final String ip) {
         this.ip = ip;
     }
 
@@ -48,7 +65,7 @@ public class KleinProp {
         return storage;
     }
 
-    public void setStorage(String storage) {
+    public void setStorage(final String storage) {
         this.storage = storage;
     }
 
@@ -56,7 +73,7 @@ public class KleinProp {
         return consensus;
     }
 
-    public void setConsensus(String consensus) {
+    public void setConsensus(final String consensus) {
         this.consensus = consensus;
     }
 
@@ -64,7 +81,7 @@ public class KleinProp {
         return consensusProp;
     }
 
-    public void setConsensusProp(ConsensusProp consensusProp) {
+    public void setConsensusProp(final ConsensusProp consensusProp) {
         this.consensusProp = consensusProp;
     }
 
@@ -72,7 +89,7 @@ public class KleinProp {
         return rpc;
     }
 
-    public void setRpc(String rpc) {
+    public void setRpc(final String rpc) {
         this.rpc = rpc;
     }
 
@@ -80,7 +97,7 @@ public class KleinProp {
         return storageProp;
     }
 
-    public void setStorageProp(StorageProp storageProp) {
+    public void setStorageProp(final StorageProp storageProp) {
         this.storageProp = storageProp;
     }
 
@@ -88,7 +105,7 @@ public class KleinProp {
         return rpcProp;
     }
 
-    public void setRpcProp(RpcProp rpcProp) {
+    public void setRpcProp(final RpcProp rpcProp) {
         this.rpcProp = rpcProp;
     }
 
@@ -96,10 +113,14 @@ public class KleinProp {
         return cacheProp;
     }
 
-    public void setCacheProp(CacheProp cacheProp) {
+    public void setCacheProp(final CacheProp cacheProp) {
         this.cacheProp = cacheProp;
     }
 
+    /**
+     * loadIfPresent.
+     * @return KleinProp
+     */
     public static KleinProp loadIfPresent() {
         return KleinPropHolder.INSTANCE;
     }

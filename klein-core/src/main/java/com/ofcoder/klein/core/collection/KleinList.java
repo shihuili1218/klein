@@ -24,6 +24,8 @@ import java.util.ListIterator;
 import org.jetbrains.annotations.NotNull;
 
 /**
+ * KleinList.
+ *
  * @author 释慧利
  */
 public class KleinList<E> implements List<E> {
@@ -38,7 +40,7 @@ public class KleinList<E> implements List<E> {
     }
 
     @Override
-    public boolean contains(Object o) {
+    public boolean contains(final Object o) {
         return false;
     }
 
@@ -56,42 +58,42 @@ public class KleinList<E> implements List<E> {
 
     @NotNull
     @Override
-    public <T> T[] toArray(@NotNull T[] a) {
+    public <T> T[] toArray(@NotNull final T[] a) {
         return null;
     }
 
     @Override
-    public boolean add(E e) {
+    public boolean add(final E e) {
         return false;
     }
 
     @Override
-    public boolean remove(Object o) {
+    public boolean remove(final Object o) {
         return false;
     }
 
     @Override
-    public boolean containsAll(@NotNull Collection<?> c) {
+    public boolean containsAll(@NotNull final Collection<?> c) {
         return false;
     }
 
     @Override
-    public boolean addAll(@NotNull Collection<? extends E> c) {
+    public boolean addAll(@NotNull final Collection<? extends E> c) {
         return false;
     }
 
     @Override
-    public boolean addAll(int index, @NotNull Collection<? extends E> c) {
+    public boolean addAll(final int index, @NotNull final Collection<? extends E> c) {
         return false;
     }
 
     @Override
-    public boolean removeAll(@NotNull Collection<?> c) {
+    public boolean removeAll(@NotNull final Collection<?> c) {
         return false;
     }
 
     @Override
-    public boolean retainAll(@NotNull Collection<?> c) {
+    public boolean retainAll(@NotNull final Collection<?> c) {
         return false;
     }
 
@@ -101,32 +103,32 @@ public class KleinList<E> implements List<E> {
     }
 
     @Override
-    public E get(int index) {
+    public E get(final int index) {
         return null;
     }
 
     @Override
-    public E set(int index, E element) {
+    public E set(final int index, final E element) {
         return null;
     }
 
     @Override
-    public void add(int index, E element) {
+    public void add(final int index, final E element) {
 
     }
 
     @Override
-    public E remove(int index) {
+    public E remove(final int index) {
         return null;
     }
 
     @Override
-    public int indexOf(Object o) {
+    public int indexOf(final Object o) {
         return 0;
     }
 
     @Override
-    public int lastIndexOf(Object o) {
+    public int lastIndexOf(final Object o) {
         return 0;
     }
 
@@ -138,13 +140,13 @@ public class KleinList<E> implements List<E> {
 
     @NotNull
     @Override
-    public ListIterator<E> listIterator(int index) {
+    public ListIterator<E> listIterator(final int index) {
         return null;
     }
 
     @NotNull
     @Override
-    public List<E> subList(int fromIndex, int toIndex) {
+    public List<E> subList(final int fromIndex, final int toIndex) {
         return null;
     }
 }

@@ -36,10 +36,10 @@ public class RemoteAddressInterceptor implements ServerInterceptor {
     private static final Context.Key<SocketAddress> REMOTE_ADDRESS = Context.key("remote-address");
 
     @Override
-    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(final ServerCall<ReqT, RespT> call,
-                                                                 final Metadata headers,
-                                                                 final ServerCallHandler<ReqT, RespT> next) {
-        final Context ctx = Context.current() //
+    public <REQT, REST> ServerCall.Listener<REQT> interceptCall(final ServerCall<REQT, REST> call,
+                                                                final Metadata headers,
+                                                                final ServerCallHandler<REQT, REST> next) {
+        final Context ctx = Context.current()
             .withValue(REMOTE_ADDRESS, call.getAttributes().get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR));
         return Contexts.interceptCall(ctx, call, headers, next);
     }
