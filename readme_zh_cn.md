@@ -1,3 +1,5 @@
+### [English](readme.md)
+
 # 介绍
 ![](logo.svg)
 
@@ -42,7 +44,7 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 
 ### 缓存
 - [x] 读、写、等基础功能
-- [ ] 配合持久化实现LRU
+- [x] 配合持久化实现LRU
 - [x] TTL自动过期
 
 ### 集合
@@ -55,7 +57,7 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 - [ ] 监控协商效率
 - [ ] 监控线程池指标(DefaultTimer, ThreadExecutor)
 - [x] ProposalNo全局唯一
-- [ ] 状态机持久化（master、lock）
+- [x] 状态机持久化（master、lock）
 
 # 章解
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)

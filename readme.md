@@ -1,3 +1,5 @@
+### [中文](readme_zh_cn.md)
+
 # Introduce
 ![logo](logo.svg)
 
@@ -44,7 +46,7 @@ this is still in the process of implementation. 😆😆😆
 
 ### Cache
 - [x] Basic functions such as reading, writing, etc
-- [ ] Implement LRU with persistence
+- [x] Implement LRU with persistence
 - [x] Cache Automatic Expiration (TTL)
 
 ### Collection
@@ -56,7 +58,7 @@ this is still in the process of implementation. 😆😆😆
 - [ ] Monitor negotiation efficiency
 - [ ] Monitoring thread pool indicators (DefaultTimer, ThreadExecutor)
 - [x] ProposalNo全局唯一
-- [ ] 状态机持久化（master、lock）
+- [x] 状态机持久化（master、lock）
 
 # Design ideas
 [Paxos](klein-consensus/klein-consensus-paxos/readme.md)
