@@ -15,24 +15,28 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - name: Check format
+      - name: Check code style
+        run: mvn clean compile
+        
+      - name: Package
         run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-      - name: test_klein_common
+        
+      - name: Test klein-common
         run:  mvn --projects klein-common test
         
-      - name: test_klein_spi
+      - name: Test klein-spi
         run:  mvn --projects klein-spi test
         
-      - name: test_klein_rpc
+      - name: Test klein-rpc
         run:  mvn --projects klein-rpc test        
         
-      - name: test_klein_storage
+      - name: Test klein-storage
         run:  mvn --projects klein-storage test
       
-      - name: test_klein_consensus
+      - name: Test klein-consensus
         run:  mvn --projects klein-consensus test
-        
-      - name: test_klein_core
+         
+      - name: Test klein-core
         run:  mvn --projects klein-core test        
   
                     
