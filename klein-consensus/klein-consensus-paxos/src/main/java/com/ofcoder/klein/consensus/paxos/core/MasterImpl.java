@@ -319,7 +319,6 @@ public class MasterImpl implements Master {
 
             // reset and restart election timer
             if (!isSelf) {
-                updateMasterState(ElectState.FOLLOWING);
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
@@ -371,6 +370,7 @@ public class MasterImpl implements Master {
             updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
+            updateMasterState(ElectState.FOLLOWING);
             restartElect();
         }
     }
