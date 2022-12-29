@@ -152,26 +152,19 @@ public class MasterImpl implements Master {
             req.setOp(op);
 
             CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().tryBoost(
-                    new Holder<Long>() {
-                        @Override
-                        protected Long create() {
-                            return self.incrementInstanceId();
-                        }
-                    },
-                    Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
-                        @Override
-                        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
-                            if (!result) {
-                                latch.countDown();
-                            }
-                        }
+            RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
+                @Override
+                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+                    if (!result) {
+                        latch.countDown();
+                    }
+                }
 
-                        @Override
-                        public void applyDone(final Map<Proposal, Object> applyResults) {
-                            latch.countDown();
-                        }
-                    });
+                @Override
+                public void applyDone(final Map<Proposal, Object> applyResults) {
+                    latch.countDown();
+                }
+            });
             boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
             // do nothing for await.result
         } catch (InterruptedException e) {
