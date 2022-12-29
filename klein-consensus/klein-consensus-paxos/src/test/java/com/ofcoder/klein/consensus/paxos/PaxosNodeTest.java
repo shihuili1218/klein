@@ -5,7 +5,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-
 import junit.framework.TestCase;
 
 /**
@@ -25,7 +24,7 @@ public class PaxosNodeTest extends TestCase {
         assertEquals(node.generateNextProposalNo(), 3);
     }
 
-    public void testss(){
+    public void testRandomInt() {
         for (int i = 0; i < 10; i++) {
             System.out.println(ThreadLocalRandom.current().nextInt(600, 800));
         }

@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.common.disruptor;
 
+import java.util.concurrent.CountDownLatch;
+
 import org.junit.Test;
 
 import com.lmax.disruptor.BlockingWaitStrategy;
@@ -32,41 +34,31 @@ import junit.framework.TestCase;
  * @author far.liu
  */
 public class DisruptorBuilderTest extends TestCase {
-    /**
-     * Disruptor to run propose.
-     */
     private Disruptor<ProposeWithDone> applyDisruptor;
     private RingBuffer<ProposeWithDone> applyQueue;
-
-    @Override
-    protected void setUp() throws Exception {
-
-        this.applyDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
-                .setRingBufferSize(16384)
-                .setEventFactory(new ProposeEventFactory())
-                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
-                .setProducerType(ProducerType.MULTI)
-                .setWaitStrategy(new BlockingWaitStrategy())
-                .build();
-        this.applyDisruptor.handleEventsWith(new ProposeEventFactory.ProposeEventHandler());
-        this.applyDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
-        this.applyQueue = this.applyDisruptor.start();
-    }
 
     @Test
     public void test() throws Exception {
 
-        final EventTranslator<ProposeWithDone> translator = new EventTranslator<ProposeWithDone>() {
-            @Override
-            public void translateTo(final ProposeWithDone proposeWithDone, final long l) {
-                proposeWithDone.data = "";
-            }
-        };
+        CountDownLatch latch = new CountDownLatch(2);
+
+        this.applyDisruptor = DisruptorBuilder.<ProposeWithDone>newInstance()
+                .setRingBufferSize(16384)
+                .setEventFactory(ProposeWithDone::new)
+                .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true)) //
+                .setProducerType(ProducerType.MULTI)
+                .setWaitStrategy(new BlockingWaitStrategy())
+                .build();
+        this.applyDisruptor.handleEventsWith(new ProposeEventHandler(latch));
+        this.applyDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
+        this.applyQueue = this.applyDisruptor.start();
+
+        final EventTranslator<ProposeWithDone> translator = (proposeWithDone, l) -> proposeWithDone.data = "";
 
         this.applyQueue.publishEvent(translator);
         this.applyQueue.publishEvent(translator);
 
-        Thread.sleep(2200);
+        latch.await();
 
     }
 
@@ -74,21 +66,19 @@ public class DisruptorBuilderTest extends TestCase {
         private String data;
     }
 
-    private static class ProposeEventFactory implements EventFactory<ProposeWithDone> {
+    public static class ProposeEventHandler implements EventHandler<ProposeWithDone> {
+        CountDownLatch latch;
 
-        @Override
-        public ProposeWithDone newInstance() {
-            return new ProposeWithDone();
+        public ProposeEventHandler(CountDownLatch latch) {
+            this.latch = latch;
         }
 
-        public static class ProposeEventHandler implements EventHandler<ProposeWithDone> {
+        @Override
+        public void onEvent(ProposeWithDone proposeWithDone, final long l, final boolean b) throws Exception {
+            System.out.println("onEvent");
 
-            @Override
-            public void onEvent(ProposeWithDone proposeWithDone, final long l, final boolean b) throws Exception {
-                System.out.println("onEvent");
-
-                Thread.sleep(1000);
-            }
+            Thread.sleep(100);
+            latch.countDown();
         }
     }
 
