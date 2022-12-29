@@ -16,18 +16,16 @@
  */
 package com.ofcoder.klein.core.member;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
+ * Klein Member Impl.
+ *
  * @author 释慧利
  */
 public class KleinMemberImpl implements KleinMember {
@@ -40,23 +38,12 @@ public class KleinMemberImpl implements KleinMember {
 
     @Override
     public void addMember(final Endpoint endpoint) {
-        if (MemberManager.createRef().isValid(endpoint.getId())) {
-            return;
-        }
-        changeMember(ChangeMemberOp.ADD, endpoint);
+
     }
 
     @Override
     public void removeMember(final Endpoint endpoint) {
-        if (!MemberManager.createRef().isValid(endpoint.getId())) {
-            return;
-        }
-        changeMember(ChangeMemberOp.REMOVE, endpoint);
-    }
-
-    private void changeMember(final byte op, final Endpoint endpoint) {
-        LOG.info("start add member.");
-
 
     }
+
 }

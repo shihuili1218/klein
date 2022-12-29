@@ -19,7 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.Objects;
 
 import com.ofcoder.klein.consensus.facade.Node;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -37,6 +37,7 @@ public class PaxosNode extends Node {
     private long lastCheckpoint = 0;
     private final Object checkpointLock = new Object();
     private Endpoint self;
+    private transient PaxosMemberConfiguration memberConfig;
 
     /**
      * nextProposalNo = N * J + I.
@@ -46,7 +47,7 @@ public class PaxosNode extends Node {
      */
     public long generateNextProposalNo() {
         long cur = this.curProposalNo;
-        int n = MemberManager.getAllMembers().size();
+        int n = memberConfig.getAllMembers().size();
         long j = cur / n;
         if (cur % n > 0) {
             j = j + 1;
@@ -55,7 +56,6 @@ public class PaxosNode extends Node {
         updateCurProposalNo(next);
         return this.curProposalNo;
     }
-
 
     /**
      * This is a synchronous method, Double-Check-Lock.
@@ -137,6 +137,14 @@ public class PaxosNode extends Node {
                 this.lastCheckpoint = Math.max(lastCheckpoint, checkpoint);
             }
         }
+    }
+
+    public PaxosMemberConfiguration getMemberConfig() {
+        return memberConfig;
+    }
+
+    public void setMemberConfig(final PaxosMemberConfiguration memberConfig) {
+        this.memberConfig = memberConfig;
     }
 
     @Override

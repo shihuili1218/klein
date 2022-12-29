@@ -48,7 +48,6 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
@@ -73,6 +72,7 @@ public class LearnerImpl implements Learner {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerImpl.class);
     private RpcClient client;
     private final PaxosNode self;
+    private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
@@ -85,6 +85,7 @@ public class LearnerImpl implements Learner {
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
+        this.memberConfig = self.getMemberConfig();
     }
 
     @Override
@@ -274,7 +275,7 @@ public class LearnerImpl implements Learner {
                 // do nothing, lr = false
             }
         } else {
-            final Endpoint master = MemberManager.createRef().getMaster();
+            final Endpoint master = memberConfig.getMaster();
             if (master != null) {
                 lr = learnSync(instanceId, master);
             } else {
@@ -378,7 +379,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void keepSameData(final NodeState state) {
-        final Endpoint target = MemberManager.getEndpointById(state.getNodeId());
+        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
         if (target == null) {
             return;
         }
@@ -418,7 +419,7 @@ public class LearnerImpl implements Learner {
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
-                    .memberConfigurationVersion(MemberManager.createRef().getVersion())
+                    .memberConfigurationVersion(memberConfig.getVersion())
                     .checkpoint(self.getLastCheckpoint())
                     .build();
             client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
@@ -472,7 +473,7 @@ public class LearnerImpl implements Learner {
         // Instead, using self.proposalNo allows you to more quickly advance a proposalNo for another member
         long curProposalNo = self.getCurProposalNo();
 
-        PaxosMemberConfiguration configuration = MemberManager.createRef();
+        PaxosMemberConfiguration configuration = memberConfig.createRef();
 
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
@@ -518,7 +519,7 @@ public class LearnerImpl implements Learner {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                learn(req.getInstanceId(), MemberManager.getEndpointById(req.getNodeId()));
+                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
                 return;
             }
 

@@ -32,13 +32,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
  * MemberConfiguration.
  *
  * @author far.liu
  */
-public abstract class MemberConfiguration implements Serializable {
+public class MemberConfiguration implements Serializable, LogManager.ClusterConfig {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
     protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();
@@ -47,6 +48,11 @@ public abstract class MemberConfiguration implements Serializable {
         return version.get();
     }
 
+    /**
+     * get all members.
+     *
+     * @return all members
+     */
     public Set<Endpoint> getAllMembers() {
         return new HashSet<>(allMembers.values());
     }
@@ -56,10 +62,22 @@ public abstract class MemberConfiguration implements Serializable {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * check node is valid.
+     *
+     * @param nodeId check node id
+     * @return is valid
+     */
     public boolean isValid(final String nodeId) {
         return allMembers.containsKey(nodeId);
     }
 
+    /**
+     * get endpoint info by node id.
+     *
+     * @param id node id
+     * @return endpoint
+     */
     public Endpoint getEndpointById(final String id) {
         if (StringUtils.isEmpty(id)) {
             return null;
@@ -67,17 +85,32 @@ public abstract class MemberConfiguration implements Serializable {
         return allMembers.getOrDefault(id, null);
     }
 
+    /**
+     * add member.
+     *
+     * @param node new member
+     */
     protected void writeOn(final Endpoint node) {
         allMembers.put(node.getId(), node);
         version.incrementAndGet();
     }
 
+    /**
+     * remove member.
+     *
+     * @param node error member
+     */
     protected void writeOff(final Endpoint node) {
         allMembers.remove(node.getId());
         version.incrementAndGet();
     }
 
-    protected void init(final List<Endpoint> nodes) {
+    /**
+     * init configuration.
+     *
+     * @param nodes all members
+     */
+    public void init(final List<Endpoint> nodes) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }

@@ -26,7 +26,6 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
@@ -50,7 +49,7 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
 
     @Override
     public void handleRequest(final ConfirmReq request, final RpcContext context) {
-        if (!MemberManager.isValid(request.getNodeId())) {
+        if (!self.getMemberConfig().isValid(request.getNodeId())) {
             LOG.error("msg type: confirm, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
             return;

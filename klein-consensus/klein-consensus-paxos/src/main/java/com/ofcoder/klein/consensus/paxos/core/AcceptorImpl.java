@@ -26,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
@@ -47,10 +46,12 @@ public class AcceptorImpl implements Acceptor {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptorImpl.class);
 
     private final PaxosNode self;
+    private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
 
     public AcceptorImpl(final PaxosNode self) {
         this.self = self;
+        this.memberConfig = self.getMemberConfig();
     }
 
     @Override
@@ -72,7 +73,7 @@ public class AcceptorImpl implements Acceptor {
 
             final long selfProposalNo = self.getCurProposalNo();
             final long selfInstanceId = self.getCurInstanceId();
-            final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+            final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
             if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= self.getCurAppliedInstanceId()) {
                 return AcceptRes.Builder.anAcceptRes()
@@ -143,7 +144,7 @@ public class AcceptorImpl implements Acceptor {
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
-        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
         PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
                 .nodeId(self.getSelf().getId())
