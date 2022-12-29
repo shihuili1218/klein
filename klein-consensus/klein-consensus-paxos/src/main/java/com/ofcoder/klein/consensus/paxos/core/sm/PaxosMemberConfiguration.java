@@ -39,6 +39,12 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return this.master;
     }
 
+    /**
+     * change master.
+     *
+     * @param nodeId new master id
+     * @return change result
+     */
     protected boolean changeMaster(final String nodeId) {
         if (isValid(nodeId)) {
             this.master = getEndpointById(nodeId);
@@ -56,14 +62,21 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         super.writeOn(node);
     }
 
+    @Override
     protected void writeOff(final Endpoint node) {
         super.writeOff(node);
     }
 
-    protected void init(final List<Endpoint> nodes) {
+    @Override
+    public void init(final List<Endpoint> nodes) {
         super.init(nodes);
     }
 
+    /**
+     * load snapshot.
+     *
+     * @param snap snapshot
+     */
     protected void loadSnap(final PaxosMemberConfiguration snap) {
         this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
         this.version = new AtomicInteger(snap.version.get());

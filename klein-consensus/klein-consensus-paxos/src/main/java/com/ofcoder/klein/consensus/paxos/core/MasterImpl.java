@@ -42,17 +42,14 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
@@ -66,18 +63,19 @@ import com.ofcoder.klein.storage.facade.LogManager;
 public class MasterImpl implements Master {
     private static final Logger LOG = LoggerFactory.getLogger(MasterImpl.class);
     private final PaxosNode self;
+    private final PaxosMemberConfiguration memberConfig;
     private RepeatedTimer electTimer;
     private RepeatedTimer sendHeartbeatTimer;
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
-    private final AtomicBoolean changing = new AtomicBoolean(false);
     private final List<HealthyListener> listeners = new ArrayList<>();
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
+        this.memberConfig = self.getMemberConfig();
     }
 
     @Override
@@ -119,59 +117,6 @@ public class MasterImpl implements Master {
 
     private int calculateElectionMasterInterval() {
         return ThreadLocalRandom.current().nextInt(prop.getPaxosProp().getMasterElectMinInterval(), prop.getPaxosProp().getMasterElectMaxInterval());
-    }
-
-    @Override
-    public void addMember(final Endpoint endpoint) {
-        if (MemberManager.createRef().isValid(endpoint.getId())) {
-            return;
-        }
-        changeMember(ChangeMemberOp.ADD, endpoint);
-    }
-
-    @Override
-    public void removeMember(final Endpoint endpoint) {
-        if (!MemberManager.createRef().isValid(endpoint.getId())) {
-            return;
-        }
-        changeMember(ChangeMemberOp.REMOVE, endpoint);
-    }
-
-    private void changeMember(final byte op, final Endpoint endpoint) {
-        LOG.info("start add member.");
-
-        try {
-            // It can only be changed once at a time
-            if (!changing.compareAndSet(false, true)) {
-                return;
-            }
-
-            ChangeMemberOp req = new ChangeMemberOp();
-            req.setNodeId(self.getSelf().getId());
-            req.setTarget(endpoint);
-            req.setOp(op);
-
-            CountDownLatch latch = new CountDownLatch(1);
-            RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
-                @Override
-                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
-                    if (!result) {
-                        latch.countDown();
-                    }
-                }
-
-                @Override
-                public void applyDone(final Map<Proposal, Object> applyResults) {
-                    latch.countDown();
-                }
-            });
-            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-            // do nothing for await.result
-        } catch (InterruptedException e) {
-            // do nothing
-        } finally {
-            changing.compareAndSet(true, false);
-        }
     }
 
     @Override
@@ -235,7 +180,7 @@ public class MasterImpl implements Master {
 
         stopAllTimer();
 
-        PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
@@ -293,7 +238,7 @@ public class MasterImpl implements Master {
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
-        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
+        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
         final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
@@ -354,13 +299,15 @@ public class MasterImpl implements Master {
     }
 
     private void updateMasterState(final ElectState healthy) {
+        if (state == healthy){
+            return;
+        }
         state = healthy;
         listeners.forEach(it -> it.change(healthy));
     }
 
     @Override
     public boolean onReceiveHeartbeat(final Ping request, final boolean isSelf) {
-        final PaxosMemberConfiguration memberConfiguration = MemberManager.createRef();
         NodeState nodeState = request.getNodeState();
 
         self.updateCurInstanceId(nodeState.getMaxInstanceId());
@@ -368,17 +315,18 @@ public class MasterImpl implements Master {
         // check and update instance
         checkAndUpdateInstance(nodeState);
 
-        if (request.getMemberConfigurationVersion() >= memberConfiguration.getVersion()) {
+        if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
 
             // reset and restart election timer
             if (!isSelf) {
+                updateMasterState(ElectState.FOLLOWING);
                 restartElect();
             }
             LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
             return true;
         } else {
             LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
-                    memberConfiguration, request.getMemberConfigurationVersion());
+                    memberConfig, request.getMemberConfigurationVersion());
             return false;
         }
     }
@@ -423,7 +371,6 @@ public class MasterImpl implements Master {
             updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
-            updateMasterState(ElectState.FOLLOWING);
             restartElect();
         }
     }

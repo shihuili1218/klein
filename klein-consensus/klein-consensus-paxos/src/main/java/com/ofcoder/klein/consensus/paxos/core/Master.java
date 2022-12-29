@@ -24,7 +24,6 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * Master Role.
@@ -32,20 +31,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
-
-    /**
-     * Change member, add <code>endpoint</code> to the cluster.
-     *
-     * @param endpoint new member
-     */
-    void addMember(Endpoint endpoint);
-
-    /**
-     * Change member, remove <code>endpoint</code> from cluster.
-     *
-     * @param endpoint delete member
-     */
-    void removeMember(Endpoint endpoint);
 
     /**
      * Election master.

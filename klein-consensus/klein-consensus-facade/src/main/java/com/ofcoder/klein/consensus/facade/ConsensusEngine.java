@@ -30,6 +30,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 public final class ConsensusEngine {
     private static final Logger LOG = LoggerFactory.getLogger(ConsensusEngine.class);
     private static Consensus consensus;
+    private static Cluster cluster;
 
     /**
      * engine start up.
@@ -39,6 +40,9 @@ public final class ConsensusEngine {
      */
     public static void startup(final String algorithm, final ConsensusProp prop) {
         LOG.info("start consensus engine");
+        cluster = ExtensionLoader.getExtensionLoader(Cluster.class).getJoinWithGlobal(algorithm);
+        cluster.init(prop);
+
         consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoinWithGlobal(algorithm);
         consensus.init(prop);
     }
@@ -47,6 +51,10 @@ public final class ConsensusEngine {
      * shutdown.
      */
     public static void shutdown() {
+        if (cluster != null) {
+            cluster.shutdown();
+        }
+
         if (consensus != null) {
             consensus.shutdown();
         }

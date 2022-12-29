@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -34,7 +35,7 @@ import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
@@ -121,10 +122,14 @@ public class PaxosConsensus implements Consensus {
     public void init(final ConsensusProp op) {
         this.prop = op;
         loadNode();
-        loadMemberConfig();
+
+        Cluster cluster = ExtensionLoader.getExtensionLoader(Cluster.class).getJoin();
+        PaxosMemberConfiguration memberConfig = (PaxosMemberConfiguration) cluster.getMemberConfig();
+        this.self.setMemberConfig(memberConfig);
+
         registerProcessor();
         RoleAccessor.create(prop, self);
-        loadSM(MasterSM.GROUP, new MasterSM());
+        loadSM(MasterSM.GROUP, new MasterSM(memberConfig));
         RoleAccessor.getMaster().electingMaster();
 
         preheating();
@@ -146,10 +151,6 @@ public class PaxosConsensus implements Consensus {
                 .build());
 
         LOG.info("self info: {}", self);
-    }
-
-    private void loadMemberConfig() {
-        MemberManager.init(this.prop.getMembers(), this.prop.getSelf());
     }
 
     private void registerProcessor() {

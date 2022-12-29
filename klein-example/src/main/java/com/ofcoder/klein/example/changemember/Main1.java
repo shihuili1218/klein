@@ -23,7 +23,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -59,18 +58,13 @@ public class Main1 {
                 while (true) {
                     try {
                         Thread.sleep(2000L);
-
-
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
                 }
             }
         }).start();
-
-
         System.in.read();
     }
-
 
 }

@@ -3,8 +3,9 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Lists;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManager;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+
 import junit.framework.TestCase;
 
 /**
@@ -13,14 +14,17 @@ import junit.framework.TestCase;
 public class PaxosNodeTest extends TestCase {
 
     public void testGenerateNextProposalNo() {
-        MemberManager.init(
+        PaxosMemberConfiguration configuration = new PaxosMemberConfiguration();
+
+        configuration.init(
                 Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220))
-                , new Endpoint("3", "127.0.0.1", 1220)
         );
         PaxosNode node = PaxosNode.Builder.aPaxosNode()
                 .curProposalNo(0)
                 .self(new Endpoint("3", "127.0.0.1", 1220))
                 .build();
+        node.setMemberConfig(configuration);
+
         assertEquals(node.generateNextProposalNo(), 3);
     }
 
