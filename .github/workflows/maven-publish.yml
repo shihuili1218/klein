@@ -1,9 +1,8 @@
 name: Maven Central Repo Deployment
 
 on:
-  push:
-    branches:
-      - feat/mvncentral
+  release:
+    types: [created]
 
 jobs:
   publish:
