@@ -2,7 +2,7 @@ name: Maven Central Repo Deployment
 
 on:
   release:
-    types: [released]
+    types: [created]
 
 jobs:
   publish:
