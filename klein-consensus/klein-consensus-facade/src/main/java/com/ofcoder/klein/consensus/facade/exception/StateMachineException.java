@@ -18,8 +18,6 @@ package com.ofcoder.klein.consensus.facade.exception;
 
 /**
  * StateMachine Exception.
- *
- * @author: 释慧利
  */
 public class StateMachineException extends ConsensusException {
     public StateMachineException(final String message) {
