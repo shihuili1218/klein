@@ -60,9 +60,9 @@ public interface Consensus extends Lifecycle<ConsensusProp> {
     }
 
     /**
-     * W + R > N.
+     * W + R ＞ N.
      * read from local.sm and only check self.lastApplyInstance if W = 1
-     * read from W and only check self.lastApplyInstance if W > 1
+     * read from W and only check self.lastApplyInstance if W ＞ 1
      *
      * @param group group name
      * @param data  message

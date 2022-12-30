@@ -5,12 +5,14 @@
     <parent>
         <artifactId>klein</artifactId>
         <groupId>com.ofcoder.klein</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ofcoder.klein.common</groupId>
     <artifactId>klein-common</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
