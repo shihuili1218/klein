@@ -10,15 +10,13 @@ jobs:
     steps:
       - name: Checkout Git Repo
         uses: actions/checkout@v2
-      - name: Set up Maven Central Repo
+
+      - name: Install Java and Maven
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-          server-id: sonatype-nexus-staging
-          server-username: ${{ secrets.OSSRH_USER }}
-          server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-passphrase:  ${{ secrets.GPG_PASSWORD }}
-      - name: Publish to Maven Central Repo
+
+      - name: Release Maven package
         uses: samuelmeuli/action-maven-publish@v1
         with:
           gpg_private_key: ${{ secrets.GPG_SECRET }}

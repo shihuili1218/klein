@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
  * Common Thread Factory.
  *
  * @author yuanyuan.liu
- * @date: 2020/1/14 9:34
  */
 public final class KleinThreadFactory implements java.util.concurrent.ThreadFactory {
     private static final Logger LOG = LoggerFactory.getLogger(KleinThreadFactory.class);
