@@ -362,11 +362,12 @@ public class MasterImpl implements Master {
 
     @Override
     public void onChangeMaster(final String newMaster) {
-        if (!sendHeartbeat()) {
-            LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
-            return;
-        }
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
+            if (!sendHeartbeat()) {
+                LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
+                return;
+            }
+
             updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
