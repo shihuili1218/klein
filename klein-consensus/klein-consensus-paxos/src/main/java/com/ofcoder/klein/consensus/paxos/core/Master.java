@@ -24,6 +24,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * Master Role.
@@ -31,6 +32,15 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
+
+    /**
+     * Change Member.
+     *
+     * @param op     add member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#ADD}
+     *               remove member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#REMOVE}
+     * @param target target
+     */
+    void changeMember(byte op, Endpoint target);
 
     /**
      * Election master.

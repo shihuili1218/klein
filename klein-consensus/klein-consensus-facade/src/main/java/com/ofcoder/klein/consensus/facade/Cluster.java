@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -25,7 +23,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  *
  * @author 释慧利
  */
-public interface Cluster extends Lifecycle<ConsensusProp> {
+public interface Cluster {
     MemberConfiguration getMemberConfig();
 
     /**
