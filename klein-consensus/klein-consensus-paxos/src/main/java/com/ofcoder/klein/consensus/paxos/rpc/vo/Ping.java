@@ -23,9 +23,14 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
  */
 public class Ping extends BaseReq {
     private NodeState nodeState;
+    private boolean probe;
 
     public NodeState getNodeState() {
         return nodeState;
+    }
+
+    public boolean isProbe() {
+        return probe;
     }
 
     public static final class Builder {
@@ -33,7 +38,7 @@ public class Ping extends BaseReq {
         private long proposalNo;
         private int memberConfigurationVersion;
         private NodeState nodeState;
-
+        private boolean probe;
         private Builder() {
         }
 
@@ -90,6 +95,11 @@ public class Ping extends BaseReq {
             return this;
         }
 
+        public Builder probe(final boolean probe) {
+            this.probe = probe;
+            return this;
+        }
+
         /**
          * build.
          *
@@ -101,6 +111,7 @@ public class Ping extends BaseReq {
             ping.setProposalNo(proposalNo);
             ping.setMemberConfigurationVersion(memberConfigurationVersion);
             ping.nodeState = this.nodeState;
+            ping.probe = this.probe;
             return ping;
         }
     }
