@@ -51,14 +51,12 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
     private static String selfPath;
     private static String metaPath;
-    private static String clusterPath;
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ReentrantReadWriteLock lock;
 
     private MetaData metadata;
-    private ClusterConfig clusterConfig;
 
     @Override
     public void init(final StorageProp op) {
@@ -80,7 +78,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         }
 
         metaPath = selfPath + File.separator + "mate";
-        clusterPath = selfPath + File.separator + "cluster";
     }
 
     @Override
@@ -139,26 +136,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
             return this.metadata;
         } catch (IOException e) {
             throw new StorageException("loadMetaData, " + e.getMessage(), e);
-        } finally {
-            StreamUtil.close(lastIn);
-        }
-    }
-
-    @Override
-    public ClusterConfig loadCluster(final ClusterConfig defaultValue) {
-
-        File file = new File(clusterPath);
-        if (!file.exists()) {
-            this.clusterConfig = defaultValue;
-            return this.clusterConfig;
-        }
-        FileInputStream lastIn = null;
-        try {
-            lastIn = new FileInputStream(file);
-            this.clusterConfig = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
-            return this.clusterConfig;
-        } catch (IOException e) {
-            throw new StorageException("loadCluster, " + e.getMessage(), e);
         } finally {
             StreamUtil.close(lastIn);
         }

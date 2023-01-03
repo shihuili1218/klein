@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.Consensus;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
@@ -34,6 +36,7 @@ import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
@@ -43,6 +46,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
@@ -58,6 +62,7 @@ public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
     private PaxosNode self;
     private ConsensusProp prop;
+    private final AtomicBoolean changing = new AtomicBoolean(false);
 
     private void proposeAsync(final Proposal data, final ProposeDone done) {
         RoleAccessor.getProposer().propose(data, done);
@@ -123,13 +128,9 @@ public class PaxosConsensus implements Consensus {
         this.prop = op;
         loadNode();
 
-        Cluster cluster = ExtensionLoader.getExtensionLoader(Cluster.class).getJoin();
-        PaxosMemberConfiguration memberConfig = (PaxosMemberConfiguration) cluster.getMemberConfig();
-        this.self.setMemberConfig(memberConfig);
-
         registerProcessor();
         RoleAccessor.create(prop, self);
-        loadSM(MasterSM.GROUP, new MasterSM(memberConfig));
+        loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
         RoleAccessor.getMaster().electingMaster();
 
         preheating();
@@ -141,6 +142,9 @@ public class PaxosConsensus implements Consensus {
 
     private void loadNode() {
         // reload self information from storage.
+        PaxosMemberConfiguration defaultValue = new PaxosMemberConfiguration();
+        defaultValue.init(prop.getMembers());
+
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
@@ -148,6 +152,7 @@ public class PaxosConsensus implements Consensus {
                 .curProposalNo(0)
                 .lastCheckpoint(0)
                 .self(prop.getSelf())
+                .memberConfig(defaultValue)
                 .build());
 
         LOG.info("self info: {}", self);
@@ -178,4 +183,64 @@ public class PaxosConsensus implements Consensus {
             RoleAccessor.getMaster().shutdown();
         }
     }
+
+    @Override
+    public MemberConfiguration getMemberConfig() {
+        return self.getMemberConfig();
+    }
+
+    @Override
+    public void addMember(final Endpoint endpoint) {
+        if (getMemberConfig().isValid(endpoint.getId())) {
+            return;
+        }
+        changeMember(ChangeMemberOp.ADD, endpoint);
+    }
+
+    @Override
+    public void removeMember(final Endpoint endpoint) {
+        if (!getMemberConfig().isValid(endpoint.getId())) {
+            return;
+        }
+        changeMember(ChangeMemberOp.REMOVE, endpoint);
+    }
+
+    private void changeMember(final byte op, final Endpoint endpoint) {
+        LOG.info("start add member.");
+        // stop → change member → restart → propose noop.
+
+        try {
+            // It can only be changed once at a time
+            if (!changing.compareAndSet(false, true)) {
+                return;
+            }
+
+            ChangeMemberOp req = new ChangeMemberOp();
+            req.setNodeId(prop.getSelf().getId());
+            req.setTarget(endpoint);
+            req.setOp(op);
+
+            CountDownLatch latch = new CountDownLatch(1);
+            RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
+                @Override
+                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+                    if (!result) {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void applyDone(final Map<Proposal, Object> applyResults) {
+                    latch.countDown();
+                }
+            });
+            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+            // do nothing for await.result
+        } catch (InterruptedException e) {
+            // do nothing
+        } finally {
+            changing.compareAndSet(true, false);
+        }
+    }
+
 }

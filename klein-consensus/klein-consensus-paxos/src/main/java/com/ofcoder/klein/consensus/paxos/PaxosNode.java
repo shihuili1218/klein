@@ -37,7 +37,7 @@ public class PaxosNode extends Node {
     private long lastCheckpoint = 0;
     private final Object checkpointLock = new Object();
     private Endpoint self;
-    private transient PaxosMemberConfiguration memberConfig;
+    private PaxosMemberConfiguration memberConfig;
 
     /**
      * nextProposalNo = N * J + I.
@@ -143,10 +143,6 @@ public class PaxosNode extends Node {
         return memberConfig;
     }
 
-    public void setMemberConfig(final PaxosMemberConfiguration memberConfig) {
-        this.memberConfig = memberConfig;
-    }
-
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -191,6 +187,7 @@ public class PaxosNode extends Node {
         private long curProposalNo;
         private long lastCheckpoint;
         private Endpoint self;
+        private PaxosMemberConfiguration memberConfig;
 
         private Builder() {
         }
@@ -260,6 +257,17 @@ public class PaxosNode extends Node {
         }
 
         /**
+         * memberConfig.
+         *
+         * @param memberConfig memberConfig
+         * @return Builder
+         */
+        public Builder memberConfig(final PaxosMemberConfiguration memberConfig) {
+            this.memberConfig = memberConfig;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return PaxosNode
@@ -271,6 +279,7 @@ public class PaxosNode extends Node {
             paxosNode.curAppliedInstanceId = this.curAppliedInstanceId;
             paxosNode.self = this.self;
             paxosNode.lastCheckpoint = this.lastCheckpoint;
+            paxosNode.memberConfig = this.memberConfig;
             return paxosNode;
         }
     }

@@ -380,7 +380,6 @@ public class MasterImpl implements Master {
             updateMasterState(ElectState.DOMINANT);
             restartHeartbeat();
         } else {
-            // fixme bug: 选举的提案已经存入快照，不会调用该方法
             updateMasterState(ElectState.FOLLOWING);
             restartElect();
         }
