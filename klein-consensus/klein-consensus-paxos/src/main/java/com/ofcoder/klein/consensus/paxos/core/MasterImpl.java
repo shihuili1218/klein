@@ -108,7 +108,7 @@ public class MasterImpl implements Master {
         sendHeartbeatTimer = new RepeatedTimer("master-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
-                if (!sendHeartbeat()) {
+                if (!sendHeartbeat(false)) {
                     restartElect();
                 }
             }
@@ -234,7 +234,13 @@ public class MasterImpl implements Master {
         }
     }
 
-    private boolean sendHeartbeat() {
+    /**
+     * Send Heartbeat Msg.
+     *
+     * @param probe probe msg
+     * @return true if the majority responds
+     */
+    private boolean sendHeartbeat(boolean probe) {
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
@@ -251,6 +257,7 @@ public class MasterImpl implements Master {
                         .lastCheckpoint(lastCheckpoint)
                         .lastAppliedInstanceId(curAppliedInstanceId)
                         .build())
+                .probe(probe)
                 .build();
 
         final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
@@ -299,7 +306,7 @@ public class MasterImpl implements Master {
     }
 
     private void updateMasterState(final ElectState healthy) {
-        if (state == healthy){
+        if (state == healthy) {
             return;
         }
         state = healthy;
@@ -312,8 +319,10 @@ public class MasterImpl implements Master {
 
         self.updateCurInstanceId(nodeState.getMaxInstanceId());
 
-        // check and update instance
-        checkAndUpdateInstance(nodeState);
+        if (!request.isProbe()) {
+            // check and update instance
+            checkAndUpdateInstance(nodeState);
+        }
 
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
 
@@ -363,7 +372,7 @@ public class MasterImpl implements Master {
     @Override
     public void onChangeMaster(final String newMaster) {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
-            if (!sendHeartbeat()) {
+            if (!sendHeartbeat(true)) {
                 LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
                 return;
             }
