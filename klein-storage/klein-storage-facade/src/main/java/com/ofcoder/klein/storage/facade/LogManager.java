@@ -72,15 +72,6 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     MetaData loadMetaData(MetaData defaultValue);
 
-
-    /**
-     * load MemberConfig.
-     *
-     * @param defaultValue default MetaData
-     * @return MetaData
-     */
-    ClusterConfig loadCluster(ClusterConfig defaultValue);
-
     /**
      * save snapshot.
      *
@@ -106,12 +97,4 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
     interface MetaData extends Serializable {
     }
 
-
-    /**
-     * Meta data.
-     *
-     * @author 释慧利
-     */
-    interface ClusterConfig extends Serializable {
-    }
 }

@@ -29,7 +29,7 @@ import com.ofcoder.klein.spi.SPI;
  * @author 释慧利
  */
 @SPI
-public interface Consensus extends Lifecycle<ConsensusProp> {
+public interface Consensus extends Cluster, Lifecycle<ConsensusProp> {
 
     /**
      * propose proposal.

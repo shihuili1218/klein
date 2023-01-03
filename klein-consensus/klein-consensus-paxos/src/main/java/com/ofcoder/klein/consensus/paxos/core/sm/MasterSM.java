@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 
 /**
  * master sm.
@@ -33,6 +34,9 @@ public class MasterSM extends AbstractSM {
 
     public MasterSM(final PaxosMemberConfiguration memberConfig) {
         this.memberConfig = memberConfig;
+        if (memberConfig.getMaster() != null) {
+            RoleAccessor.getMaster().onChangeMaster(memberConfig.getMaster().getId());
+        }
     }
 
     @Override
