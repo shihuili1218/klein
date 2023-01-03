@@ -22,8 +22,8 @@ public class PaxosNodeTest extends TestCase {
         PaxosNode node = PaxosNode.Builder.aPaxosNode()
                 .curProposalNo(0)
                 .self(new Endpoint("3", "127.0.0.1", 1220))
+                .memberConfig(configuration)
                 .build();
-        node.setMemberConfig(configuration);
 
         assertEquals(node.generateNextProposalNo(), 3);
     }

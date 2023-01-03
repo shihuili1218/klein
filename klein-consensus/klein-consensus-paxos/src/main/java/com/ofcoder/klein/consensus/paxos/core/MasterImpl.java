@@ -42,6 +42,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
@@ -50,6 +51,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
@@ -72,6 +74,7 @@ public class MasterImpl implements Master {
     private final List<HealthyListener> listeners = new ArrayList<>();
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
+    private final AtomicBoolean changing = new AtomicBoolean(false);
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
@@ -117,6 +120,45 @@ public class MasterImpl implements Master {
 
     private int calculateElectionMasterInterval() {
         return ThreadLocalRandom.current().nextInt(prop.getPaxosProp().getMasterElectMinInterval(), prop.getPaxosProp().getMasterElectMaxInterval());
+    }
+
+    @Override
+    public void changeMember(final byte op, final Endpoint endpoint) {
+        LOG.info("start add member.");
+        // stop → change member → restart → propose noop.
+
+        try {
+            // It can only be changed once at a time
+            if (!changing.compareAndSet(false, true)) {
+                return;
+            }
+
+            ChangeMemberOp req = new ChangeMemberOp();
+            req.setNodeId(prop.getSelf().getId());
+            req.setTarget(endpoint);
+            req.setOp(op);
+
+            CountDownLatch latch = new CountDownLatch(1);
+            RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
+                @Override
+                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+                    if (!result) {
+                        latch.countDown();
+                    }
+                }
+
+                @Override
+                public void applyDone(final Map<Proposal, Object> applyResults) {
+                    latch.countDown();
+                }
+            });
+            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+            // do nothing for await.result
+        } catch (InterruptedException e) {
+            // do nothing
+        } finally {
+            changing.compareAndSet(true, false);
+        }
     }
 
     @Override
@@ -240,7 +282,7 @@ public class MasterImpl implements Master {
      * @param probe probe msg
      * @return true if the majority responds
      */
-    private boolean sendHeartbeat(boolean probe) {
+    private boolean sendHeartbeat(final boolean probe) {
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
         long curAppliedInstanceId = self.getCurAppliedInstanceId();

@@ -32,14 +32,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
  * MemberConfiguration.
  *
  * @author far.liu
  */
-public class MemberConfiguration implements Serializable, LogManager.ClusterConfig {
+public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
     protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();

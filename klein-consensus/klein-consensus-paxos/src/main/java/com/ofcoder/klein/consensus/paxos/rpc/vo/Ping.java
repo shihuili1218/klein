@@ -39,7 +39,9 @@ public class Ping extends BaseReq {
         private int memberConfigurationVersion;
         private NodeState nodeState;
         private boolean probe;
+
         private Builder() {
+
         }
 
         /**
@@ -95,6 +97,12 @@ public class Ping extends BaseReq {
             return this;
         }
 
+        /**
+         * probe.
+         *
+         * @param probe probe
+         * @return Builder
+         */
         public Builder probe(final boolean probe) {
             this.probe = probe;
             return this;

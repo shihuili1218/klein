@@ -38,12 +38,12 @@ public class KleinMemberImpl implements KleinMember {
 
     @Override
     public void addMember(final Endpoint endpoint) {
-
+        consensus.addMember(endpoint);
     }
 
     @Override
     public void removeMember(final Endpoint endpoint) {
-
+        consensus.removeMember(endpoint);
     }
 
 }
