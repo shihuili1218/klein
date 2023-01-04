@@ -28,6 +28,7 @@ import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
@@ -203,7 +204,7 @@ public class PaxosConsensus implements Consensus {
         if (getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(ChangeMemberOp.ADD, endpoint);
+        RoleAccessor.getMaster().changeMember(ADD, Lists.newArrayList(endpoint));
     }
 
     @Override
@@ -211,7 +212,7 @@ public class PaxosConsensus implements Consensus {
         if (!getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(ChangeMemberOp.REMOVE, endpoint);
+        RoleAccessor.getMaster().changeMember(REMOVE, Lists.newArrayList(endpoint));
     }
 
 }

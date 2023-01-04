@@ -20,6 +20,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
@@ -43,12 +44,12 @@ public interface Master extends Lifecycle<ConsensusProp> {
     /**
      * Change Member.
      *
-     * @param op     <code>o</code> is add member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#ADD}
-     *               <code>1</code> is remove member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#REMOVE}
+     * @param op     <code>o</code> is add member: ${@link Cluster#ADD}
+     *               <code>1</code> is remove member: ${@link Cluster#REMOVE}
      * @param target target
      * @return change result
      */
-    boolean changeMember(byte op, Endpoint target);
+    boolean changeMember(byte op, List<Endpoint> target);
 
     /**
      * Election master.

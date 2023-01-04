@@ -82,8 +82,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     protected void loadSnap(final PaxosMemberConfiguration snap) {
         this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
         this.version = new AtomicInteger(snap.version.get());
-        this.allMembers.clear();
-        this.allMembers.putAll(snap.allMembers);
+        this.effectMembers.clear();
+        this.effectMembers.putAll(snap.effectMembers);
     }
 
     /**
@@ -93,7 +93,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      */
     public PaxosMemberConfiguration createRef() {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
-        target.allMembers.putAll(allMembers);
+        target.effectMembers.putAll(effectMembers);
         if (master != null) {
             target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
         }
@@ -106,7 +106,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return "PaxosMemberConfiguration{"
                 + "master=" + master
                 + ", version=" + version
-                + ", allMembers=" + allMembers
+                + ", allMembers=" + effectMembers
                 + '}';
     }
 }

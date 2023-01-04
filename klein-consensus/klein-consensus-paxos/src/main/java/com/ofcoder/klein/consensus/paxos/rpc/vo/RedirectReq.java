@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
+import java.util.List;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -29,7 +30,7 @@ public class RedirectReq implements Serializable {
 
     private byte redirect;
     private byte changeOp;
-    private Endpoint changeTarget;
+    private List<Endpoint> changeTarget;
 
     public byte getRedirect() {
         return redirect;
@@ -39,14 +40,14 @@ public class RedirectReq implements Serializable {
         return changeOp;
     }
 
-    public Endpoint getChangeTarget() {
+    public List<Endpoint> getChangeTarget() {
         return changeTarget;
     }
 
     public static final class Builder {
         private byte redirect;
         private byte changeOp;
-        private Endpoint changeTarget;
+        private List<Endpoint> changeTarget;
 
         private Builder() {
         }
@@ -65,7 +66,7 @@ public class RedirectReq implements Serializable {
             return this;
         }
 
-        public Builder changeTarget(Endpoint changeTarget) {
+        public Builder changeTarget(List<Endpoint> changeTarget) {
             this.changeTarget = changeTarget;
             return this;
         }

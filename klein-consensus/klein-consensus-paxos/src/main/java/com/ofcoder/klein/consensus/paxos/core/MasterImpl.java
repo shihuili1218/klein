@@ -17,8 +17,10 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -37,6 +39,7 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -130,7 +133,7 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public boolean changeMember(final byte op, final Endpoint target) {
+    public boolean changeMember(final byte op, final List<Endpoint> target) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         if (RoleAccessor.getMaster().isSelf()) {
@@ -173,9 +176,24 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void _changeMember(final byte op, final Endpoint endpoint, final ProposeDone done) {
-        LOG.info("start add member.");
-        // join-consensus
+    /**
+     * Change member by Join-Consensus.
+     * 1. Accept phase → enter Join-Consensus
+     * 2. Confirm phase → new config take effect
+     *
+     * @param op       add or remove member
+     * @param endpoint target member
+     * @param done     callback
+     */
+    private void _changeMember(final byte op, final List<Endpoint> endpoint, final ProposeDone done) {
+
+        PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
+        Set<Endpoint> newConfig = new HashSet<>(curConfiguration.getEffectMembers());
+        if (op == Cluster.ADD) {
+            newConfig.addAll(endpoint);
+        } else {
+            endpoint.forEach(newConfig::remove);
+        }
 
         try {
             // It can only be changed once at a time
@@ -185,9 +203,7 @@ public class MasterImpl implements Master {
 
             ChangeMemberOp req = new ChangeMemberOp();
             req.setNodeId(prop.getSelf().getId());
-            req.setTarget(endpoint);
-            req.setOp(op);
-
+            req.setNewConfig(newConfig);
             CountDownLatch latch = new CountDownLatch(1);
             RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
                 @Override

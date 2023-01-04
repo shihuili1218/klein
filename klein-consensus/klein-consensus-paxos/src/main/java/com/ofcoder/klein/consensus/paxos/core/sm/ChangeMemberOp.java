@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.Objects;
+import java.util.Set;
 
 import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -27,50 +28,36 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class ChangeMemberOp implements SystemOp {
-    public static final byte ADD = 0;
-    public static final byte REMOVE = 1;
     private String nodeId;
-    private byte op;
-    private Endpoint target;
+    private Set<Endpoint> newConfig;
 
     public String getNodeId() {
         return nodeId;
+    }
+
+    public Set<Endpoint> getNewConfig() {
+        return newConfig;
+    }
+
+    public void setNewConfig(Set<Endpoint> newConfig) {
+        this.newConfig = newConfig;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ChangeMemberOp that = (ChangeMemberOp) o;
+        return Objects.equals(nodeId, that.nodeId) && Objects.equals(newConfig, that.newConfig);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nodeId, newConfig);
     }
 
     public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
-    public byte getOp() {
-        return op;
-    }
-
-    public void setOp(final byte op) {
-        this.op = op;
-    }
-
-    public Endpoint getTarget() {
-        return target;
-    }
-
-    public void setTarget(final Endpoint target) {
-        this.target = target;
-    }
-
-    @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        ChangeMemberOp that = (ChangeMemberOp) o;
-        return getOp() == that.getOp() && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getTarget(), that.getTarget());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getNodeId(), getOp(), getTarget());
-    }
 }

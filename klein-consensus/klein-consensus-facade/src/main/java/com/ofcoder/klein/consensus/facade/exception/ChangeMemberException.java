@@ -14,32 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
-
-import com.ofcoder.klein.rpc.facade.Endpoint;
+package com.ofcoder.klein.consensus.facade.exception;
 
 /**
- * Cluster info.
+ * ChangeMemberException.
  *
  * @author 释慧利
  */
-public interface Cluster {
-    public static final byte ADD = 0;
-    public static final byte REMOVE = 1;
+public class ChangeMemberException extends ConsensusException {
 
-    MemberConfiguration getMemberConfig();
+    public ChangeMemberException(String message) {
+        super(message);
+    }
 
-    /**
-     * Change member, add endpoint to the cluster.
-     *
-     * @param endpoint new member
-     */
-    void addMember(Endpoint endpoint);
-
-    /**
-     * Change member, remove endpoint from cluster.
-     *
-     * @param endpoint delete member
-     */
-    void removeMember(Endpoint endpoint);
 }
