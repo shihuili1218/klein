@@ -16,39 +16,19 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * Quorum.
- *
  * @author 释慧利
  */
-public abstract class Quorum {
-    private Set<Endpoint> allMembers = new HashSet<>();
-
-    private Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
-    private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
-    private int threshold;
-
-    public Quorum(final Set<Endpoint> allMembers) {
-
-        this.allMembers = allMembers;
-        this.threshold = allMembers.size() / 2 + 1;
-    }
-
-    public GrantResult isGranted() {
-        if (grantedMembers.size() >= threshold) {
-            return GrantResult.PASS;
-        } else if (failedMembers.size() >= threshold) {
-            return GrantResult.REFUSE;
-        } else {
-            return GrantResult.GRANTING;
-        }
-    }
+public interface Quorum {
+    /**
+     * the node refuse, refuse current request.
+     *
+     * @param node refuse node
+     * @return refuse result
+     */
+    boolean refuse(final Endpoint node);
 
     /**
      * the node pass, grant current request.
@@ -56,29 +36,14 @@ public abstract class Quorum {
      * @param node pass node
      * @return grant result
      */
-    public boolean grant(final Endpoint node) {
-        if (!allMembers.contains(node)) {
-            return false;
-        }
-        return grantedMembers.add(node);
-    }
+    boolean grant(final Endpoint node);
 
-    /**
-     * the node refuse, refuse current request.
-     *
-     * @param node refuse node
-     * @return refuse result
-     */
-    public boolean refuse(final Endpoint node) {
-        if (!allMembers.contains(node)) {
-            return false;
-        }
-        return failedMembers.add(node);
-    }
+    SingleQuorum.GrantResult isGranted();
 
-    public enum GrantResult {
+    enum GrantResult {
         PASS,
         REFUSE,
         GRANTING
     }
+
 }

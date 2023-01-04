@@ -43,7 +43,7 @@ import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -198,7 +198,7 @@ public class ProposerImpl implements Proposer {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
 
                     ctxt.getAcceptQuorum().refuse(it);
-                    if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
+                    if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
                         skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
@@ -230,7 +230,7 @@ public class ProposerImpl implements Proposer {
 
         if (result.getResult()) {
             ctxt.getAcceptQuorum().grant(it);
-            if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.PASS
+            if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.PASS
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
                 // do learn phase and return client.
                 callback.granted(ctxt);
@@ -239,7 +239,7 @@ public class ProposerImpl implements Proposer {
             ctxt.getAcceptQuorum().refuse(it);
 
             // do prepare phase
-            if (ctxt.getAcceptQuorum().isGranted() == Quorum.GrantResult.REFUSE
+            if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
                 skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                 ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
@@ -335,7 +335,7 @@ public class ProposerImpl implements Proposer {
                 public void error(final Throwable err) {
                     LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());
                     ctxt.getPrepareQuorum().refuse(it);
-                    if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
+                    if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                         ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
                     }
@@ -370,7 +370,7 @@ public class ProposerImpl implements Proposer {
         if (result.getResult()) {
             boolean grant = ctxt.getPrepareQuorum().grant(it);
             LOG.debug("handling node-{}'s prepare response, grant: {}, {}", result.getNodeId(), grant, ctxt.getPrepareQuorum().isGranted());
-            if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.PASS
+            if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.PASS
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 // do accept phase.
                 callback.granted(proposalNo, ctxt);
@@ -380,7 +380,7 @@ public class ProposerImpl implements Proposer {
             LOG.debug("handling node-{}'s prepare response, refuse: {}, {}", result.getNodeId(), refuse, ctxt.getPrepareQuorum().isGranted());
 
             // do prepare phase
-            if (ctxt.getPrepareQuorum().isGranted() == Quorum.GrantResult.REFUSE
+            if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
             }

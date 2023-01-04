@@ -18,7 +18,7 @@ package com.ofcoder.klein.consensus.paxos;
 
 import java.util.Set;
 
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -27,7 +27,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  *
  * @author 释慧利
  */
-public final class PaxosQuorum extends Quorum {
+public class PaxosQuorum extends SingleQuorum {
 
     private PaxosQuorum(final Set<Endpoint> allMembers) {
         super(allMembers);

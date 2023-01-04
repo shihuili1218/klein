@@ -32,7 +32,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Maps;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -52,11 +51,22 @@ public class MemberConfiguration implements Serializable {
     }
 
     public void seeNewConfig(Set<Endpoint> newConfig) {
-        if (MapUtils.isNotEmpty(lastMembers)){
+        if (MapUtils.isNotEmpty(lastMembers)) {
             throw new ChangeMemberException("lastMembers is not empty, the config may be changing");
         }
         this.version.incrementAndGet();
         this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+    }
+
+    /**
+     * get all members.
+     *
+     * @return all members
+     */
+    public Set<Endpoint> getAllMembers() {
+        HashSet<Endpoint> endpoints = new HashSet<>(effectMembers.values());
+        endpoints.addAll(lastMembers.values());
+        return endpoints;
     }
 
     /**
@@ -78,7 +88,7 @@ public class MemberConfiguration implements Serializable {
     }
 
     public Set<Endpoint> getMembersWithout(final String selfId) {
-        return getEffectMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+        return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
                 .collect(Collectors.toSet());
     }
 
@@ -89,7 +99,7 @@ public class MemberConfiguration implements Serializable {
      * @return is valid
      */
     public boolean isValid(final String nodeId) {
-        return effectMembers.containsKey(nodeId);
+        return effectMembers.containsKey(nodeId) && lastMembers.containsKey(nodeId);
     }
 
     /**
@@ -102,27 +112,10 @@ public class MemberConfiguration implements Serializable {
         if (StringUtils.isEmpty(id)) {
             return null;
         }
-        return effectMembers.getOrDefault(id, null);
-    }
-
-    /**
-     * add member.
-     *
-     * @param node new member
-     */
-    protected void writeOn(final Endpoint node) {
-        effectMembers.put(node.getId(), node);
-        version.incrementAndGet();
-    }
-
-    /**
-     * remove member.
-     *
-     * @param node error member
-     */
-    protected void writeOff(final Endpoint node) {
-        effectMembers.remove(node.getId());
-        version.incrementAndGet();
+        if (effectMembers.containsKey(id)) {
+            return effectMembers.get(id);
+        }
+        return lastMembers.getOrDefault(id, null);
     }
 
     /**

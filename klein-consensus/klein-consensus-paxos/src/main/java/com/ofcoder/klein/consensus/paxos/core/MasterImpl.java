@@ -40,7 +40,7 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Cluster;
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
@@ -306,7 +306,7 @@ public class MasterImpl implements Master {
                     @Override
                     public void error(final Throwable err) {
                         quorum.refuse(it);
-                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+                        if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
                             restartElect();
                         }
                     }
@@ -315,7 +315,7 @@ public class MasterImpl implements Master {
                     public void complete(final NewMasterRes result) {
                         self.updateCurInstanceId(result.getCurInstanceId());
                         quorum.grant(it);
-                        if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+                        if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                             ThreadExecutor.submit(MasterImpl.this::_boosting);
                         }
                     }
@@ -354,7 +354,7 @@ public class MasterImpl implements Master {
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-        final Quorum quorum = PaxosQuorum.createInstance(memberConfiguration);
+        final SingleQuorum quorum = PaxosQuorum.createInstance(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
@@ -368,7 +368,7 @@ public class MasterImpl implements Master {
                 .probe(probe)
                 .build();
 
-        final CompletableFuture<Quorum.GrantResult> complete = new CompletableFuture<>();
+        final CompletableFuture<SingleQuorum.GrantResult> complete = new CompletableFuture<>();
         // for self
         if (onReceiveHeartbeat(req, true)) {
             quorum.grant(self.getSelf());
@@ -381,7 +381,7 @@ public class MasterImpl implements Master {
                 public void error(final Throwable err) {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
-                    if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
+                    if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE) {
                         complete.complete(quorum.isGranted());
                     }
                 }
@@ -389,15 +389,15 @@ public class MasterImpl implements Master {
                 @Override
                 public void complete(final Pong result) {
                     quorum.grant(it);
-                    if (quorum.isGranted() == Quorum.GrantResult.PASS) {
+                    if (quorum.isGranted() == SingleQuorum.GrantResult.PASS) {
                         complete.complete(quorum.isGranted());
                     }
                 }
             }, 55);
         });
         try {
-            Quorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
-            return grantResult == Quorum.GrantResult.PASS;
+            SingleQuorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
+            return grantResult == SingleQuorum.GrantResult.PASS;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             return false;
         }

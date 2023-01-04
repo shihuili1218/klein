@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
@@ -52,9 +52,9 @@ public class ProposeContext {
      */
     private int times = 0;
     private final PaxosMemberConfiguration memberConfiguration;
-    private final Quorum prepareQuorum;
+    private final SingleQuorum prepareQuorum;
     private final AtomicBoolean prepareNexted;
-    private final Quorum acceptQuorum;
+    private final SingleQuorum acceptQuorum;
     private final AtomicBoolean acceptNexted;
 
     public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final Holder<Long> instanceIdHolder, final List<ProposalWithDone> events) {
@@ -99,7 +99,7 @@ public class ProposeContext {
         return times;
     }
 
-    public Quorum getPrepareQuorum() {
+    public SingleQuorum getPrepareQuorum() {
         return prepareQuorum;
     }
 
@@ -107,7 +107,7 @@ public class ProposeContext {
         return prepareNexted;
     }
 
-    public Quorum getAcceptQuorum() {
+    public SingleQuorum getAcceptQuorum() {
         return acceptQuorum;
     }
 
