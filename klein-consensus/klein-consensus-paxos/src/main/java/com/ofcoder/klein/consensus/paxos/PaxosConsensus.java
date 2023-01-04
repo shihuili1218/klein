@@ -19,13 +19,16 @@ package com.ofcoder.klein.consensus.paxos;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -44,8 +47,12 @@ import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectResp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
@@ -61,6 +68,7 @@ public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
     private PaxosNode self;
     private ConsensusProp prop;
+    private RpcClient client;
 
     private void proposeAsync(final Proposal data, final ProposeDone done) {
         RoleAccessor.getProposer().propose(data, done);
@@ -124,6 +132,8 @@ public class PaxosConsensus implements Consensus {
     @Override
     public void init(final ConsensusProp op) {
         this.prop = op;
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+
         loadNode();
 
         registerProcessor();
@@ -164,6 +174,7 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
+        RpcEngine.registerProcessor(new RedirectProcessor(this.self));
     }
 
     @Override

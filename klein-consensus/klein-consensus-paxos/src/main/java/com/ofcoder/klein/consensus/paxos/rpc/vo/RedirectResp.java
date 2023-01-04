@@ -14,29 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import java.io.Serializable;
 
 /**
- * Cluster info.
- *
  * @author 释慧利
  */
-public interface Cluster {
-    MemberConfiguration getMemberConfig();
+public class RedirectResp implements Serializable {
+    private boolean changeResult;
 
-    /**
-     * Change member, add endpoint to the cluster.
-     *
-     * @param endpoint new member
-     */
-    void addMember(Endpoint endpoint);
+    public boolean isChangeResult() {
+        return changeResult;
+    }
 
-    /**
-     * Change member, remove endpoint from cluster.
-     *
-     * @param endpoint delete member
-     */
-    void removeMember(Endpoint endpoint);
+    public static final class Builder {
+        private boolean changeResult;
+
+        private Builder() {
+        }
+
+        public static Builder aRedirectResp() {
+            return new Builder();
+        }
+
+        public Builder changeResult(boolean changeResult) {
+            this.changeResult = changeResult;
+            return this;
+        }
+
+        public RedirectResp build() {
+            RedirectResp redirectResp = new RedirectResp();
+            redirectResp.changeResult = this.changeResult;
+            return redirectResp;
+        }
+    }
 }
