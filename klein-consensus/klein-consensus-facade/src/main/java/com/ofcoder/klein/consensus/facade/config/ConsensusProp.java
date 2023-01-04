@@ -42,6 +42,10 @@ public class ConsensusProp {
      */
     private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 150);
     /**
+     * timeout for single change member.
+     */
+    private long changeMemberTimeout = SystemPropertyUtil.getLong("klein.consensus.change-member-timeout", roundTimeout * 2);
+    /**
      * the number of proposals negotiated by the single round.
      */
     private int batchSize = SystemPropertyUtil.getInt("klein.consensus.batch-size", 5);
@@ -75,6 +79,14 @@ public class ConsensusProp {
 
     public void setRoundTimeout(final long roundTimeout) {
         this.roundTimeout = roundTimeout;
+    }
+
+    public long getChangeMemberTimeout() {
+        return changeMemberTimeout;
+    }
+
+    public void setChangeMemberTimeout(long changeMemberTimeout) {
+        this.changeMemberTimeout = changeMemberTimeout;
     }
 
     public int getBatchSize() {

@@ -34,13 +34,21 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public interface Master extends Lifecycle<ConsensusProp> {
 
     /**
+     * Whether I am a Master.
+     *
+     * @return true if I am master.
+     */
+    boolean isSelf();
+
+    /**
      * Change Member.
      *
-     * @param op     add member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#ADD}
-     *               remove member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#REMOVE}
+     * @param op     <code>o</code> is add member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#ADD}
+     *               <code>1</code> is remove member: ${@link com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp#REMOVE}
      * @param target target
+     * @return change result
      */
-    void changeMember(byte op, Endpoint target);
+    boolean changeMember(byte op, Endpoint target);
 
     /**
      * Election master.

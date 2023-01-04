@@ -51,6 +51,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectResp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -123,9 +125,57 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void changeMember(final byte op, final Endpoint endpoint) {
+    public boolean isSelf() {
+        return self.getSelf().equals(memberConfig.getMaster());
+    }
+
+    @Override
+    public boolean changeMember(final byte op, final Endpoint target) {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+
+        if (RoleAccessor.getMaster().isSelf()) {
+            _changeMember(op, target, new ProposeDone() {
+                @Override
+                public void negotiationDone(boolean result, List<Proposal> consensusDatas) {
+                    future.complete(result);
+                }
+            });
+        } else {
+            Endpoint master = self.getMemberConfig().getMaster();
+            if (master == null) {
+                return false;
+            }
+            RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                    .redirect(RedirectReq.CHANGE_MEMBER)
+                    .changeOp(op)
+                    .changeTarget(target)
+                    .build();
+            client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectResp>() {
+                @Override
+                public void error(final Throwable err) {
+                    LOG.error("redirect change member to node-{}, occur exception, {}", master.getId(), err.getMessage());
+                    future.complete(false);
+                }
+
+                @Override
+                public void complete(final RedirectResp result) {
+                    future.complete(true);
+                }
+            }, prop.getChangeMemberTimeout());
+        }
+
+        try {
+            Boolean result = future.get(prop.getChangeMemberTimeout() + 10, TimeUnit.MILLISECONDS);
+            return result;
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            LOG.error("redirect change member, occur exception, {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private void _changeMember(final byte op, final Endpoint endpoint, final ProposeDone done) {
         LOG.info("start add member.");
-        // stop → change member → restart → propose noop.
+        // join-consensus
 
         try {
             // It can only be changed once at a time
