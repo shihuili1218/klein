@@ -40,6 +40,6 @@ public final class PaxosQuorum extends Quorum {
      * @return new Quorum checker
      */
     public static PaxosQuorum createInstance(final PaxosMemberConfiguration memberConfiguration) {
-        return new PaxosQuorum(memberConfiguration.getAllMembers());
+        return new PaxosQuorum(memberConfiguration.getEffectMembers());
     }
 }

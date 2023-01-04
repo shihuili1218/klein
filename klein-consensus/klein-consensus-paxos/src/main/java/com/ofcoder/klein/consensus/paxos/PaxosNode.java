@@ -47,7 +47,7 @@ public class PaxosNode extends Node {
      */
     public long generateNextProposalNo() {
         long cur = this.curProposalNo;
-        int n = memberConfig.getAllMembers().size();
+        int n = memberConfig.getEffectMembers().size();
         long j = cur / n;
         if (cur % n > 0) {
             j = j + 1;

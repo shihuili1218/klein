@@ -27,10 +27,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.Maps;
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -41,23 +44,41 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
-    protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();
+    protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
+    protected transient Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
 
     public int getVersion() {
         return version.get();
     }
 
+    public void seeNewConfig(Set<Endpoint> newConfig) {
+        if (MapUtils.isNotEmpty(lastMembers)){
+            throw new ChangeMemberException("lastMembers is not empty, the config may be changing");
+        }
+        this.version.incrementAndGet();
+        this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+    }
+
     /**
-     * get all members.
+     * get effect members.
+     *
+     * @return effect members
+     */
+    public Set<Endpoint> getEffectMembers() {
+        return new HashSet<>(effectMembers.values());
+    }
+
+    /**
+     * get last see members.
      *
      * @return all members
      */
-    public Set<Endpoint> getAllMembers() {
-        return new HashSet<>(allMembers.values());
+    public Set<Endpoint> getLastMembers() {
+        return new HashSet<>(lastMembers.values());
     }
 
     public Set<Endpoint> getMembersWithout(final String selfId) {
-        return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+        return getEffectMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
                 .collect(Collectors.toSet());
     }
 
@@ -68,7 +89,7 @@ public class MemberConfiguration implements Serializable {
      * @return is valid
      */
     public boolean isValid(final String nodeId) {
-        return allMembers.containsKey(nodeId);
+        return effectMembers.containsKey(nodeId);
     }
 
     /**
@@ -81,7 +102,7 @@ public class MemberConfiguration implements Serializable {
         if (StringUtils.isEmpty(id)) {
             return null;
         }
-        return allMembers.getOrDefault(id, null);
+        return effectMembers.getOrDefault(id, null);
     }
 
     /**
@@ -90,7 +111,7 @@ public class MemberConfiguration implements Serializable {
      * @param node new member
      */
     protected void writeOn(final Endpoint node) {
-        allMembers.put(node.getId(), node);
+        effectMembers.put(node.getId(), node);
         version.incrementAndGet();
     }
 
@@ -100,7 +121,7 @@ public class MemberConfiguration implements Serializable {
      * @param node error member
      */
     protected void writeOff(final Endpoint node) {
-        allMembers.remove(node.getId());
+        effectMembers.remove(node.getId());
         version.incrementAndGet();
     }
 
@@ -113,7 +134,7 @@ public class MemberConfiguration implements Serializable {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
-        this.allMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.effectMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.version.incrementAndGet();
     }
 
@@ -121,7 +142,7 @@ public class MemberConfiguration implements Serializable {
     public String toString() {
         return "MemberConfiguration{"
                 + "version=" + version
-                + ", allMembers=" + allMembers
+                + ", allMembers=" + effectMembers
                 + '}';
     }
 }
