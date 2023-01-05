@@ -85,7 +85,7 @@ public class ConsensusProp {
         return changeMemberTimeout;
     }
 
-    public void setChangeMemberTimeout(long changeMemberTimeout) {
+    public void setChangeMemberTimeout(final long changeMemberTimeout) {
         this.changeMemberTimeout = changeMemberTimeout;
     }
 

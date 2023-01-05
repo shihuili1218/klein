@@ -14,22 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.facade;
 
 import java.util.Set;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Join Consensus Quorum.
+ *
  * @author 释慧利
  */
-public class JoinConsensusQuorum implements Quorum {
+public final class JoinConsensusQuorum implements Quorum {
     private final Quorum oldQuorum;
     private final Quorum newQuorum;
 
-    private JoinConsensusQuorum(Set<Endpoint> effectMembers, Set<Endpoint> lasMemmbers) {
+    private JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lasMemmbers) {
         oldQuorum = new SingleQuorum(effectMembers);
         newQuorum = new SingleQuorum(lasMemmbers);
     }
@@ -45,14 +45,14 @@ public class JoinConsensusQuorum implements Quorum {
     }
 
     @Override
-    public boolean refuse(Endpoint node) {
+    public boolean refuse(final Endpoint node) {
         oldQuorum.refuse(node);
         newQuorum.refuse(node);
         return true;
     }
 
     @Override
-    public boolean grant(Endpoint node) {
+    public boolean grant(final Endpoint node) {
         oldQuorum.grant(node);
         newQuorum.grant(node);
         return true;

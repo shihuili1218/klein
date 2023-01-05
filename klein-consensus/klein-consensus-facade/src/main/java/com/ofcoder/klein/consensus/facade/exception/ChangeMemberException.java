@@ -23,7 +23,7 @@ package com.ofcoder.klein.consensus.facade.exception;
  */
 public class ChangeMemberException extends ConsensusException {
 
-    public ChangeMemberException(String message) {
+    public ChangeMemberException(final String message) {
         super(message);
     }
 

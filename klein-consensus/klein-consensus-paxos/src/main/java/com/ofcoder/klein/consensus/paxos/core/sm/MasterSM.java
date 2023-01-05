@@ -53,17 +53,7 @@ public class MasterSM extends AbstractSM {
     }
 
     private void changeMember(final ChangeMemberOp op) {
-        switch (op.getOp()) {
-            case ChangeMemberOp.ADD:
-                memberConfig.writeOn(op.getTarget());
-                break;
-            case ChangeMemberOp.REMOVE:
-                memberConfig.writeOff(op.getTarget());
-                break;
-            default:
-                LOG.warn("MasterSM.changeMember, op[{}] is invalid", op.getOp());
-                break;
-        }
+        memberConfig.effectiveNewConfig(op.getNewConfig());
     }
 
     private void electMaster(final ElectionOp op) {

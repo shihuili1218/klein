@@ -21,13 +21,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.consensus.facade.SingleQuorum;
-import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
+import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
+import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
  * Propose Context.
+ *
  * @author 释慧利
  */
 public class ProposeContext {
@@ -52,18 +53,18 @@ public class ProposeContext {
      */
     private int times = 0;
     private final PaxosMemberConfiguration memberConfiguration;
-    private final SingleQuorum prepareQuorum;
+    private final Quorum prepareQuorum;
     private final AtomicBoolean prepareNexted;
-    private final SingleQuorum acceptQuorum;
+    private final Quorum acceptQuorum;
     private final AtomicBoolean acceptNexted;
 
     public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final Holder<Long> instanceIdHolder, final List<ProposalWithDone> events) {
         this.memberConfiguration = memberConfiguration;
         this.instanceIdHolder = instanceIdHolder;
         this.dataWithCallback = ImmutableList.copyOf(events);
-        this.prepareQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.prepareQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
         this.prepareNexted = new AtomicBoolean(false);
-        this.acceptQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.acceptQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
         this.acceptNexted = new AtomicBoolean(false);
     }
 
@@ -99,7 +100,7 @@ public class ProposeContext {
         return times;
     }
 
-    public SingleQuorum getPrepareQuorum() {
+    public Quorum getPrepareQuorum() {
         return prepareQuorum;
     }
 
@@ -107,7 +108,7 @@ public class ProposeContext {
         return prepareNexted;
     }
 
-    public SingleQuorum getAcceptQuorum() {
+    public Quorum getAcceptQuorum() {
         return acceptQuorum;
     }
 

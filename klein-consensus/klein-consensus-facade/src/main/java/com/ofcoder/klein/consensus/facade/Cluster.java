@@ -24,8 +24,8 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Cluster {
-    public static final byte ADD = 0;
-    public static final byte REMOVE = 1;
+    byte ADD = 0;
+    byte REMOVE = 1;
 
     MemberConfiguration getMemberConfig();
 
