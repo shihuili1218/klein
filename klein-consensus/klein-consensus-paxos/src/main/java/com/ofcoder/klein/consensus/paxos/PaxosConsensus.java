@@ -197,6 +197,9 @@ public class PaxosConsensus implements Consensus {
         if (getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
+
+        // todo 数据对齐
+
         RoleAccessor.getMaster().changeMember(ADD, Lists.newArrayList(endpoint));
     }
 

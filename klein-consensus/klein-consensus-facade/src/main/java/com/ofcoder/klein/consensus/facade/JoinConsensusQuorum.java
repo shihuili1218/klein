@@ -18,6 +18,8 @@ package com.ofcoder.klein.consensus.facade;
 
 import java.util.Set;
 
+import org.apache.commons.collections4.CollectionUtils;
+
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -40,8 +42,12 @@ public final class JoinConsensusQuorum implements Quorum {
      * @param memberConfiguration member config
      * @return new Quorum checker
      */
-    public static JoinConsensusQuorum createInstance(final MemberConfiguration memberConfiguration) {
-        return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers());
+    public static Quorum createInstance(final MemberConfiguration memberConfiguration) {
+        if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
+            return new SingleQuorum(memberConfiguration.getEffectMembers());
+        } else {
+            return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers());
+        }
     }
 
     @Override

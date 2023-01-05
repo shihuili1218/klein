@@ -135,7 +135,6 @@ public class MasterImpl implements Master {
 
     @Override
     public boolean changeMember(final byte op, final List<Endpoint> target) {
-        // todo 数据对齐
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
