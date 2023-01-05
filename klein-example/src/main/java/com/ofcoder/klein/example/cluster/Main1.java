@@ -45,6 +45,8 @@ public class Main1 {
         prop1.getRpcProp().setPort(1218);
 
         Klein instance1 = Klein.getInstance();
+        instance1.startup();
+
         instance1.awaitInit();
 
 //        Thread.sleep(15000L);

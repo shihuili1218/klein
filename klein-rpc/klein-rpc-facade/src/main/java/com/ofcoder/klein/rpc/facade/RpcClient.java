@@ -91,8 +91,25 @@ public interface RpcClient extends Lifecycle<RpcProp> {
      * @param target    target
      * @param request   invoke data and service info
      * @param timeoutMs invoke timeout
+     * @param <R>       result type
      * @return invoke result
      */
-    Object sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs);
+    <R> R sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs);
 
+    /**
+     * send request for sync.
+     *
+     * @param target    target
+     * @param request   invoke data and service info
+     * @param timeoutMs invoke timeout
+     * @param <R>       result type
+     * @return invoke result
+     */
+    default <R> R sendRequestSync(Endpoint target, Serializable request, long timeoutMs) {
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(request.getClass().getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
+        return sendRequestSync(target, param, timeoutMs);
+    }
 }

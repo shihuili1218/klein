@@ -17,7 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
-import java.util.List;
+import java.util.Set;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -29,19 +29,19 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class ChangeMemberReq implements Serializable {
 
     private byte op;
-    private List<Endpoint> changeTarget;
+    private Set<Endpoint> changeTarget;
 
     public byte getOp() {
         return op;
     }
 
-    public List<Endpoint> getChangeTarget() {
+    public Set<Endpoint> getChangeTarget() {
         return changeTarget;
     }
 
     public static final class Builder {
         private byte op;
-        private List<Endpoint> changeTarget;
+        private Set<Endpoint> changeTarget;
 
         private Builder() {
         }
@@ -61,7 +61,7 @@ public class ChangeMemberReq implements Serializable {
          * @param op op
          * @return Builder
          */
-        public Builder changeOp(final byte op) {
+        public Builder op(final byte op) {
             this.op = op;
             return this;
         }
@@ -72,7 +72,7 @@ public class ChangeMemberReq implements Serializable {
          * @param changeTarget changeTarget
          * @return Builder
          */
-        public Builder changeTarget(final List<Endpoint> changeTarget) {
+        public Builder changeTarget(final Set<Endpoint> changeTarget) {
             this.changeTarget = changeTarget;
             return this;
         }
@@ -85,6 +85,7 @@ public class ChangeMemberReq implements Serializable {
         public ChangeMemberReq build() {
             ChangeMemberReq redirectReq = new ChangeMemberReq();
             redirectReq.changeTarget = this.changeTarget;
+            redirectReq.op = this.op;
             return redirectReq;
         }
     }

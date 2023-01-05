@@ -52,6 +52,7 @@ public class Main3 {
 //        prop3.getRpcProp().setPort(1220);
 
         Klein instance3 = Klein.getInstance();
+        instance3.startup();
 
         System.in.read();
     }

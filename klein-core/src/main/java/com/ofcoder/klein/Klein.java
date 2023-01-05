@@ -47,7 +47,6 @@ public final class Klein {
     private KleinLock lock;
 
     private Klein() {
-        startup();
     }
 
     /**
