@@ -78,7 +78,7 @@ public class AcceptorImpl implements Acceptor {
 
             for (Proposal datum : req.getData()) {
                 if (datum.getData() instanceof ChangeMemberOp) {
-                    memberConfig.seeNewConfig(((ChangeMemberOp) datum.getData()).getNewConfig());
+                    memberConfig.seenNewConfig(((ChangeMemberOp) datum.getData()).getNewConfig());
                 }
             }
 

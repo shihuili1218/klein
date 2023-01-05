@@ -32,6 +32,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -50,7 +51,12 @@ public class MemberConfiguration implements Serializable {
         return version.get();
     }
 
-    public void seeNewConfig(Set<Endpoint> newConfig) {
+    /**
+     * Set the last seen configuration.
+     *
+     * @param newConfig new configuration
+     */
+    public void seenNewConfig(final Set<Endpoint> newConfig) {
         if (MapUtils.isNotEmpty(lastMembers)) {
             throw new ChangeMemberException("lastMembers is not empty, the config may be changing");
         }
@@ -59,12 +65,25 @@ public class MemberConfiguration implements Serializable {
     }
 
     /**
+     * Commit the last seen configuration.
+     *
+     * @param newConfig new configuration
+     */
+    public void effectiveNewConfig(final Set<Endpoint> newConfig) {
+        if (MapUtils.isEmpty(lastMembers) || !new HashSet<>(lastMembers.values()).equals(newConfig)) {
+            throw new ChangeMemberException("lastMembers is empty, this error should not occur");
+        }
+        this.effectMembers = lastMembers;
+        this.lastMembers = new ConcurrentHashMap<>();
+    }
+
+    /**
      * get all members.
      *
      * @return all members
      */
     public Set<Endpoint> getAllMembers() {
-        HashSet<Endpoint> endpoints = new HashSet<>(effectMembers.values());
+        Set<Endpoint> endpoints = new HashSet<>(effectMembers.values());
         endpoints.addAll(lastMembers.values());
         return endpoints;
     }
@@ -87,8 +106,14 @@ public class MemberConfiguration implements Serializable {
         return new HashSet<>(lastMembers.values());
     }
 
-    public Set<Endpoint> getMembersWithout(final String selfId) {
-        return getAllMembers().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+    /**
+     * As {@link MemberConfiguration#getAllMembers()} has no benchmark, remove param: removeId.
+     *
+     * @param removeId remove id.
+     * @return get all members exclude param removeId
+     */
+    public Set<Endpoint> getMembersWithout(final String removeId) {
+        return getAllMembers().stream().filter(it -> !StringUtils.equals(removeId, it.getId()))
                 .collect(Collectors.toSet());
     }
 

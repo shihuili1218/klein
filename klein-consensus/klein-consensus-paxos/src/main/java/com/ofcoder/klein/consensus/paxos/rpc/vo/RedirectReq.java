@@ -22,6 +22,8 @@ import java.util.List;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * RedirectReq.
+ *
  * @author 释慧利
  */
 public class RedirectReq implements Serializable {
@@ -52,25 +54,53 @@ public class RedirectReq implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aRedirectReq.
+         *
+         * @return Builder
+         */
         public static Builder aRedirectReq() {
             return new Builder();
         }
 
-        public Builder redirect(byte redirect) {
+        /**
+         * redirect.
+         *
+         * @param redirect redirect
+         * @return Builder
+         */
+        public Builder redirect(final byte redirect) {
             this.redirect = redirect;
             return this;
         }
 
-        public Builder changeOp(byte changeOp) {
+        /**
+         * changeOp.
+         *
+         * @param changeOp changeOp
+         * @return Builder
+         */
+        public Builder changeOp(final byte changeOp) {
             this.changeOp = changeOp;
             return this;
         }
 
-        public Builder changeTarget(List<Endpoint> changeTarget) {
+        /**
+         * changeTarget.
+         *
+         * @param changeTarget changeTarget
+         * @return Builder
+         */
+        public Builder changeTarget(final List<Endpoint> changeTarget) {
             this.changeTarget = changeTarget;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return RedirectReq
+         */
         public RedirectReq build() {
             RedirectReq redirectReq = new RedirectReq();
             redirectReq.changeOp = this.changeOp;

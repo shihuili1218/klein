@@ -39,14 +39,18 @@ public class ChangeMemberOp implements SystemOp {
         return newConfig;
     }
 
-    public void setNewConfig(Set<Endpoint> newConfig) {
+    public void setNewConfig(final Set<Endpoint> newConfig) {
         this.newConfig = newConfig;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ChangeMemberOp that = (ChangeMemberOp) o;
         return Objects.equals(nodeId, that.nodeId) && Objects.equals(newConfig, that.newConfig);
     }

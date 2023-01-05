@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * Redirect Resp.
+ *
  * @author 释慧利
  */
 public class RedirectResp implements Serializable {
@@ -34,15 +36,31 @@ public class RedirectResp implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aRedirectResp.
+         *
+         * @return Builder
+         */
         public static Builder aRedirectResp() {
             return new Builder();
         }
 
-        public Builder changeResult(boolean changeResult) {
+        /**
+         * changeResult.
+         *
+         * @param changeResult changeResult
+         * @return Builder
+         */
+        public Builder changeResult(final boolean changeResult) {
             this.changeResult = changeResult;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return RedirectResp
+         */
         public RedirectResp build() {
             RedirectResp redirectResp = new RedirectResp();
             redirectResp.changeResult = this.changeResult;

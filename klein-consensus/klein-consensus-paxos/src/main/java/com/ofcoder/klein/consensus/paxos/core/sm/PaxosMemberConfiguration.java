@@ -58,15 +58,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         }
     }
 
-    protected void writeOn(final Endpoint node) {
-        super.writeOn(node);
-    }
-
-    @Override
-    protected void writeOff(final Endpoint node) {
-        super.writeOff(node);
-    }
-
     @Override
     public void init(final List<Endpoint> nodes) {
         super.init(nodes);

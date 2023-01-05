@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.facade;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Quorum check.
+ *
  * @author 释慧利
  */
 public interface Quorum {
@@ -28,7 +30,7 @@ public interface Quorum {
      * @param node refuse node
      * @return refuse result
      */
-    boolean refuse(final Endpoint node);
+    boolean refuse(Endpoint node);
 
     /**
      * the node pass, grant current request.
@@ -36,7 +38,7 @@ public interface Quorum {
      * @param node pass node
      * @return grant result
      */
-    boolean grant(final Endpoint node);
+    boolean grant(Endpoint node);
 
     SingleQuorum.GrantResult isGranted();
 
