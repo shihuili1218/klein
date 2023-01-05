@@ -378,7 +378,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void keepSameData(final NodeState state) {
+    public void pullSameData(final NodeState state) {
         final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
         if (target == null) {
             return;
@@ -402,6 +402,11 @@ public class LearnerImpl implements Learner {
                 RoleAccessor.getLearner().learn(localApplied, target);
             }
         }
+    }
+
+    @Override
+    public void pushSameData(final NodeState self, final Endpoint state) {
+
     }
 
     @Override

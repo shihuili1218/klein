@@ -98,7 +98,9 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      *
      * @param state target information
      */
-    void keepSameData(NodeState state);
+    void pullSameData(NodeState state);
+
+    void pushSameData(NodeState self, Endpoint target);
 
     /**
      * Keep consistent with the data in the cluster.

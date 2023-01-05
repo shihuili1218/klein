@@ -39,7 +39,6 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.SingleQuorum;
@@ -198,7 +197,7 @@ public class MasterImpl implements Master {
 
         PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
         Set<Endpoint> newConfig = new HashSet<>(curConfiguration.getEffectMembers());
-        if (op == Cluster.ADD) {
+        if (op == Master.ADD) {
             newConfig.addAll(endpoint);
         } else {
             endpoint.forEach(newConfig::remove);
@@ -438,7 +437,9 @@ public class MasterImpl implements Master {
 
         if (!request.isProbe()) {
             // check and update instance
-            checkAndUpdateInstance(nodeState);
+            ThreadExecutor.submit(() -> {
+                RoleAccessor.getLearner().pullSameData(nodeState);
+            });
         }
 
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
@@ -463,12 +464,6 @@ public class MasterImpl implements Master {
                 .curInstanceId(self.getCurInstanceId())
                 .lastAppliedId(self.getCurAppliedInstanceId())
                 .build();
-    }
-
-    private void checkAndUpdateInstance(final NodeState nodeState) {
-        ThreadExecutor.submit(() -> {
-            RoleAccessor.getLearner().keepSameData(nodeState);
-        });
     }
 
     private void stopAllTimer() {
