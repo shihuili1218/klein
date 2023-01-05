@@ -26,7 +26,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  *
  * @author 释慧利
  */
-public class ChangeMemberReq implements Serializable {
+public class QueryMasterReq implements Serializable {
 
     private byte op;
     private Set<Endpoint> changeTarget;
@@ -82,8 +82,8 @@ public class ChangeMemberReq implements Serializable {
          *
          * @return RedirectReq
          */
-        public ChangeMemberReq build() {
-            ChangeMemberReq redirectReq = new ChangeMemberReq();
+        public QueryMasterReq build() {
+            QueryMasterReq redirectReq = new QueryMasterReq();
             redirectReq.changeTarget = this.changeTarget;
             redirectReq.op = this.op;
             return redirectReq;

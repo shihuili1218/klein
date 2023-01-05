@@ -405,7 +405,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void pushSameData(final NodeState self, final Endpoint state) {
+    public void pushSameData(final Endpoint state) {
 
     }
 

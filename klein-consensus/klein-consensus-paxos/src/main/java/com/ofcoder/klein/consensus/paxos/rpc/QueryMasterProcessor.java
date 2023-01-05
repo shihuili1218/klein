@@ -16,13 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import java.nio.ByteBuffer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ChangeMemberReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Nil;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
@@ -30,25 +34,27 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  *
  * @author 释慧利
  */
-public class ChangeMemberProcessor extends AbstractRpcProcessor<ChangeMemberReq> {
-    private static final Logger LOG = LoggerFactory.getLogger(ChangeMemberProcessor.class);
+public class QueryMasterProcessor extends AbstractRpcProcessor<Nil> {
+    private static final Logger LOG = LoggerFactory.getLogger(QueryMasterProcessor.class);
 
     private final PaxosNode self;
 
-    public ChangeMemberProcessor(final PaxosNode self) {
+    public QueryMasterProcessor(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
     public String service() {
-        return ChangeMemberReq.class.getSimpleName();
+        return Nil.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(final ChangeMemberReq request, final RpcContext context) {
-
-
-
+    public void handleRequest(final Nil request, final RpcContext context) {
+        QueryMasterRes res = new QueryMasterRes();
+        if (self.getMemberConfig().getMaster() != null) {
+            res.setMaster(self.getMemberConfig().getMaster());
+        }
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 
 }
