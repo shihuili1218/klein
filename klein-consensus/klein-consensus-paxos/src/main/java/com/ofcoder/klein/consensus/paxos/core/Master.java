@@ -33,6 +33,8 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
+    byte ADD = 0;
+    byte REMOVE = 1;
 
     /**
      * Whether I am a Master.
@@ -44,8 +46,8 @@ public interface Master extends Lifecycle<ConsensusProp> {
     /**
      * Change Member.
      *
-     * @param op     <code>o</code> is add member: ${@link Cluster#ADD}
-     *               <code>1</code> is remove member: ${@link Cluster#REMOVE}
+     * @param op     <code>o</code> is add member: ${@link Master#ADD}
+     *               <code>1</code> is remove member: ${@link Master#REMOVE}
      * @param target target
      * @return change result
      */

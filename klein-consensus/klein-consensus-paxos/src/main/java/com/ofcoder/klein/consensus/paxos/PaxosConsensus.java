@@ -38,6 +38,7 @@ import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.ChangeMemberProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
@@ -169,6 +170,7 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
         RpcEngine.registerProcessor(new RedirectProcessor(this.self));
+        RpcEngine.registerProcessor(new ChangeMemberProcessor(this.self));
     }
 
     @Override
@@ -197,10 +199,7 @@ public class PaxosConsensus implements Consensus {
         if (getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-
-        // todo 数据对齐
-
-        RoleAccessor.getMaster().changeMember(ADD, Lists.newArrayList(endpoint));
+        RoleAccessor.getMaster().changeMember(Master.ADD, Lists.newArrayList(endpoint));
     }
 
     @Override
@@ -208,7 +207,7 @@ public class PaxosConsensus implements Consensus {
         if (!getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(REMOVE, Lists.newArrayList(endpoint));
+        RoleAccessor.getMaster().changeMember(Master.REMOVE, Lists.newArrayList(endpoint));
     }
 
 }
