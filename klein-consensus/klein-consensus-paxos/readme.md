@@ -166,9 +166,17 @@ Klein引入Master角色，该角色在集群中，同一时间只允许存在一
 
 https://www.microsoft.com/en-us/research/publication/stoppable-paxos/
 
-成员变更是否能够像选举Master一样，使用共识协商来完成？
+成员变更是否能够像选举Master一样，使用共识协商来完成？不行，成员变更需要在Accept阶段生效
 
 这里采用Join-Consensus
+
+1. 新增成员入口，新成员join启动，主动发请求联系集群，
+2. Master同步日志给新成员[0, maxInstanceId]
+3. Master执行Join-Consensus
+
+1. 成员下线入口，提供主动关机api、关机时主动向集群发送移除自己
+2. Master将确认日志是否已经发送给了移除它之后的多数派成员
+3. Master执行Join-Consensus
 
 ### 成员变更需要等待上一个生效后才能进行
 
