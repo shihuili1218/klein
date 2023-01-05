@@ -94,13 +94,20 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     void confirm(long instanceId, List<ProposeDone> dons);
 
     /**
-     * Keep the data consistent with <code>state</code>.
+     * Keep the data consistent with master, state is master.
+     * Caller is slave.
      *
      * @param state target information
      */
     void pullSameData(NodeState state);
 
-    void pushSameData(NodeState self, Endpoint target);
+    /**
+     * Master pushes data to slave, target is slave.
+     * Caller is master.
+     *
+     * @param target target
+     */
+    void pushSameData(Endpoint target);
 
     /**
      * Keep consistent with the data in the cluster.

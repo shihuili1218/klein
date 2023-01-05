@@ -25,8 +25,8 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -39,16 +39,19 @@ import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.ChangeMemberProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.QueryMasterProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.QueryNodeStateProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ChangeMemberReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ChangeMemberRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
@@ -145,16 +148,27 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void joinCluster() {
-        ChangeMemberReq req = ChangeMemberReq.Builder.aRedirectReq()
+        QueryMasterReq req = QueryMasterReq.Builder.aRedirectReq()
                 .op(Master.ADD)
                 .changeTarget(Sets.newHashSet(self.getSelf()))
                 .build();
+
+        Endpoint master = null;
         for (Endpoint member : prop.getMembers()) {
-            ChangeMemberRes res = this.client.sendRequestSync(member, req, 100);
-            if (res != null) {
+            QueryMasterRes res = this.client.sendRequestSync(member, req, 50);
+            if (res != null && res.getMaster() != null) {
+                master = res.getMaster();
                 break;
             }
         }
+        if (master == null) {
+            throw new StartupException("join cluster failure, because there is no master in the cluster");
+        }
+        QueryNodeStateRes res = this.client.sendRequestSync(master, new QueryNodeStateReq(), 50);
+
+        RoleAccessor.getLearner().pullSameData(res.getState());
+
+        // todo add member
     }
 
 
@@ -181,15 +195,19 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void registerProcessor() {
+        // negotiation
         RpcEngine.registerProcessor(new PrepareProcessor(this.self));
         RpcEngine.registerProcessor(new AcceptProcessor(this.self));
         RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
         RpcEngine.registerProcessor(new LearnProcessor(this.self));
+        // master
         RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
         RpcEngine.registerProcessor(new RedirectProcessor(this.self));
-        RpcEngine.registerProcessor(new ChangeMemberProcessor(this.self));
+        // change member
+        RpcEngine.registerProcessor(new QueryMasterProcessor(this.self));
+        RpcEngine.registerProcessor(new QueryNodeStateProcessor(this.self));
     }
 
     @Override
