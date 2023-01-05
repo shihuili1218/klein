@@ -133,7 +133,7 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public boolean changeMember(final byte op, final List<Endpoint> target) {
+    public boolean changeMember(final byte op, final Set<Endpoint> target) {
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
@@ -193,7 +193,7 @@ public class MasterImpl implements Master {
      * @param endpoint target member
      * @param done     callback
      */
-    private void _changeMember(final byte op, final List<Endpoint> endpoint, final ProposeDone done) {
+    private void _changeMember(final byte op, final Set<Endpoint> endpoint, final ProposeDone done) {
 
         PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
         Set<Endpoint> newConfig = new HashSet<>(curConfiguration.getEffectMembers());

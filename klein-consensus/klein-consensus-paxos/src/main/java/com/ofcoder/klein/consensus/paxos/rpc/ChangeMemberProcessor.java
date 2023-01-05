@@ -46,7 +46,9 @@ public class ChangeMemberProcessor extends AbstractRpcProcessor<ChangeMemberReq>
 
     @Override
     public void handleRequest(final ChangeMemberReq request, final RpcContext context) {
-        RoleAccessor.getMaster().changeMember(request.getOp(), request.getChangeTarget());
+
+
+
     }
 
 }

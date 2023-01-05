@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -46,6 +47,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.ChangeMemberReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.ChangeMemberRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
@@ -130,14 +133,30 @@ public class PaxosConsensus implements Consensus {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         loadNode();
-
         registerProcessor();
-        RoleAccessor.create(prop, self);
+        RoleAccessor.create(this.prop, self);
         loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
-        RoleAccessor.getMaster().electingMaster();
-
-        preheating();
+        if (!this.prop.isJoinCluster()) {
+            RoleAccessor.getMaster().electingMaster();
+            preheating();
+        } else {
+            joinCluster();
+        }
     }
+
+    private void joinCluster() {
+        ChangeMemberReq req = ChangeMemberReq.Builder.aRedirectReq()
+                .op(Master.ADD)
+                .changeTarget(Sets.newHashSet(self.getSelf()))
+                .build();
+        for (Endpoint member : prop.getMembers()) {
+            ChangeMemberRes res = this.client.sendRequestSync(member, req, 100);
+            if (res != null) {
+                break;
+            }
+        }
+    }
+
 
     private void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
@@ -199,7 +218,7 @@ public class PaxosConsensus implements Consensus {
         if (getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(Master.ADD, Lists.newArrayList(endpoint));
+        RoleAccessor.getMaster().changeMember(Master.ADD, Sets.newHashSet(endpoint));
     }
 
     @Override
@@ -207,7 +226,7 @@ public class PaxosConsensus implements Consensus {
         if (!getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(Master.REMOVE, Lists.newArrayList(endpoint));
+        RoleAccessor.getMaster().changeMember(Master.REMOVE, Sets.newHashSet(endpoint));
     }
 
 }

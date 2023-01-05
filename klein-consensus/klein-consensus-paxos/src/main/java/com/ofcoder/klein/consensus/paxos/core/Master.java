@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
@@ -51,7 +52,7 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @param target target
      * @return change result
      */
-    boolean changeMember(byte op, List<Endpoint> target);
+    boolean changeMember(byte op, Set<Endpoint> target);
 
     /**
      * Election master.

@@ -38,6 +38,10 @@ public class ConsensusProp {
      */
     private List<Endpoint> members = Lists.newArrayList(self);
     /**
+     * join cluster, this member is not in the cluster, and will automatically join the cluster at startup
+     */
+    private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
+    /**
      * timeout for single round.
      */
     private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 150);
@@ -71,6 +75,14 @@ public class ConsensusProp {
 
     public void setMembers(final List<Endpoint> members) {
         this.members = members;
+    }
+
+    public boolean isJoinCluster() {
+        return joinCluster;
+    }
+
+    public void setJoinCluster(boolean joinCluster) {
+        this.joinCluster = joinCluster;
     }
 
     public long getRoundTimeout() {
