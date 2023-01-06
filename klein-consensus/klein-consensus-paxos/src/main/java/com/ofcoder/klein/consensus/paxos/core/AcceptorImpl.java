@@ -66,7 +66,7 @@ public class AcceptorImpl implements Acceptor {
     }
 
     @Override
-    public AcceptRes handleAcceptRequest(final AcceptReq req) {
+    public AcceptRes handleAcceptRequest(final AcceptReq req, final boolean isSelf) {
         LOG.info("processing the accept message from node-{}, instanceId: {}, data.size: {}", req.getNodeId(), req.getInstanceId(), req.getData().size());
 
         try {
@@ -76,9 +76,12 @@ public class AcceptorImpl implements Acceptor {
             final long selfInstanceId = self.getCurInstanceId();
             final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-            for (Proposal datum : req.getData()) {
-                if (datum.getData() instanceof ChangeMemberOp) {
-                    memberConfig.seenNewConfig(((ChangeMemberOp) datum.getData()).getNewConfig());
+            if (!isSelf) {
+                // check proposals include change member
+                for (Proposal datum : req.getData()) {
+                    if (datum.getData() instanceof ChangeMemberOp) {
+                        memberConfig.seenNewConfig(((ChangeMemberOp) datum.getData()).getNewConfig());
+                    }
                 }
             }
 
