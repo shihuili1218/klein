@@ -55,7 +55,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectResp;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -161,7 +161,7 @@ public class MasterImpl implements Master {
                     .changeOp(op)
                     .changeTarget(target)
                     .build();
-            client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectResp>() {
+            client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectRes>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("redirect change member to node-{}, occur exception, {}", master.getId(), err.getMessage());
@@ -169,7 +169,7 @@ public class MasterImpl implements Master {
                 }
 
                 @Override
-                public void complete(final RedirectResp result) {
+                public void complete(final RedirectRes result) {
                     future.complete(true);
                 }
             }, prop.getChangeMemberTimeout());

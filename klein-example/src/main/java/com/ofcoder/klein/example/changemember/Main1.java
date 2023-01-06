@@ -49,8 +49,7 @@ public class Main1 {
                 )
         );
 
-        Klein instance = Klein.getInstance();
-        instance.startup();
+        Klein instance = Klein.startup();
         instance.awaitInit();
 
         new Thread(new Runnable() {

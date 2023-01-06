@@ -32,7 +32,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -124,7 +123,7 @@ public class MemberConfiguration implements Serializable {
      * @return is valid
      */
     public boolean isValid(final String nodeId) {
-        return effectMembers.containsKey(nodeId) && lastMembers.containsKey(nodeId);
+        return effectMembers.containsKey(nodeId) || lastMembers.containsKey(nodeId);
     }
 
     /**

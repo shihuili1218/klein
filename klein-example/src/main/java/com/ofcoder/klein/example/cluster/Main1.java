@@ -44,8 +44,7 @@ public class Main1 {
         prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218));
         prop1.getRpcProp().setPort(1218);
 
-        Klein instance1 = Klein.getInstance();
-        instance1.startup();
+        Klein instance1 = Klein.startup();
 
         instance1.awaitInit();
 

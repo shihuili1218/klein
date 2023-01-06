@@ -38,7 +38,7 @@ public class ConsensusProp {
      */
     private List<Endpoint> members = Lists.newArrayList(self);
     /**
-     * join cluster, this member is not in the cluster, and will automatically join the cluster at startup
+     * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
      */
     private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
     /**
@@ -81,7 +81,7 @@ public class ConsensusProp {
         return joinCluster;
     }
 
-    public void setJoinCluster(boolean joinCluster) {
+    public void setJoinCluster(final boolean joinCluster) {
         this.joinCluster = joinCluster;
     }
 

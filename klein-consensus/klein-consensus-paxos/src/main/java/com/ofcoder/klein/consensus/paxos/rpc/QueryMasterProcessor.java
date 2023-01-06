@@ -25,7 +25,6 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Nil;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 

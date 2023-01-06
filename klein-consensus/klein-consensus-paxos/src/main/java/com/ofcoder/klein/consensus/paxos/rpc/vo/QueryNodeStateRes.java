@@ -30,7 +30,7 @@ public class QueryNodeStateRes implements Serializable {
         return state;
     }
 
-    public void setState(NodeState state) {
+    public void setState(final NodeState state) {
         this.state = state;
     }
 }

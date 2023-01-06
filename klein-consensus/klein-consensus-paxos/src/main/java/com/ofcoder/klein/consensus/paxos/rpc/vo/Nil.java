@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 
 /**
+ * Nil.
+ *
  * @author 释慧利
  */
 public class Nil implements Serializable {

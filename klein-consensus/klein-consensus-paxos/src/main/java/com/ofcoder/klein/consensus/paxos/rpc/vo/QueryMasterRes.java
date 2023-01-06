@@ -32,7 +32,7 @@ public class QueryMasterRes implements Serializable {
         return master;
     }
 
-    public void setMaster(Endpoint master) {
+    public void setMaster(final Endpoint master) {
         this.master = master;
     }
 }
