@@ -396,6 +396,7 @@ public class LearnerImpl implements Learner {
                 target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
         if (targetCheckpoint > localApplied) {
             snapSync(target);
+            pullSameData(state);
         } else {
             long next = ++localApplied;
             for (; next <= targetApplied; next++) {
