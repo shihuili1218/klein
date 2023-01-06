@@ -44,7 +44,7 @@ public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
     protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
-    protected transient Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
+    protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
 
     public int getVersion() {
         return version.get();
@@ -56,6 +56,7 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void seenNewConfig(final Set<Endpoint> newConfig) {
+        LOG.info("see a new configuration, {}", newConfig);
         if (MapUtils.isNotEmpty(lastMembers)) {
             throw new ChangeMemberException("lastMembers is not empty, the config may be changing");
         }

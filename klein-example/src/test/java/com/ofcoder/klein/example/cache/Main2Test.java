@@ -1,4 +1,4 @@
-package com.ofcoder.klein.example.cluster;
+package com.ofcoder.klein.example.cache;
 
 import junit.framework.TestCase;
 

@@ -38,12 +38,12 @@ public class Main3 {
         System.setProperty("klein.id", "3");
         System.setProperty("klein.port", "1220");
         System.setProperty("klein.ip", "127.0.0.1");
+        System.setProperty("klein.consensus.join-cluster", "false");
 
         KleinProp prop3 = KleinProp.loadIfPresent();
 
         prop3.getConsensusProp().setMembers(
                 Lists.newArrayList(
-                        new Endpoint("1", "127.0.0.1", 1218),
                         new Endpoint("2", "127.0.0.1", 1219),
                         new Endpoint("3", "127.0.0.1", 1220)
                 )
