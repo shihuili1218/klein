@@ -66,13 +66,18 @@ public final class Klein {
         }
     }
 
-    private void startup() {
+    /**
+     * startup klein.
+     */
+    public static Klein startup() {
         if (started.get()) {
             throw new StartupException("klein engine has started.");
         }
+        Klein kl = KleinHolder.INSTANCE;
+
         if (!started.compareAndSet(false, true)) {
             LOG.warn("klein engine is starting.");
-            return;
+            return kl;
         }
         LOG.info("starting klein...");
         KleinProp prop = KleinProp.loadIfPresent();
@@ -81,8 +86,8 @@ public final class Klein {
         StorageEngine.getInstance().startup(prop.getStorage(), prop.getStorageProp());
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
 
-        this.cache = new KleinCacheImpl(prop.getCacheProp());
-        this.lock = new KleinLockImpl();
+        kl.cache = new KleinCacheImpl(prop.getCacheProp());
+        kl.lock = new KleinLockImpl();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("*** shutting down Klein since JVM is shutting down");
@@ -91,6 +96,7 @@ public final class Klein {
             RpcEngine.shutdown();
             LOG.info("*** Klein shut down");
         }));
+        return kl;
     }
 
     public KleinCache getCache() {
@@ -99,10 +105,6 @@ public final class Klein {
 
     public KleinLock getLock() {
         return lock;
-    }
-
-    public static Klein getInstance() {
-        return KleinHolder.INSTANCE;
     }
 
     private static class KleinHolder {

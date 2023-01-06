@@ -17,9 +17,6 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
-import java.util.Set;
-
-import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * ChangeMemberReq.
@@ -27,66 +24,5 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class QueryMasterReq implements Serializable {
-
-    private byte op;
-    private Set<Endpoint> changeTarget;
-
-    public byte getOp() {
-        return op;
-    }
-
-    public Set<Endpoint> getChangeTarget() {
-        return changeTarget;
-    }
-
-    public static final class Builder {
-        private byte op;
-        private Set<Endpoint> changeTarget;
-
-        private Builder() {
-        }
-
-        /**
-         * aRedirectReq.
-         *
-         * @return Builder
-         */
-        public static Builder aRedirectReq() {
-            return new Builder();
-        }
-
-        /**
-         * op.
-         *
-         * @param op op
-         * @return Builder
-         */
-        public Builder op(final byte op) {
-            this.op = op;
-            return this;
-        }
-
-        /**
-         * changeTarget.
-         *
-         * @param changeTarget changeTarget
-         * @return Builder
-         */
-        public Builder changeTarget(final Set<Endpoint> changeTarget) {
-            this.changeTarget = changeTarget;
-            return this;
-        }
-
-        /**
-         * build.
-         *
-         * @return RedirectReq
-         */
-        public QueryMasterReq build() {
-            QueryMasterReq redirectReq = new QueryMasterReq();
-            redirectReq.changeTarget = this.changeTarget;
-            redirectReq.op = this.op;
-            return redirectReq;
-        }
-    }
+    public static final QueryMasterReq INSTANCE = new QueryMasterReq();
 }

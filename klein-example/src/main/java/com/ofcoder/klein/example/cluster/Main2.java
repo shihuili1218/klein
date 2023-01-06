@@ -51,8 +51,7 @@ public class Main2 {
 //        prop2.getConsensusProp().setSelf(new Endpoint("2", "127.0.0.1", 1219));
 //        prop2.getRpcProp().setPort(1219);
 
-        Klein instance2 = Klein.getInstance();
-        instance2.startup();
+        Klein instance2 = Klein.startup();
 
         System.in.read();
     }

@@ -97,7 +97,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return "PaxosMemberConfiguration{"
                 + "master=" + master
                 + ", version=" + version
-                + ", allMembers=" + effectMembers
+                + ", effectMembers=" + effectMembers
+                + ", lastMembers=" + lastMembers
                 + '}';
     }
 }

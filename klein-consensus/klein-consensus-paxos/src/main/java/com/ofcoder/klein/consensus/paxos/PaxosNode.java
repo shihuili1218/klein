@@ -169,7 +169,8 @@ public class PaxosNode extends Node {
                 + ", curProposalNo=" + curProposalNo
                 + ", lastCheckpoint=" + lastCheckpoint
                 + ", self=" + self
-                + "} " + super.toString();
+                + ", memberConfig=" + memberConfig
+                + '}';
     }
 
     /**

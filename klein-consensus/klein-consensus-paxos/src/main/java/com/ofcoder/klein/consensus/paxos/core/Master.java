@@ -21,7 +21,6 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;

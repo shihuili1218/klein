@@ -17,54 +17,76 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
+import java.util.Set;
+
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * Redirect Resp.
+ * ChangeMemberReq.
  *
  * @author 释慧利
  */
-public class RedirectResp implements Serializable {
-    private boolean changeResult;
+public class ChangeMemberReq implements Serializable {
 
-    public boolean isChangeResult() {
-        return changeResult;
+    private byte op;
+    private Set<Endpoint> changeTarget;
+
+    public byte getOp() {
+        return op;
+    }
+
+    public Set<Endpoint> getChangeTarget() {
+        return changeTarget;
     }
 
     public static final class Builder {
-        private boolean changeResult;
+        private byte op;
+        private Set<Endpoint> changeTarget;
 
         private Builder() {
         }
 
         /**
-         * aRedirectResp.
+         * aRedirectReq.
          *
          * @return Builder
          */
-        public static Builder aRedirectResp() {
+        public static Builder aRedirectReq() {
             return new Builder();
         }
 
         /**
-         * changeResult.
+         * op.
          *
-         * @param changeResult changeResult
+         * @param op op
          * @return Builder
          */
-        public Builder changeResult(final boolean changeResult) {
-            this.changeResult = changeResult;
+        public Builder op(final byte op) {
+            this.op = op;
+            return this;
+        }
+
+        /**
+         * changeTarget.
+         *
+         * @param changeTarget changeTarget
+         * @return Builder
+         */
+        public Builder changeTarget(final Set<Endpoint> changeTarget) {
+            this.changeTarget = changeTarget;
             return this;
         }
 
         /**
          * build.
          *
-         * @return RedirectResp
+         * @return RedirectReq
          */
-        public RedirectResp build() {
-            RedirectResp redirectResp = new RedirectResp();
-            redirectResp.changeResult = this.changeResult;
-            return redirectResp;
+        public ChangeMemberReq build() {
+            ChangeMemberReq redirectReq = new ChangeMemberReq();
+            redirectReq.changeTarget = this.changeTarget;
+            redirectReq.op = this.op;
+            return redirectReq;
         }
     }
 }

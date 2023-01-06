@@ -52,6 +52,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
@@ -148,14 +150,10 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void joinCluster() {
-        QueryMasterReq req = QueryMasterReq.Builder.aRedirectReq()
-                .op(Master.ADD)
-                .changeTarget(Sets.newHashSet(self.getSelf()))
-                .build();
-
+        // find master
         Endpoint master = null;
         for (Endpoint member : prop.getMembers()) {
-            QueryMasterRes res = this.client.sendRequestSync(member, req, 50);
+            QueryMasterRes res = this.client.sendRequestSync(member, QueryMasterReq.INSTANCE, 50);
             if (res != null && res.getMaster() != null) {
                 master = res.getMaster();
                 break;
@@ -164,13 +162,22 @@ public class PaxosConsensus implements Consensus {
         if (master == null) {
             throw new StartupException("join cluster failure, because there is no master in the cluster");
         }
-        QueryNodeStateRes res = this.client.sendRequestSync(master, new QueryNodeStateReq(), 50);
+        QueryNodeStateRes res = this.client.sendRequestSync(master, QueryNodeStateReq.INSTANCE, 50);
 
+        // sync data
         RoleAccessor.getLearner().pullSameData(res.getState());
 
-        // todo add member
+        // add member
+        RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                .redirect(RedirectReq.CHANGE_MEMBER)
+                .changeOp(Master.ADD)
+                .changeTarget(Sets.newHashSet(self.getSelf()))
+                .build();
+        RedirectRes changeRes = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout());
+        if (changeRes == null || !changeRes.isChangeResult()) {
+            throw new StartupException(String.format("join cluster failure, master is node-%s, sync data success, but change member occur exception: %s", master.getId(), changeRes));
+        }
     }
-
 
     private void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);

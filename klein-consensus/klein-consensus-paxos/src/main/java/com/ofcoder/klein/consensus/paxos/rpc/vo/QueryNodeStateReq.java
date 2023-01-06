@@ -24,4 +24,6 @@ import java.io.Serializable;
  * @author 释慧利
  */
 public class QueryNodeStateReq implements Serializable {
+    public static final QueryNodeStateReq INSTANCE = new QueryNodeStateReq();
+
 }

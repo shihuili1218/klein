@@ -49,8 +49,7 @@ public class Main2 {
                 )
         );
 
-        Klein instance = Klein.getInstance();
-        instance.startup();
+        Klein instance = Klein.startup();
 
         System.in.read();
     }
