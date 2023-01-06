@@ -139,6 +139,8 @@ public class PaxosConsensus implements Consensus {
 
         loadNode();
         registerProcessor();
+        this.self.getMemberConfig().getAllMembers().forEach(it -> this.client.createConnection(it));
+
         RoleAccessor.create(this.prop, self);
         loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
         if (!this.prop.isJoinCluster()) {
@@ -153,10 +155,15 @@ public class PaxosConsensus implements Consensus {
         // find master
         Endpoint master = null;
         for (Endpoint member : prop.getMembers()) {
-            QueryMasterRes res = this.client.sendRequestSync(member, QueryMasterReq.INSTANCE, 50);
-            if (res != null && res.getMaster() != null) {
-                master = res.getMaster();
-                break;
+            try {
+                QueryMasterRes res = this.client.sendRequestSync(member, QueryMasterReq.INSTANCE, 2000);
+                if (res != null && res.getMaster() != null) {
+                    master = res.getMaster();
+                    break;
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
+                continue;
             }
         }
         if (master == null) {
@@ -173,7 +180,7 @@ public class PaxosConsensus implements Consensus {
                 .changeOp(Master.ADD)
                 .changeTarget(Sets.newHashSet(self.getSelf()))
                 .build();
-        RedirectRes changeRes = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout());
+        RedirectRes changeRes = this.client.sendRequestSync(master, req, 2000);
         if (changeRes == null || !changeRes.isChangeResult()) {
             throw new StartupException(String.format("join cluster failure, master is node-%s, sync data success, but change member occur exception: %s", master.getId(), changeRes));
         }

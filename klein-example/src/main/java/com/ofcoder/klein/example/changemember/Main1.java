@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -38,32 +39,21 @@ public class Main1 {
         System.setProperty("klein.id", "1");
         System.setProperty("klein.port", "1218");
         System.setProperty("klein.ip", "127.0.0.1");
+        System.setProperty("klein.consensus.join-cluster", "true");
 
         KleinProp prop2 = KleinProp.loadIfPresent();
 
         prop2.getConsensusProp().setMembers(
                 Lists.newArrayList(
-                        new Endpoint("1", "127.0.0.1", 1218),
                         new Endpoint("2", "127.0.0.1", 1219),
                         new Endpoint("3", "127.0.0.1", 1220)
                 )
         );
 
         Klein instance = Klein.startup();
-        instance.awaitInit();
+        MemberConfiguration clusterInfo = instance.getClusterInfo();
+        LOG.info("==============" + clusterInfo.toString());
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        Thread.sleep(2000L);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-        }).start();
         System.in.read();
     }
 

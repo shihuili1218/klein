@@ -26,6 +26,7 @@ import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
@@ -34,7 +35,7 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  *
  * @author 释慧利
  */
-public class QueryNodeStateProcessor extends AbstractRpcProcessor<QueryMasterReq> {
+public class QueryNodeStateProcessor extends AbstractRpcProcessor<QueryNodeStateReq> {
     private static final Logger LOG = LoggerFactory.getLogger(QueryNodeStateProcessor.class);
 
     private final PaxosNode self;
@@ -45,11 +46,11 @@ public class QueryNodeStateProcessor extends AbstractRpcProcessor<QueryMasterReq
 
     @Override
     public String service() {
-        return QueryMasterReq.class.getSimpleName();
+        return QueryNodeStateReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(final QueryMasterReq request, final RpcContext context) {
+    public void handleRequest(final QueryNodeStateReq request, final RpcContext context) {
         QueryNodeStateRes res = new QueryNodeStateRes();
         res.setState(NodeState.Builder.aNodeState()
                 .nodeId(self.getSelf().getId())

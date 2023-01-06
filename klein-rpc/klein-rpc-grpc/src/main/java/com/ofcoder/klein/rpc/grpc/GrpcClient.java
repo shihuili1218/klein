@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.DynamicMessage;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
@@ -118,8 +119,8 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public Object sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
-        final CompletableFuture<Object> future = new CompletableFuture<>();
+    public <R> R sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
+        final CompletableFuture<ByteBuffer> future = new CompletableFuture<>();
 
         invokeAsync(target, request, new InvokeCallback() {
             @Override
@@ -134,7 +135,8 @@ public class GrpcClient implements RpcClient {
         }, timeoutMs);
 
         try {
-            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            ByteBuffer result = future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            return Hessian2Util.deserialize(result.array());
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
@@ -169,7 +171,7 @@ public class GrpcClient implements RpcClient {
      * @param callback    invoke callback
      * @param timeoutMs   invoke timeout
      */
-    public void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
+    private void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
             ThreadExecutor.submit(() -> {

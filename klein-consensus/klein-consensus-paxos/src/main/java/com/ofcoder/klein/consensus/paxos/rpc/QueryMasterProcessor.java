@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.Nil;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
@@ -33,7 +33,7 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  *
  * @author 释慧利
  */
-public class QueryMasterProcessor extends AbstractRpcProcessor<Nil> {
+public class QueryMasterProcessor extends AbstractRpcProcessor<QueryMasterReq> {
     private static final Logger LOG = LoggerFactory.getLogger(QueryMasterProcessor.class);
 
     private final PaxosNode self;
@@ -44,11 +44,11 @@ public class QueryMasterProcessor extends AbstractRpcProcessor<Nil> {
 
     @Override
     public String service() {
-        return Nil.class.getSimpleName();
+        return QueryMasterReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(final Nil request, final RpcContext context) {
+    public void handleRequest(final QueryMasterReq request, final RpcContext context) {
         QueryMasterRes res = new QueryMasterRes();
         if (self.getMemberConfig().getMaster() != null) {
             res.setMaster(self.getMemberConfig().getMaster());

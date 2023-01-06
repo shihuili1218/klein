@@ -134,46 +134,34 @@ public class MasterImpl implements Master {
 
     @Override
     public boolean changeMember(final byte op, final Set<Endpoint> target) {
-
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        LOG.info("change member, op: {}, target: {}", op, target);
 
         if (RoleAccessor.getMaster().isSelf()) {
-            _changeMember(op, target, new ProposeDone() {
-                @Override
-                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
-                    if (!result) {
-                        future.complete(false);
-                    }
-                }
-
-                @Override
-                public void applyDone(final Map<Proposal, Object> applyResults) {
-                    future.complete(true);
-                }
-            });
-        } else {
-            Endpoint master = self.getMemberConfig().getMaster();
-            if (master == null) {
-                return false;
-            }
-            RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                    .redirect(RedirectReq.CHANGE_MEMBER)
-                    .changeOp(op)
-                    .changeTarget(target)
-                    .build();
-            client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectRes>() {
-                @Override
-                public void error(final Throwable err) {
-                    LOG.error("redirect change member to node-{}, occur exception, {}", master.getId(), err.getMessage());
-                    future.complete(false);
-                }
-
-                @Override
-                public void complete(final RedirectRes result) {
-                    future.complete(true);
-                }
-            }, prop.getChangeMemberTimeout());
+            return _changeMember(op, target);
         }
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        Endpoint master = self.getMemberConfig().getMaster();
+        if (master == null) {
+            return false;
+        }
+        RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                .redirect(RedirectReq.CHANGE_MEMBER)
+                .changeOp(op)
+                .changeTarget(target)
+                .build();
+        client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectRes>() {
+            @Override
+            public void error(final Throwable err) {
+                LOG.error("redirect change member to node-{}, occur exception, {}", master.getId(), err.getMessage());
+                future.complete(false);
+            }
+
+            @Override
+            public void complete(final RedirectRes result) {
+                future.complete(true);
+            }
+        }, prop.getChangeMemberTimeout());
 
         try {
             Boolean result = future.get(prop.getChangeMemberTimeout() + 10, TimeUnit.MILLISECONDS);
@@ -191,9 +179,9 @@ public class MasterImpl implements Master {
      *
      * @param op       add or remove member
      * @param endpoint target member
-     * @param done     callback
+     * @return result
      */
-    private void _changeMember(final byte op, final Set<Endpoint> endpoint, final ProposeDone done) {
+    private boolean _changeMember(final byte op, final Set<Endpoint> endpoint) {
 
         PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
         Set<Endpoint> newConfig = new HashSet<>(curConfiguration.getEffectMembers());
@@ -206,30 +194,30 @@ public class MasterImpl implements Master {
         try {
             // It can only be changed once at a time
             if (!changing.compareAndSet(false, true)) {
-                return;
+                return false;
             }
 
             ChangeMemberOp req = new ChangeMemberOp();
             req.setNodeId(prop.getSelf().getId());
             req.setNewConfig(newConfig);
-            CountDownLatch latch = new CountDownLatch(1);
+            CompletableFuture<Boolean> latch = new CompletableFuture();
             RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
                 @Override
                 public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                     if (!result) {
-                        latch.countDown();
+                        latch.complete(false);
                     }
                 }
 
                 @Override
                 public void applyDone(final Map<Proposal, Object> applyResults) {
-                    latch.countDown();
+                    latch.complete(true);
                 }
             });
-            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-            // do nothing for await.result
-        } catch (InterruptedException e) {
+            return latch.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
             // do nothing
+            return false;
         } finally {
             changing.compareAndSet(true, false);
         }
