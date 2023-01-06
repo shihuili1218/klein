@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +47,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
@@ -175,8 +175,7 @@ public class ProposerImpl implements Proposer {
                 ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
                 : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
 
-        // todo get member configuration from ProposeContext
-        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
+        final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
 
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
@@ -187,7 +186,7 @@ public class ProposerImpl implements Proposer {
                 .build();
 
         // for self
-        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req);
+        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req, true);
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
@@ -314,7 +313,7 @@ public class ProposerImpl implements Proposer {
 
         final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
-        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
+        final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
 
         LOG.info("start prepare phase, the {} retry, proposalNo: {}", context.getTimes(), proposalNo);
 
@@ -406,11 +405,10 @@ public class ProposerImpl implements Proposer {
         }
 
         private void handle() {
-            List<ProposalWithDone> temp = new ArrayList<>(tasks);
+            final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(tasks);
             tasks.clear();
 
-            LOG.info("start negotiations, proposal size: {}", temp.size());
-            final List<ProposalWithDone> finalEvents = ImmutableList.copyOf(temp);
+            LOG.info("start negotiations, proposal size: {}", finalEvents.size());
             ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
                 @Override
                 protected Long create() {
@@ -434,6 +432,9 @@ public class ProposerImpl implements Proposer {
                 }
                 event.getShutdownLatch().countDown();
                 return;
+            }
+            if (event.getProposal().getData() instanceof ChangeMemberOp) {
+                memberConfig.seenNewConfig(((ChangeMemberOp) event.getProposal().getData()).getNewConfig());
             }
             this.tasks.add(event);
 

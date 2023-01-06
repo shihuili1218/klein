@@ -69,6 +69,8 @@ public final class Klein {
 
     /**
      * startup klein.
+     *
+     * @return klein instance
      */
     public static Klein startup() {
         if (started.get()) {

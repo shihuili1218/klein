@@ -55,7 +55,7 @@ public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
                     request.getNodeId());
             return;
         }
-        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(request);
+        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
 
     }
