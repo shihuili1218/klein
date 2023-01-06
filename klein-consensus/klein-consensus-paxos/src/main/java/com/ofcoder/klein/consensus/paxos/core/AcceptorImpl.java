@@ -77,7 +77,6 @@ public class AcceptorImpl implements Acceptor {
             final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
             for (Proposal datum : req.getData()) {
-                LOG.info("++++++++++" + req.getData());
                 if (datum.getData() instanceof ChangeMemberOp) {
                     memberConfig.seenNewConfig(((ChangeMemberOp) datum.getData()).getNewConfig());
                 }
