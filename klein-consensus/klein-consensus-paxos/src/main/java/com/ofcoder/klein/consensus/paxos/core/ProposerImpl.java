@@ -464,11 +464,9 @@ public class ProposerImpl implements Proposer {
                 skipPrepare.notifyAll();
             }
 
-            ThreadExecutor.submit(() -> {
-                for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(false, null);
-                }
-            });
+            for (ProposalWithDone event : context.getDataWithCallback()) {
+                event.getDone().negotiationDone(false, null);
+            }
         }
     }
 
@@ -480,11 +478,9 @@ public class ProposerImpl implements Proposer {
 
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
-            ThreadExecutor.submit(() -> {
-                for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(true, context.getConsensusData());
-                }
-            });
+            for (ProposalWithDone event : context.getDataWithCallback()) {
+                event.getDone().negotiationDone(true, context.getConsensusData());
+            }
 
             ThreadExecutor.submit(() -> {
                 // do confirm
@@ -499,15 +495,13 @@ public class ProposerImpl implements Proposer {
             LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), it.getId());
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
+            for (ProposalWithDone event : context.getDataWithCallback()) {
+                event.getDone().negotiationDone(false, null);
+            }
+
             ThreadExecutor.submit(() -> {
                 // do learn
                 RoleAccessor.getLearner().learn(context.getInstanceId(), it);
-            });
-
-            ThreadExecutor.submit(() -> {
-                for (ProposalWithDone event : context.getDataWithCallback()) {
-                    event.getDone().negotiationDone(false, null);
-                }
             });
 
         }

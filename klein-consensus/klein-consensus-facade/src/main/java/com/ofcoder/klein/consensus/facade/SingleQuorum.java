@@ -34,7 +34,7 @@ public class SingleQuorum implements Quorum {
     private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
     private int threshold;
 
-    protected SingleQuorum(final Set<Endpoint> allMembers) {
+    public SingleQuorum(final Set<Endpoint> allMembers) {
         this.allMembers = allMembers;
         this.threshold = allMembers.size() / 2 + 1;
     }

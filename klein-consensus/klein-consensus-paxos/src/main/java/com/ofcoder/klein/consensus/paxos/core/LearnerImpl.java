@@ -112,28 +112,49 @@ public class LearnerImpl implements Learner {
         sms.values().forEach(SM::close);
     }
 
-    private void generateSnap() {
+    @Override
+    public Map<String, Snap> generateSnap() {
+        Map<String, Snap> snaps = new HashMap<>();
         try {
             if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
                     || (!snapLock.isLocked() && !snapLock.tryLock())) {
-                return;
+                return snaps;
             }
 
             for (Map.Entry<String, SM> entry : sms.entrySet()) {
                 Snap snapshot = entry.getValue().snapshot();
+
+                Snap lastSnap = logManager.getLastSnap(entry.getKey());
+                if (lastSnap != null && lastSnap.getCheckpoint() >= snapshot.getCheckpoint()) {
+                    continue;
+                }
+
                 LOG.info("save snapshot, group: {}, cp: {}", entry.getKey(), snapshot.getCheckpoint());
                 self.updateLastCheckpoint(snapshot.getCheckpoint());
                 logManager.saveSnap(entry.getKey(), snapshot);
+                snaps.put(entry.getKey(), snapshot);
+                return snaps;
             }
+            return snaps;
         } finally {
             snapLock.unlock();
         }
+    }
+
+    @Override
+    public void loadSnap(final Map<String, Snap> snaps) {
+        snaps.forEach(this::loadSnap);
     }
 
     private void loadSnap(final String group, final Snap lastSnap) {
         if (lastSnap == null) {
             return;
         }
+        Snap localSnap = logManager.getLastSnap(group);
+        if (localSnap != null && localSnap.getCheckpoint() >= lastSnap.getCheckpoint()) {
+            return;
+        }
+
         LOG.info("load snap, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
         try {
             if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
@@ -595,7 +616,7 @@ public class LearnerImpl implements Learner {
                 .build();
         for (String group : sms.keySet()) {
             Snap lastSnap = logManager.getLastSnap(group);
-            if (lastSnap.getCheckpoint() > req.getCheckpoint()) {
+            if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
                 res.getImages().put(group, lastSnap);
             }
         }

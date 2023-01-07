@@ -108,6 +108,11 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
+    public List<Instance<P>> getInstanceConfirmed() {
+        return new ArrayList<>(confirmedInstances.values());
+    }
+
+    @Override
     public void updateInstance(final Instance<P> instance) {
         if (!lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");

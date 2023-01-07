@@ -18,21 +18,19 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
-
 /**
- * QueryMasterRes.
+ * PushCompleteDataRes.
  *
  * @author 释慧利
  */
-public class QueryMasterRes implements Serializable {
-    private Endpoint master;
+public class PushCompleteDataRes implements Serializable {
+    private boolean success;
 
-    public Endpoint getMaster() {
-        return master;
+    public boolean isSuccess() {
+        return success;
     }
 
-    public void setMaster(final Endpoint master) {
-        this.master = master;
+    public void setSuccess(final boolean success) {
+        this.success = success;
     }
 }
