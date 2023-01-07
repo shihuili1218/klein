@@ -26,11 +26,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
-import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.core.Master;
@@ -44,14 +44,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.QueryMasterProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.QueryNodeStateProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.PushCompleteDataProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryMasterRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.QueryNodeStateRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -147,42 +142,31 @@ public class PaxosConsensus implements Consensus {
             RoleAccessor.getMaster().electingMaster();
             preheating();
         } else {
-            joinCluster();
+            joinCluster(0);
         }
     }
 
-    private void joinCluster() {
-        // find master
-        Endpoint master = null;
+    private void joinCluster(final int times) {
+        int cur = times + 1;
+//        if (cur >= 3) {
+//            throw new ChangeMemberException("members change failed after trying many times");
+//        }
+        // add member
+        boolean result = false;
         for (Endpoint member : prop.getMembers()) {
-            try {
-                QueryMasterRes res = this.client.sendRequestSync(member, QueryMasterReq.INSTANCE, 2000);
-                if (res != null && res.getMaster() != null) {
-                    master = res.getMaster();
-                    break;
-                }
-            } catch (Exception e) {
-                LOG.error(e.getMessage(), e);
-                continue;
+            RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                    .redirect(RedirectReq.CHANGE_MEMBER)
+                    .changeOp(Master.ADD)
+                    .changeTarget(Sets.newHashSet(self.getSelf()))
+                    .build();
+            RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
+            if (changeRes != null && changeRes.isChangeResult()) {
+                result = true;
+                break;
             }
         }
-        if (master == null) {
-            throw new StartupException("join cluster failure, because there is no master in the cluster");
-        }
-        QueryNodeStateRes res = this.client.sendRequestSync(master, QueryNodeStateReq.INSTANCE, 50);
-
-        // sync data
-        RoleAccessor.getLearner().pullSameData(res.getState());
-
-        // add member
-        RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                .redirect(RedirectReq.CHANGE_MEMBER)
-                .changeOp(Master.ADD)
-                .changeTarget(Sets.newHashSet(self.getSelf()))
-                .build();
-        RedirectRes changeRes = this.client.sendRequestSync(master, req, 2000);
-        if (changeRes == null || !changeRes.isChangeResult()) {
-            throw new StartupException(String.format("join cluster failure, master is node-%s, sync data success, but change member occur exception: %s", master.getId(), changeRes));
+        if (!result) {
+            joinCluster(cur);
         }
     }
 
@@ -219,9 +203,7 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
         RpcEngine.registerProcessor(new RedirectProcessor(this.self));
-        // change member
-        RpcEngine.registerProcessor(new QueryMasterProcessor(this.self));
-        RpcEngine.registerProcessor(new QueryNodeStateProcessor(this.self));
+        RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
     }
 
     @Override

@@ -43,6 +43,7 @@ import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
@@ -54,6 +55,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -61,6 +64,7 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
 
 /**
  * Master implement.
@@ -174,8 +178,10 @@ public class MasterImpl implements Master {
 
     /**
      * Change member by Join-Consensus.
-     * 1. Accept phase → enter Join-Consensus
-     * 2. Confirm phase → new config take effect
+     * e.g. old version = 0, new version = 1
+     * 1. Accept phase → send new config to old quorum, enter Join-Consensus
+     * 2. Copy instance(version = 0, confirmed) to new quorum
+     * 3. Confirm phase → new config take effect
      *
      * @param op       add or remove member
      * @param endpoint target member
@@ -200,13 +206,17 @@ public class MasterImpl implements Master {
             ChangeMemberOp req = new ChangeMemberOp();
             req.setNodeId(prop.getSelf().getId());
             req.setNewConfig(newConfig);
-            CompletableFuture<Boolean> latch = new CompletableFuture();
+            CompletableFuture<Boolean> latch = new CompletableFuture<>();
             RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
                 @Override
                 public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                     if (!result) {
                         latch.complete(false);
+                        return;
                     }
+
+                    // 2. Copy instance(version = 0, confirmed) to new quorum
+                    pushCompleteData(newConfig, 0);
                 }
 
                 @Override
@@ -220,6 +230,54 @@ public class MasterImpl implements Master {
             return false;
         } finally {
             changing.compareAndSet(true, false);
+        }
+    }
+
+    private void pushCompleteData(final Set<Endpoint> newConfig, final int times) {
+        int cur = times + 1;
+        if (cur >= 3) {
+            throw new ChangeMemberException("push complete data to new quorum failure.");
+        }
+
+        Map<String, Snap> snaps = RoleAccessor.getLearner().generateSnap();
+        List<Instance<Proposal>> instanceConfirmed = logManager.getInstanceConfirmed();
+        PushCompleteDataReq completeDataReq = PushCompleteDataReq.Builder.aPushCompleteDataReq()
+                .snaps(snaps)
+                .confirmedInstances(instanceConfirmed)
+                .build();
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        Quorum quorum = new SingleQuorum(newConfig);
+        newConfig.forEach(it -> client.sendRequestAsync(it, completeDataReq, new AbstractInvokeCallback<PushCompleteDataRes>() {
+            @Override
+            public void error(final Throwable err) {
+                quorum.refuse(it);
+                if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
+                    future.complete(false);
+                }
+            }
+
+            @Override
+            public void complete(final PushCompleteDataRes result) {
+                if (result.isSuccess()) {
+                    quorum.grant(it);
+                } else {
+                    quorum.refuse(it);
+                }
+                if (quorum.isGranted() == Quorum.GrantResult.PASS) {
+                    future.complete(true);
+                } else if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
+                    future.complete(false);
+                }
+                // else ignore
+            }
+        }, 2000));
+        try {
+            if (!future.get(2010, TimeUnit.MILLISECONDS)) {
+                pushCompleteData(newConfig, cur);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

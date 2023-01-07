@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +31,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.storage.facade.Snap;
 
 /**
  * Learner Role.
@@ -37,6 +39,20 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Learner extends Lifecycle<ConsensusProp> {
+
+    /**
+     * generate and save snapshot.
+     *
+     * @return snaps
+     */
+    Map<String, Snap> generateSnap();
+
+    /**
+     * load snap.
+     *
+     * @param snaps snaps
+     */
+    void loadSnap(Map<String, Snap> snaps);
 
     /**
      * Load SM, one group will only load one SM.

@@ -64,6 +64,14 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      */
     List<Instance<P>> getInstanceNoConfirm();
 
+
+    /**
+     * Get instance reach confirmed.
+     *
+     * @return range in [checkpoint, Max Instance] confirmed the Instance
+     */
+    List<Instance<P>> getInstanceConfirmed();
+
     /**
      * load MetaData.
      *
@@ -87,7 +95,6 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      * @return last snapshot
      */
     Snap getLastSnap(String group);
-
 
     /**
      * Meta data.
