@@ -48,6 +48,7 @@ import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
@@ -85,7 +86,7 @@ public class ProposerImpl implements Proposer {
 
     public ProposerImpl(final PaxosNode self) {
         this.self = self;
-        this.memberConfig = self.getMemberConfig();
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override

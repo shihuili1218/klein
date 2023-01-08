@@ -37,7 +37,7 @@ import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
@@ -132,12 +132,14 @@ public class PaxosConsensus implements Consensus {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         loadNode();
+        MemberRegistry.getInstance().init(prop.getMembers());
         registerProcessor();
-        this.self.getMemberConfig().getAllMembers().forEach(it -> this.client.createConnection(it));
+        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 
         RoleAccessor.create(this.prop, self);
-        SMRegistry.register(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
+        SMRegistry.register(MasterSM.GROUP, new MasterSM());
         SMRegistry.getSms().forEach(this::loadSM);
+        LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
         if (!this.prop.isJoinCluster()) {
             RoleAccessor.getMaster().electingMaster();
             preheating();
@@ -176,8 +178,6 @@ public class PaxosConsensus implements Consensus {
 
     private void loadNode() {
         // reload self information from storage.
-        PaxosMemberConfiguration defaultValue = new PaxosMemberConfiguration();
-        defaultValue.init(prop.getMembers());
 
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
@@ -186,7 +186,6 @@ public class PaxosConsensus implements Consensus {
                 .curProposalNo(0)
                 .lastCheckpoint(0)
                 .self(prop.getSelf())
-                .memberConfig(defaultValue)
                 .build());
 
         LOG.info("self info: {}", self);
@@ -224,7 +223,7 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public MemberConfiguration getMemberConfig() {
-        return self.getMemberConfig();
+        return MemberRegistry.getInstance().getMemberConfiguration().createRef();
     }
 
     @Override
