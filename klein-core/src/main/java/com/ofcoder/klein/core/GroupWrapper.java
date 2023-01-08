@@ -20,7 +20,6 @@ import java.io.Serializable;
 
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
-import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
@@ -30,14 +29,11 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  */
 public class GroupWrapper {
     private final String group;
-    private final SM sm;
-    private Consensus consensus;
+    private final Consensus consensus;
 
-    public GroupWrapper(final String group, final SM sm) {
+    public GroupWrapper(final String group) {
         this.group = group;
-        this.sm = sm;
         this.consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin();
-        this.consensus.loadSM(this.group, this.sm);
     }
 
     /**

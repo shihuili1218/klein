@@ -30,9 +30,9 @@ import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
+import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
@@ -113,8 +113,7 @@ public class PaxosConsensus implements Consensus {
         return builder.build();
     }
 
-    @Override
-    public void loadSM(final String group, final SM sm) {
+    private void loadSM(final String group, final SM sm) {
         RoleAccessor.getLearner().loadSM(group, sm);
     }
 
@@ -137,7 +136,8 @@ public class PaxosConsensus implements Consensus {
         this.self.getMemberConfig().getAllMembers().forEach(it -> this.client.createConnection(it));
 
         RoleAccessor.create(this.prop, self);
-        loadSM(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
+        SMRegistry.register(MasterSM.GROUP, new MasterSM(self.getMemberConfig()));
+        SMRegistry.getSms().forEach(this::loadSM);
         if (!this.prop.isJoinCluster()) {
             RoleAccessor.getMaster().electingMaster();
             preheating();

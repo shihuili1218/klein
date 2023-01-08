@@ -70,11 +70,13 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @deprecated the function of the old version
      */
     @Deprecated
-    protected void loadSnap(final PaxosMemberConfiguration snap) {
+    public void loadSnap(final PaxosMemberConfiguration snap) {
         this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
         this.version = new AtomicInteger(snap.version.get());
         this.effectMembers.clear();
         this.effectMembers.putAll(snap.effectMembers);
+        this.lastMembers.clear();
+        this.lastMembers.putAll(snap.lastMembers);
     }
 
     /**

@@ -14,37 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade;
+package com.ofcoder.klein.consensus.facade.sm;
 
-import com.ofcoder.klein.spi.ExtensionLoader;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Storage Engine.
+ * SMRegistry.
  *
- * @author far.liu
+ * @author 释慧利
  */
-public final class StorageEngine {
-    private static LogManager logManager;
+public final class SMRegistry {
+    private static final Logger LOG = LoggerFactory.getLogger(SMRegistry.class);
+    private static final Map<String, SM> SMS = new HashMap<>();
 
     /**
-     * start up.
+     * load sm.
      *
-     * @param type storage type
-     * @param prop property
+     * @param group sm group
+     * @param sm    sm
      */
-    public static void startup(final String type, final StorageProp prop) {
-        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoinWithGlobal(type);
-        logManager.init(prop);
+    public static void register(final String group, final SM sm) {
+        if (SMS.containsKey(group)) {
+            LOG.error("the group[{}] has been loaded with sm.", group);
+            return;
+        }
+        SMS.put(group, sm);
     }
 
     /**
-     * shutdown.
+     * get sm.
+     *
+     * @return all sm
      */
-    public static void shutdown() {
-        if (logManager != null) {
-            logManager.shutdown();
-        }
+    public static Map<String, SM> getSms() {
+        return SMS;
     }
-
 }

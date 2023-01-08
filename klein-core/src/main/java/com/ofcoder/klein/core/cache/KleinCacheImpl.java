@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.GroupWrapper;
-import com.ofcoder.klein.core.config.CacheProp;
 
 /**
  * Klein Cache Implement.
@@ -36,8 +35,8 @@ public class KleinCacheImpl implements KleinCache {
     private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected GroupWrapper consensus;
 
-    public KleinCacheImpl(final CacheProp cacheProp) {
-        this.consensus = new GroupWrapper(CacheSM.GROUP, new CacheSM(cacheProp));
+    public KleinCacheImpl() {
+        this.consensus = new GroupWrapper(CacheSM.GROUP);
     }
 
     @Override

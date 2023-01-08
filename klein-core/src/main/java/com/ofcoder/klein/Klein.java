@@ -27,6 +27,8 @@ import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
+import com.ofcoder.klein.core.cache.CacheSM;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.cache.KleinCacheImpl;
 import com.ofcoder.klein.core.config.KleinProp;
@@ -86,15 +88,16 @@ public final class Klein {
         KleinProp prop = KleinProp.loadIfPresent();
 
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
-        StorageEngine.getInstance().startup(prop.getStorage(), prop.getStorageProp());
+        StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
+        SMRegistry.register(CacheSM.GROUP, new CacheSM(prop.getCacheProp()));
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
 
-        kl.cache = new KleinCacheImpl(prop.getCacheProp());
+        kl.cache = new KleinCacheImpl();
         kl.lock = new KleinLockImpl();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("*** shutting down Klein since JVM is shutting down");
-            StorageEngine.getInstance().shutdown();
+            StorageEngine.shutdown();
             ConsensusEngine.shutdown();
             RpcEngine.shutdown();
             LOG.info("*** Klein shut down");

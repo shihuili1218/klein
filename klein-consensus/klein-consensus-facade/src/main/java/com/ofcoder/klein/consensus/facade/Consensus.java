@@ -20,7 +20,6 @@ import java.io.Serializable;
 
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.spi.SPI;
 
 /**
@@ -73,14 +72,6 @@ public interface Consensus extends Cluster, Lifecycle<ConsensusProp> {
     default <E extends Serializable, D extends Serializable> Result<D> read(String group, E data) {
         return propose(group, data, true);
     }
-
-    /**
-     * load sm.
-     *
-     * @param group sm group
-     * @param sm    sm
-     */
-    void loadSM(String group, SM sm);
 
     /**
      * set consensus listener.

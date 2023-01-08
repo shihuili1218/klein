@@ -50,6 +50,7 @@ public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushComplete
 
     @Override
     public void handleRequest(final PushCompleteDataReq request, final RpcContext context) {
+        LOG.info("receive push complete data");
         PushCompleteDataRes res = new PushCompleteDataRes();
 
         RoleAccessor.getLearner().loadSnap(request.getSnaps());
