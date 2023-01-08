@@ -70,9 +70,9 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void effectiveNewConfig(final Set<Endpoint> newConfig) {
-        if (MapUtils.isEmpty(lastMembers) || !new HashSet<>(lastMembers.values()).equals(newConfig)) {
-            throw new ChangeMemberException("lastMembers is empty, this error should not occur");
-        }
+//        if (MapUtils.isEmpty(lastMembers) || !new HashSet<>(lastMembers.values()).equals(newConfig)) {
+//            throw new ChangeMemberException("lastMembers is empty, this error should not occur");
+//        }
         this.effectMembers = lastMembers;
         this.lastMembers = new ConcurrentHashMap<>();
     }

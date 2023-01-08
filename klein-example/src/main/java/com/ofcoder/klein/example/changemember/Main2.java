@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -35,10 +36,10 @@ public class Main2 {
     private static final Logger LOG = LoggerFactory.getLogger(Main2.class);
 
     public static void main(final String[] args) throws IOException {
-        System.setProperty("klein.id", "2");
-        System.setProperty("klein.port", "1219");
-        System.setProperty("klein.ip", "127.0.0.1");
-        System.setProperty("klein.consensus.join-cluster", "false");
+        SystemPropertyUtil.setProperty("klein.id", "2");
+        SystemPropertyUtil.setProperty("klein.port", "1219");
+        SystemPropertyUtil.setProperty("klein.ip", "127.0.0.1");
+        SystemPropertyUtil.setProperty("klein.consensus.join-cluster", "false");
 
         KleinProp prop2 = KleinProp.loadIfPresent();
 

@@ -24,26 +24,27 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * Main3: cluster member.
+ * Main2: cluster member.
  *
  * @author 释慧利
  */
-public class Main3 {
-    private static final Logger LOG = LoggerFactory.getLogger(Main3.class);
+public class Main0 {
+    private static final Logger LOG = LoggerFactory.getLogger(Main0.class);
 
     public static void main(final String[] args) throws IOException {
-        SystemPropertyUtil.setProperty("klein.id", "3");
-        SystemPropertyUtil.setProperty("klein.port", "1220");
+        SystemPropertyUtil.setProperty("klein.id", "0");
+        SystemPropertyUtil.setProperty("klein.port", "1221");
         SystemPropertyUtil.setProperty("klein.ip", "127.0.0.1");
-        SystemPropertyUtil.setProperty("klein.consensus.join-cluster", "false");
+        SystemPropertyUtil.setProperty("klein.consensus.join-cluster", "true");
 
-        KleinProp prop3 = KleinProp.loadIfPresent();
+        KleinProp prop2 = KleinProp.loadIfPresent();
 
-        prop3.getConsensusProp().setMembers(
+        prop2.getConsensusProp().setMembers(
                 Lists.newArrayList(
                         new Endpoint("2", "127.0.0.1", 1219),
                         new Endpoint("3", "127.0.0.1", 1220)
@@ -51,6 +52,10 @@ public class Main3 {
         );
 
         Klein instance = Klein.startup();
+        MemberConfiguration clusterInfo = instance.getClusterInfo();
+        LOG.info("==============" + clusterInfo.toString());
+
         System.in.read();
     }
+
 }

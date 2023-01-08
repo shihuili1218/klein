@@ -154,26 +154,9 @@ public class MasterImpl implements Master {
                 .changeOp(op)
                 .changeTarget(target)
                 .build();
-        client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectRes>() {
-            @Override
-            public void error(final Throwable err) {
-                LOG.error("redirect change member to node-{}, occur exception, {}", master.getId(), err.getMessage());
-                future.complete(false);
-            }
+        RedirectRes res = client.sendRequestSync(master, req, prop.getChangeMemberTimeout());
 
-            @Override
-            public void complete(final RedirectRes result) {
-                future.complete(true);
-            }
-        }, prop.getChangeMemberTimeout());
-
-        try {
-            Boolean result = future.get(prop.getChangeMemberTimeout() + 10, TimeUnit.MILLISECONDS);
-            return result;
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            LOG.error("redirect change member, occur exception, {}", e.getMessage());
-            return false;
-        }
+        return res.isChangeResult();
     }
 
     /**
