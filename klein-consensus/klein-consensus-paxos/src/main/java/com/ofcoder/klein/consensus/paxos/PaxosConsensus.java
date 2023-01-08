@@ -155,8 +155,9 @@ public class PaxosConsensus implements Consensus {
 //        }
         // add member
         boolean result = false;
-        for (Endpoint member : prop.getMembers()) {
+        for (Endpoint member : MemberRegistry.getInstance().getMemberConfiguration().getMembersWithout(self.getSelf().getId())) {
             RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                    .nodeId(self.getSelf().getId())
                     .redirect(RedirectReq.CHANGE_MEMBER)
                     .changeOp(Master.ADD)
                     .changeTarget(Sets.newHashSet(self.getSelf()))
@@ -201,7 +202,7 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
-        RpcEngine.registerProcessor(new RedirectProcessor(this.self));
+        RpcEngine.registerProcessor(new RedirectProcessor(this.self, this.prop));
         RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
     }
 

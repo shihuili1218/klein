@@ -53,7 +53,7 @@ public class MasterSM extends AbstractSM {
     }
 
     private void changeMember(final ChangeMemberOp op) {
-        memberConfig.effectiveNewConfig(op.getNewConfig());
+        memberConfig.effectiveNewConfig(op.getVersion(), op.getNewConfig());
     }
 
     private void electMaster(final ElectionOp op) {

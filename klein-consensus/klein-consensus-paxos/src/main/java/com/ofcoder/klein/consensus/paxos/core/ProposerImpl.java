@@ -47,7 +47,6 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
@@ -433,9 +432,6 @@ public class ProposerImpl implements Proposer {
                 }
                 event.getShutdownLatch().countDown();
                 return;
-            }
-            if (event.getProposal().getData() instanceof ChangeMemberOp) {
-                memberConfig.seenNewConfig(((ChangeMemberOp) event.getProposal().getData()).getNewConfig());
             }
             this.tasks.add(event);
 

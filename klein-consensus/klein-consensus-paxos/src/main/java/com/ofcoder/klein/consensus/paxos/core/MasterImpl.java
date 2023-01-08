@@ -35,7 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.ofcoder.klein.common.Holder;
+import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -99,6 +101,23 @@ public class MasterImpl implements Master {
         if (sendHeartbeatTimer != null) {
             sendHeartbeatTimer.destroy();
         }
+        boolean shutdown = false;
+        for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
+            RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                    .nodeId(self.getSelf().getId())
+                    .redirect(RedirectReq.CHANGE_MEMBER)
+                    .changeOp(Master.REMOVE)
+                    .changeTarget(Sets.newHashSet(self.getSelf()))
+                    .build();
+            RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
+            if (changeRes != null && changeRes.isChangeResult()) {
+                shutdown = true;
+                break;
+            }
+        }
+        if (shutdown) {
+            throw new ShutdownException("shutdown, remove himself an exception occurs.");
+        }
     }
 
     @Override
@@ -150,6 +169,7 @@ public class MasterImpl implements Master {
             return false;
         }
         RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                .nodeId(self.getSelf().getId())
                 .redirect(RedirectReq.CHANGE_MEMBER)
                 .changeOp(op)
                 .changeTarget(target)
@@ -185,12 +205,19 @@ public class MasterImpl implements Master {
             if (!changing.compareAndSet(false, true)) {
                 return false;
             }
+            int version = memberConfig.seenNewConfig(newConfig);
 
             ChangeMemberOp req = new ChangeMemberOp();
             req.setNodeId(prop.getSelf().getId());
             req.setNewConfig(newConfig);
+            req.setVersion(version);
             CompletableFuture<Boolean> latch = new CompletableFuture<>();
-            RoleAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
+            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return self.incrementInstanceId();
+                }
+            }, Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
                 @Override
                 public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                     if (!result) {
@@ -337,6 +364,14 @@ public class MasterImpl implements Master {
         // for self
         quorum.grant(self.getSelf());
 
+        // only one member in the cluster
+        if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+            restartElect();
+        } else if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+            ThreadExecutor.submit(MasterImpl.this::_boosting);
+        }
+        // else ignore
+
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
                 client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
@@ -409,6 +444,9 @@ public class MasterImpl implements Master {
         // for self
         if (onReceiveHeartbeat(req, true)) {
             quorum.grant(self.getSelf());
+            if (quorum.isGranted() == SingleQuorum.GrantResult.PASS) {
+                complete.complete(quorum.isGranted());
+            }
         }
 
         // for other members
