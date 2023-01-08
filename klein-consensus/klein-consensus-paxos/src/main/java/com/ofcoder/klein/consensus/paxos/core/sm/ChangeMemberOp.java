@@ -30,6 +30,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class ChangeMemberOp implements SystemOp {
     private String nodeId;
     private Set<Endpoint> newConfig;
+    private int version;
 
     public String getNodeId() {
         return nodeId;
@@ -43,6 +44,18 @@ public class ChangeMemberOp implements SystemOp {
         this.newConfig = newConfig;
     }
 
+    public void setNodeId(final String nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(final int version) {
+        this.version = version;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -52,16 +65,11 @@ public class ChangeMemberOp implements SystemOp {
             return false;
         }
         ChangeMemberOp that = (ChangeMemberOp) o;
-        return Objects.equals(nodeId, that.nodeId) && Objects.equals(newConfig, that.newConfig);
+        return version == that.version && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getNewConfig(), that.getNewConfig());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(nodeId, newConfig);
+        return Objects.hash(getNodeId(), getNewConfig(), version);
     }
-
-    public void setNodeId(final String nodeId) {
-        this.nodeId = nodeId;
-    }
-
 }

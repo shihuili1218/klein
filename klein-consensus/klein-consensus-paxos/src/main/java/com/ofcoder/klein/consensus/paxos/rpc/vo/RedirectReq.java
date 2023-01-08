@@ -30,9 +30,14 @@ public class RedirectReq implements Serializable {
     public static final byte CHANGE_MEMBER = 0x00;
     public static final byte TRANSACTION_REQUEST = 0x01;
 
+    private String nodeId;
     private byte redirect;
     private byte changeOp;
     private Set<Endpoint> changeTarget;
+
+    public String getNodeId() {
+        return nodeId;
+    }
 
     public byte getRedirect() {
         return redirect;
@@ -47,6 +52,7 @@ public class RedirectReq implements Serializable {
     }
 
     public static final class Builder {
+        private String nodeId;
         private byte redirect;
         private byte changeOp;
         private Set<Endpoint> changeTarget;
@@ -61,6 +67,17 @@ public class RedirectReq implements Serializable {
          */
         public static Builder aRedirectReq() {
             return new Builder();
+        }
+
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
+            this.nodeId = nodeId;
+            return this;
         }
 
         /**
@@ -106,6 +123,7 @@ public class RedirectReq implements Serializable {
             redirectReq.changeOp = this.changeOp;
             redirectReq.changeTarget = this.changeTarget;
             redirectReq.redirect = this.redirect;
+            redirectReq.nodeId = this.nodeId;
             return redirectReq;
         }
     }

@@ -54,25 +54,45 @@ public class MemberConfiguration implements Serializable {
      * Set the last seen configuration.
      *
      * @param newConfig new configuration
+     * @return version
      */
-    public void seenNewConfig(final Set<Endpoint> newConfig) {
+    public int seenNewConfig(final Set<Endpoint> newConfig) {
         LOG.info("see a new configuration, {}", newConfig);
         if (MapUtils.isNotEmpty(lastMembers)) {
-            throw new ChangeMemberException("lastMembers is not empty, the config may be changing");
+            throw new ChangeMemberException(String.format("lastMembers is not empty, lastMembers: %s, newConfig: %s", lastMembers, newConfig));
         }
-        this.version.incrementAndGet();
         this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        return this.version.incrementAndGet();
+    }
+
+    /**
+     * Set the last seen configuration.
+     *
+     * @param version   new config version
+     * @param newConfig new configuration
+     */
+    public void seenNewConfig(final int version, final Set<Endpoint> newConfig) {
+        int selfVersion = this.version.get();
+        if (version <= selfVersion) {
+            LOG.info("see a configuration: {}, but in.version[{}] le self.version[{}]", newConfig, version, selfVersion);
+            return;
+        }
+        seenNewConfig(newConfig);
     }
 
     /**
      * Commit the last seen configuration.
      *
+     * @param version   config version
      * @param newConfig new configuration
      */
-    public void effectiveNewConfig(final Set<Endpoint> newConfig) {
-//        if (MapUtils.isEmpty(lastMembers) || !new HashSet<>(lastMembers.values()).equals(newConfig)) {
-//            throw new ChangeMemberException("lastMembers is empty, this error should not occur");
-//        }
+    public void effectiveNewConfig(final int version, final Set<Endpoint> newConfig) {
+        LOG.info("commit a new configuration: {}, version: {}", newConfig, version);
+        int selfVersion = this.version.get();
+        if (version < selfVersion) {
+            LOG.info("commit a configuration: {}, but in.version[{}] lt self.version[{}]", newConfig, version, selfVersion);
+            return;
+        }
         this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.lastMembers = new ConcurrentHashMap<>();
     }
