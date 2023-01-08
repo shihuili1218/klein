@@ -48,6 +48,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
@@ -85,7 +86,7 @@ public class LearnerImpl implements Learner {
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
-        this.memberConfig = self.getMemberConfig();
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override
@@ -121,6 +122,7 @@ public class LearnerImpl implements Learner {
                 return snaps;
             }
 
+            LOG.info("save snapshot, sms: {}", sms);
             for (Map.Entry<String, SM> entry : sms.entrySet()) {
                 Snap snapshot = entry.getValue().snapshot();
 
@@ -133,7 +135,6 @@ public class LearnerImpl implements Learner {
                 self.updateLastCheckpoint(snapshot.getCheckpoint());
                 logManager.saveSnap(entry.getKey(), snapshot);
                 snaps.put(entry.getKey(), snapshot);
-                return snaps;
             }
             return snaps;
         } finally {
@@ -146,16 +147,16 @@ public class LearnerImpl implements Learner {
         snaps.forEach(this::loadSnap);
     }
 
-    private void loadSnap(final String group, final Snap lastSnap) {
-        if (lastSnap == null) {
+    private void loadSnap(final String group, final Snap snap) {
+        if (snap == null) {
             return;
         }
         Snap localSnap = logManager.getLastSnap(group);
-        if (localSnap != null && localSnap.getCheckpoint() >= lastSnap.getCheckpoint()) {
+        if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
             return;
         }
 
-        LOG.info("load snap, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
+        LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         try {
             if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
                     || (!snapLock.isLocked() && !snapLock.tryLock())) {
@@ -168,11 +169,11 @@ public class LearnerImpl implements Learner {
                 return;
             }
 
-            sm.loadSnap(lastSnap);
-            self.updateLastCheckpoint(lastSnap.getCheckpoint());
-            self.updateCurAppliedInstanceId(lastSnap.getCheckpoint());
-            self.updateCurInstanceId(lastSnap.getCheckpoint());
-            LOG.info("load snap success, group: {}, checkpoint: {}", group, lastSnap.getCheckpoint());
+            sm.loadSnap(snap);
+            self.updateLastCheckpoint(snap.getCheckpoint());
+            self.updateCurAppliedInstanceId(snap.getCheckpoint());
+            self.updateCurInstanceId(snap.getCheckpoint());
+            LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         } finally {
             snapLock.unlock();
         }

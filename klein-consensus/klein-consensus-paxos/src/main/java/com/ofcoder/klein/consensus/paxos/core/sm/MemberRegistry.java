@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos;
+package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.List;
 
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -26,23 +25,38 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  *
  * @author 释慧利
  */
-public class MemberRegistry {
+public final class MemberRegistry {
 
     private final PaxosMemberConfiguration memberConfiguration = new PaxosMemberConfiguration();
 
-    public void create(final List<Endpoint> members) {
+    private MemberRegistry() {
+    }
+
+    /**
+     * init member configuration.
+     *
+     * @param members members
+     */
+    public void init(final List<Endpoint> members) {
         memberConfiguration.init(members);
     }
 
-    public void loadSnap(PaxosMemberConfiguration snap) {
+    /**
+     * load snapshot.
+     *
+     * @param snap snapshot
+     */
+    public void loadSnap(final PaxosMemberConfiguration snap) {
         memberConfiguration.loadSnap(snap);
     }
 
+    /**
+     * get member configuration.
+     *
+     * @return member configuration
+     */
     public PaxosMemberConfiguration getMemberConfiguration() {
         return memberConfiguration;
-    }
-
-    private MemberRegistry() {
     }
 
     public static MemberRegistry getInstance() {

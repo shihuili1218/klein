@@ -73,7 +73,7 @@ public class MemberConfiguration implements Serializable {
 //        if (MapUtils.isEmpty(lastMembers) || !new HashSet<>(lastMembers.values()).equals(newConfig)) {
 //            throw new ChangeMemberException("lastMembers is empty, this error should not occur");
 //        }
-        this.effectMembers = lastMembers;
+        this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.lastMembers = new ConcurrentHashMap<>();
     }
 

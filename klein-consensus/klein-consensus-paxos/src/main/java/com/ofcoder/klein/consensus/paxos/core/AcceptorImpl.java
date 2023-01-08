@@ -27,6 +27,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
@@ -52,7 +53,7 @@ public class AcceptorImpl implements Acceptor {
 
     public AcceptorImpl(final PaxosNode self) {
         this.self = self;
-        this.memberConfig = self.getMemberConfig();
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override

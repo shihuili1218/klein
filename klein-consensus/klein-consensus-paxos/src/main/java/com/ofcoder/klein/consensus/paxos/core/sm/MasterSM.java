@@ -32,8 +32,8 @@ public class MasterSM extends AbstractSM {
     private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     private final PaxosMemberConfiguration memberConfig;
 
-    public MasterSM(final PaxosMemberConfiguration memberConfig) {
-        this.memberConfig = memberConfig;
+    public MasterSM() {
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
         if (memberConfig.getMaster() != null) {
             RoleAccessor.getMaster().onChangeMaster(memberConfig.getMaster().getId());
         }
@@ -62,11 +62,15 @@ public class MasterSM extends AbstractSM {
 
     @Override
     protected Object makeImage() {
-        return null;
+        return MemberRegistry.getInstance().getMemberConfiguration().createRef();
     }
 
     @Override
     protected void loadImage(final Object snap) {
         LOG.info("LOAD SNAP: {}", snap);
+        if (!(snap instanceof PaxosMemberConfiguration)) {
+            return;
+        }
+        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
     }
 }

@@ -49,6 +49,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
@@ -87,7 +88,7 @@ public class MasterImpl implements Master {
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
-        this.memberConfig = self.getMemberConfig();
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override
@@ -144,8 +145,7 @@ public class MasterImpl implements Master {
             return _changeMember(op, target);
         }
 
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        Endpoint master = self.getMemberConfig().getMaster();
+        Endpoint master = memberConfig.getMaster();
         if (master == null) {
             return false;
         }

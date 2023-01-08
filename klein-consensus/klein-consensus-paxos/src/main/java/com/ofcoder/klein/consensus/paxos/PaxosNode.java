@@ -19,7 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.Objects;
 
 import com.ofcoder.klein.consensus.facade.Node;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -37,7 +37,6 @@ public class PaxosNode extends Node {
     private long lastCheckpoint = 0;
     private final Object checkpointLock = new Object();
     private Endpoint self;
-    private PaxosMemberConfiguration memberConfig;
 
     /**
      * nextProposalNo = N * J + I.
@@ -47,7 +46,7 @@ public class PaxosNode extends Node {
      */
     public long generateNextProposalNo() {
         long cur = this.curProposalNo;
-        int n = memberConfig.getEffectMembers().size();
+        int n = MemberRegistry.getInstance().getMemberConfiguration().getEffectMembers().size();
         long j = cur / n;
         if (cur % n > 0) {
             j = j + 1;
@@ -139,10 +138,6 @@ public class PaxosNode extends Node {
         }
     }
 
-    public PaxosMemberConfiguration getMemberConfig() {
-        return memberConfig;
-    }
-
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -169,7 +164,6 @@ public class PaxosNode extends Node {
                 + ", curProposalNo=" + curProposalNo
                 + ", lastCheckpoint=" + lastCheckpoint
                 + ", self=" + self
-                + ", memberConfig=" + memberConfig
                 + '}';
     }
 
@@ -188,7 +182,6 @@ public class PaxosNode extends Node {
         private long curProposalNo;
         private long lastCheckpoint;
         private Endpoint self;
-        private PaxosMemberConfiguration memberConfig;
 
         private Builder() {
         }
@@ -258,17 +251,6 @@ public class PaxosNode extends Node {
         }
 
         /**
-         * memberConfig.
-         *
-         * @param memberConfig memberConfig
-         * @return Builder
-         */
-        public Builder memberConfig(final PaxosMemberConfiguration memberConfig) {
-            this.memberConfig = memberConfig;
-            return this;
-        }
-
-        /**
          * build.
          *
          * @return PaxosNode
@@ -280,7 +262,6 @@ public class PaxosNode extends Node {
             paxosNode.curAppliedInstanceId = this.curAppliedInstanceId;
             paxosNode.self = this.self;
             paxosNode.lastCheckpoint = this.lastCheckpoint;
-            paxosNode.memberConfig = this.memberConfig;
             return paxosNode;
         }
     }
