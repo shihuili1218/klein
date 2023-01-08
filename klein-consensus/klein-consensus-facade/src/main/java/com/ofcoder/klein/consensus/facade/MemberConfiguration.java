@@ -62,7 +62,7 @@ public class MemberConfiguration implements Serializable {
             throw new ChangeMemberException(String.format("lastMembers is not empty, lastMembers: %s, newConfig: %s", lastMembers, newConfig));
         }
         this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
-        return this.version.incrementAndGet();
+        return this.version.get();
     }
 
     /**
@@ -72,6 +72,7 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void seenNewConfig(final int version, final Set<Endpoint> newConfig) {
+        // 不能用version检查，要根据instance，一个个变更，不能插队
         int selfVersion = this.version.get();
         if (version <= selfVersion) {
             LOG.info("see a configuration: {}, but in.version[{}] le self.version[{}]", newConfig, version, selfVersion);
@@ -95,6 +96,7 @@ public class MemberConfiguration implements Serializable {
         }
         this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.lastMembers = new ConcurrentHashMap<>();
+        this.version.incrementAndGet();
     }
 
     /**
