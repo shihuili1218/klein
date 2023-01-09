@@ -29,11 +29,11 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 - [x] 拆分Group，proposer等角色无须隔离，只需隔离instance
 - [x] 增加Master：
   - [x] 成员变更
-  - [x] master晋升应拥有最完整的数据(以提案协商选举master，如果成功晋升，那么在此之前的instance一定都apply了)
+  - [x] master晋升应拥有最完整的数据(使用提案协商来选举master，如果成功晋升成master，接着推进未达成共识的提案)
   - [x] 数据对齐
     - [x] Master心跳触发对齐
     - [x] 快照同步（心跳携带checkpoint、learn消息返回checkpoint）
-    - [ ] ~~新成员加入集群，主动向master学习~~
+    - [x] 新成员加入集群，主动向master学习
   - [ ] 优化读请求(写请求一定要复制到Master)
   - [ ] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)

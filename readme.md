@@ -31,11 +31,11 @@ this is still in the process of implementation. 😆😆😆
 - [x] To split roles such as Group and proposer, you only need to isolate instance instead of isolating them
 - [x] Master role：
   - [x] Change of members
-  - [x] The master promotion should have the most complete data (the master should be elected through negotiation with the proposal. If the promotion is successful, the previous instances must be applied)
+  - [x] The master promotion should have the most complete data (the master should be elected through negotiation with the proposal. If the promotion is successful, then boost did not reach a consensus)
   - [x] Keep data consistent
     - [x] Master heartbeat triggers data synchronization
     - [x] Snapshot synchronization (the heartbeat carries the checkpoint and the learn message returns the checkpoint)
-    - [ ] ~~New members join the cluster and actively learn from the master~~
+    - [x] New members join the cluster and actively learn from the master
   - [ ] Optimize read requests (write requests must be copied to the master)
   - [ ] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
 - [ ] Automatic member discovery (research)
