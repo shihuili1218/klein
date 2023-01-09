@@ -211,14 +211,14 @@ public class PaxosConsensus implements Consensus {
         if (RoleAccessor.getProposer() != null) {
             RoleAccessor.getProposer().shutdown();
         }
+        if (RoleAccessor.getMaster() != null) {
+            RoleAccessor.getMaster().shutdown();
+        }
         if (RoleAccessor.getAcceptor() != null) {
             RoleAccessor.getAcceptor().shutdown();
         }
         if (RoleAccessor.getLearner() != null) {
             RoleAccessor.getLearner().shutdown();
-        }
-        if (RoleAccessor.getMaster() != null) {
-            RoleAccessor.getMaster().shutdown();
         }
     }
 

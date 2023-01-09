@@ -97,8 +97,8 @@ public final class Klein {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("*** shutting down Klein since JVM is shutting down");
-            StorageEngine.shutdown();
             ConsensusEngine.shutdown();
+            StorageEngine.shutdown();
             RpcEngine.shutdown();
             LOG.info("*** Klein shut down");
         }));

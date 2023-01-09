@@ -95,28 +95,32 @@ public class MasterImpl implements Master {
 
     @Override
     public void shutdown() {
-        if (electTimer != null) {
-            electTimer.destroy();
-        }
-        if (sendHeartbeatTimer != null) {
-            sendHeartbeatTimer.destroy();
-        }
-        boolean shutdown = false;
-        for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
-            RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                    .nodeId(self.getSelf().getId())
-                    .redirect(RedirectReq.CHANGE_MEMBER)
-                    .changeOp(Master.REMOVE)
-                    .changeTarget(Sets.newHashSet(self.getSelf()))
-                    .build();
-            RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
-            if (changeRes != null && changeRes.isChangeResult()) {
-                shutdown = true;
-                break;
+        try {
+            if (electTimer != null) {
+                electTimer.destroy();
             }
-        }
-        if (shutdown) {
-            throw new ShutdownException("shutdown, remove himself an exception occurs.");
+            if (sendHeartbeatTimer != null) {
+                sendHeartbeatTimer.destroy();
+            }
+            boolean shutdown = false;
+            for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
+                RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                        .nodeId(self.getSelf().getId())
+                        .redirect(RedirectReq.CHANGE_MEMBER)
+                        .changeOp(Master.REMOVE)
+                        .changeTarget(Sets.newHashSet(self.getSelf()))
+                        .build();
+                RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
+                if (changeRes != null && changeRes.isChangeResult()) {
+                    shutdown = true;
+                    break;
+                }
+            }
+            if (shutdown) {
+                throw new ShutdownException("shutdown, remove himself an exception occurs.");
+            }
+        } catch (Exception e) {
+            LOG.error(e.getMessage(), e);
         }
     }
 
@@ -262,30 +266,35 @@ public class MasterImpl implements Master {
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         Quorum quorum = new SingleQuorum(newConfig);
-        newConfig.forEach(it -> client.sendRequestAsync(it, completeDataReq, new AbstractInvokeCallback<PushCompleteDataRes>() {
-            @Override
-            public void error(final Throwable err) {
-                quorum.refuse(it);
-                if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
-                    future.complete(false);
-                }
-            }
+        quorum.grant(self.getSelf());
+        if (quorum.isGranted() == Quorum.GrantResult.PASS) {
+            future.complete(true);
+        }
+        newConfig.stream().filter(it -> !it.equals(self.getSelf()))
+                .forEach(it -> client.sendRequestAsync(it, completeDataReq, new AbstractInvokeCallback<PushCompleteDataRes>() {
+                    @Override
+                    public void error(final Throwable err) {
+                        quorum.refuse(it);
+                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
+                            future.complete(false);
+                        }
+                    }
 
-            @Override
-            public void complete(final PushCompleteDataRes result) {
-                if (result.isSuccess()) {
-                    quorum.grant(it);
-                } else {
-                    quorum.refuse(it);
-                }
-                if (quorum.isGranted() == Quorum.GrantResult.PASS) {
-                    future.complete(true);
-                } else if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
-                    future.complete(false);
-                }
-                // else ignore
-            }
-        }, 2000));
+                    @Override
+                    public void complete(final PushCompleteDataRes result) {
+                        if (result.isSuccess()) {
+                            quorum.grant(it);
+                        } else {
+                            quorum.refuse(it);
+                        }
+                        if (quorum.isGranted() == Quorum.GrantResult.PASS) {
+                            future.complete(true);
+                        } else if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
+                            future.complete(false);
+                        }
+                        // else ignore
+                    }
+                }, 2000));
         try {
             if (!future.get(2010, TimeUnit.MILLISECONDS)) {
                 pushCompleteData(newConfig, cur);
