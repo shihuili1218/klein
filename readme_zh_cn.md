@@ -69,3 +69,7 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 - Group的拆分是否有必要完全隔离？
 - 优化Prepare阶段
 - 批量协商（队列），减少RPC交互
+
+# Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=shihuili1218/klein&type=Date)](https://star-history.com/#shihuili1218/klein&Date)

@@ -22,6 +22,7 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
  * Proposer Role.
@@ -46,5 +47,16 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      * @param defaultProposal default proposal
      */
     void tryBoost(Holder<Long> instanceHolder, List<Proposal> defaultProposal, ProposeDone done);
+
+    /**
+     * Try to boost instance.
+     * Boost the copy of the proposal to the majority and the confirm status is reached
+     *
+     * @param instanceHolder      id of the instance that you want to boost
+     * @param done                boost callback, NOTICE: it may be called multiple times
+     * @param defaultProposal     default proposal
+     * @param memberConfiguration member config
+     */
+    void tryBoost(Holder<Long> instanceHolder, PaxosMemberConfiguration memberConfiguration, List<Proposal> defaultProposal, ProposeDone done);
 
 }

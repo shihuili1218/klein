@@ -176,7 +176,7 @@ public class MasterImpl implements Master {
                 .build();
         RedirectRes res = client.sendRequestSync(master, req, prop.getChangeMemberTimeout());
 
-        return res.isChangeResult();
+        return res != null && res.isChangeResult();
     }
 
     /**
@@ -192,20 +192,24 @@ public class MasterImpl implements Master {
      */
     private boolean _changeMember(final byte op, final Set<Endpoint> endpoint) {
 
-        PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
-        Set<Endpoint> newConfig = new HashSet<>(curConfiguration.getEffectMembers());
-        if (op == Master.ADD) {
-            newConfig.addAll(endpoint);
-        } else {
-            endpoint.forEach(newConfig::remove);
-        }
-
         try {
             // It can only be changed once at a time
             if (!changing.compareAndSet(false, true)) {
                 return false;
             }
-            int version = memberConfig.seenNewConfig(newConfig);
+
+            PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
+            Set<Endpoint> newConfig = new HashSet<>(CollectionUtils.isEmpty(curConfiguration.getLastMembers())
+                    ? curConfiguration.getEffectMembers()
+                    : curConfiguration.getLastMembers());
+            if (op == Master.ADD) {
+                newConfig.addAll(endpoint);
+            } else {
+                endpoint.forEach(newConfig::remove);
+            }
+
+            // It only takes effect in the image
+            int version = curConfiguration.seenNewConfig(newConfig);
 
             ChangeMemberOp req = new ChangeMemberOp();
             req.setNodeId(prop.getSelf().getId());
@@ -217,7 +221,7 @@ public class MasterImpl implements Master {
                 protected Long create() {
                     return self.incrementInstanceId();
                 }
-            }, Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
+            }, curConfiguration, Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
                 @Override
                 public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                     if (!result) {
