@@ -77,13 +77,11 @@ public class AcceptorImpl implements Acceptor {
             final long selfInstanceId = self.getCurInstanceId();
             final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-            if (!isSelf) {
-                // check proposals include change member
-                for (Proposal datum : req.getData()) {
-                    if (datum.getData() instanceof ChangeMemberOp) {
-                        ChangeMemberOp data = (ChangeMemberOp) datum.getData();
-                        memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
-                    }
+            // check proposals include change member
+            for (Proposal datum : req.getData()) {
+                if (datum.getData() instanceof ChangeMemberOp) {
+                    ChangeMemberOp data = (ChangeMemberOp) datum.getData();
+                    memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
                 }
             }
 

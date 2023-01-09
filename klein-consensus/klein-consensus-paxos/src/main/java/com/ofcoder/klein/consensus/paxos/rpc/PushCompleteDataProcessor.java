@@ -64,10 +64,14 @@ public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushComplete
                 logManager.updateInstance(instance);
             }
             res.setSuccess(true);
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            res.setSuccess(false);
         } finally {
             logManager.getLock().writeLock().unlock();
         }
 
+        LOG.info("receive push complete data, result: {}", res.isSuccess());
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 

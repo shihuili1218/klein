@@ -43,6 +43,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
+    private int changeVersion = 0;
     protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
     protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
 
@@ -57,7 +58,6 @@ public class MemberConfiguration implements Serializable {
      * @return version
      */
     public int seenNewConfig(final Set<Endpoint> newConfig) {
-        LOG.info("see a new configuration, {}", newConfig);
         if (MapUtils.isNotEmpty(lastMembers)) {
             throw new ChangeMemberException(String.format("lastMembers is not empty, lastMembers: %s, newConfig: %s", lastMembers, newConfig));
         }
@@ -72,12 +72,12 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void seenNewConfig(final int version, final Set<Endpoint> newConfig) {
-        // 不能用version检查，要根据instance，一个个变更，不能插队
+        LOG.info("see a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
         int selfVersion = this.version.get();
-        if (version <= selfVersion) {
-            LOG.info("see a configuration: {}, but in.version[{}] le self.version[{}]", newConfig, version, selfVersion);
+        if (version <= selfVersion || version <= changeVersion) {
             return;
         }
+        this.changeVersion = version;
         seenNewConfig(newConfig);
     }
 
@@ -88,15 +88,16 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void effectiveNewConfig(final int version, final Set<Endpoint> newConfig) {
-        LOG.info("commit a new configuration: {}, version: {}", newConfig, version);
+        LOG.info("commit a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
+
         int selfVersion = this.version.get();
-        if (version < selfVersion) {
-            LOG.info("commit a configuration: {}, but in.version[{}] lt self.version[{}]", newConfig, version, selfVersion);
+        if (version < selfVersion || version < changeVersion) {
             return;
         }
         this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.lastMembers = new ConcurrentHashMap<>();
         this.version.incrementAndGet();
+        this.changeVersion = version;
     }
 
     /**

@@ -9,6 +9,5 @@ public class Main2Test extends TestCase {
 
     public void test() {
 
-
     }
 }

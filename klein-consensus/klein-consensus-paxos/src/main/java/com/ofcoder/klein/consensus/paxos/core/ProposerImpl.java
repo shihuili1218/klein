@@ -247,7 +247,13 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final List<Proposal> proposal, final ProposeDone done) {
+    public void tryBoost(Holder<Long> instanceHolder, List<Proposal> defaultProposal, ProposeDone done) {
+        tryBoost(instanceHolder, memberConfig, defaultProposal, done);
+    }
+
+    @Override
+    public void tryBoost(final Holder<Long> instanceHolder, final PaxosMemberConfiguration memberConfiguration
+            , final List<Proposal> proposal, final ProposeDone done) {
         List<ProposalWithDone> proposalWithDones = proposal.stream().map(it -> {
             ProposalWithDone event = new ProposalWithDone();
             event.setProposal(it);
@@ -255,7 +261,7 @@ public class ProposerImpl implements Proposer {
             return event;
         }).collect(Collectors.toList());
 
-        ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), instanceHolder, proposalWithDones);
+        ProposeContext ctxt = new ProposeContext(memberConfiguration.createRef(), instanceHolder, proposalWithDones);
         prepare(ctxt, new PrepareCallback());
     }
 
