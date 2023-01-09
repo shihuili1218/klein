@@ -43,9 +43,9 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
-    private int changeVersion = 0;
     protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
     protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
+    private int changeVersion = 0;
 
     public int getVersion() {
         return version.get();
