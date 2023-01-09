@@ -102,22 +102,24 @@ public class MasterImpl implements Master {
             if (sendHeartbeatTimer != null) {
                 sendHeartbeatTimer.destroy();
             }
-            boolean shutdown = false;
-            for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
-                RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                        .nodeId(self.getSelf().getId())
-                        .redirect(RedirectReq.CHANGE_MEMBER)
-                        .changeOp(Master.REMOVE)
-                        .changeTarget(Sets.newHashSet(self.getSelf()))
-                        .build();
-                RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
-                if (changeRes != null && changeRes.isChangeResult()) {
-                    shutdown = true;
-                    break;
+            if (prop.isJoinCluster()) {
+                boolean shutdown = false;
+                for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
+                    RedirectReq req = RedirectReq.Builder.aRedirectReq()
+                            .nodeId(self.getSelf().getId())
+                            .redirect(RedirectReq.CHANGE_MEMBER)
+                            .changeOp(Master.REMOVE)
+                            .changeTarget(Sets.newHashSet(self.getSelf()))
+                            .build();
+                    RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
+                    if (changeRes != null && changeRes.isChangeResult()) {
+                        shutdown = true;
+                        break;
+                    }
                 }
-            }
-            if (shutdown) {
-                throw new ShutdownException("shutdown, remove himself an exception occurs.");
+                if (shutdown) {
+                    throw new ShutdownException("shutdown, remove himself an exception occurs.");
+                }
             }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
