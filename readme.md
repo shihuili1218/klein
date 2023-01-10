@@ -82,6 +82,7 @@ KleinProp prop = KleinProp.loadIfPresent();
 - [x] Basic functions such as reading, writing, etc
 - [x] Implement LRU with persistence
 - [x] Cache Automatic Expiration (TTL)
+- [ ] Clock skew
 
 ### Collection
 - [ ] list

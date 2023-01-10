@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.exception.KleinException;
+import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.GroupWrapper;
 
@@ -68,7 +69,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setKey(key);
         message.setOp(Message.PUT);
 
-        message.setExpire(System.nanoTime() + unit.toNanos(ttl));
+        message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
         Result result = consensus.propose(message);
         return Result.State.SUCCESS.equals(result.getState());
     }
@@ -92,7 +93,8 @@ public class KleinCacheImpl implements KleinCache {
         message.setData(data);
         message.setKey(key);
         message.setOp(Message.PUTIFPRESENT);
-        message.setExpire(unit.toNanos(ttl));
+        message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
+
         Result<D> result = consensus.propose(message, true);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");

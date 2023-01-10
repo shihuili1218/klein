@@ -80,6 +80,7 @@ KleinProp prop = KleinProp.loadIfPresent();
 - [x] 读、写、等基础功能
 - [x] 配合持久化实现LRU
 - [x] TTL自动过期
+- [ ] 时间偏移
 
 ### 集合
 - [ ] list

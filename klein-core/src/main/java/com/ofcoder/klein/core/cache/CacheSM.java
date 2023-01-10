@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 import com.ofcoder.klein.core.config.CacheProp;
 
@@ -129,7 +130,7 @@ public class CacheSM extends AbstractSM {
             if (metaData.getExpire() == Message.TTL_PERPETUITY) {
                 return true;
             }
-            if (metaData.getExpire() < System.nanoTime()) {
+            if (metaData.getExpire() < TrueTime.currentTimeMillis()) {
                 remove(key);
                 return false;
             } else {
