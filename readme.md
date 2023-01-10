@@ -36,19 +36,19 @@ this is still in the process of implementation. 😆😆😆
     </repository>
 </repositories>
 ```
-### start klein
+### startup
 ```
 Klein instance = Klein.startup();
 instance.getCache().put("hello", "klein");
 ```
 ### set property
-所有可配置的参数，请查看：`com.ofcoder.klein.core.config.KleinProp`
+For all configurable parameters, see: `com.ofcoder.klein.core.config.KleinProp`
 
-你可以通过System#setProperty设置，也可以获取到KleinProp对象
+You can set it through `System#setProperty` or get the `KleinProp` object
 ```
 System.setProperty("klein.id", "2")
 
-// 或者 
+// or
 
 KleinProp prop = KleinProp.loadIfPresent();
 ```
