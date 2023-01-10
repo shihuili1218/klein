@@ -18,20 +18,26 @@ package com.ofcoder.klein.example.single;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.config.KleinProp;
 
 /**
+ * single node.
+ *
  * @author 释慧利
  */
 public class Main {
+    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
-    public static void main(String[] args) throws IOException {
+    public static void main(final String[] args) throws IOException {
         KleinProp prop = KleinProp.loadIfPresent();
 
         Klein instance = Klein.startup();
         instance.getCache().put("hello", "klein");
-        System.out.println(instance.getCache().get("hello") + "");
+        LOG.info(instance.getCache().get("hello") + "");
 
         System.in.read();
     }

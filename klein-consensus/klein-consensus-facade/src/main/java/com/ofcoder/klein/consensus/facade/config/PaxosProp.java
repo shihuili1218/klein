@@ -35,7 +35,7 @@ public class PaxosProp {
         return masterHeartbeatTimeout;
     }
 
-    public void setMasterHeartbeatTimeout(int masterHeartbeatTimeout) {
+    public void setMasterHeartbeatTimeout(final int masterHeartbeatTimeout) {
         this.masterHeartbeatTimeout = masterHeartbeatTimeout;
     }
 
