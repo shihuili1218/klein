@@ -19,6 +19,40 @@ this is still in the process of implementation. 😆😆😆
 - Cache Automatic Expiration (TTL)
 ## Lock
 
+# Quick Start
+### dependence klein
+```xml
+<dependency>
+    <groupId>com.ofcoder.klein.core</groupId>
+    <artifactId>klein-core</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+```xml
+<repositories>
+    <repository>
+        <id>ossrh</id>
+        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+</repositories>
+```
+### start klein
+```
+Klein instance = Klein.startup();
+instance.getCache().put("hello", "klein");
+```
+### set property
+所有可配置的参数，请查看：`com.ofcoder.klein.core.config.KleinProp`
+
+你可以通过System#setProperty设置，也可以获取到KleinProp对象
+```
+System.setProperty("klein.id", "2")
+
+// 或者 
+
+KleinProp prop = KleinProp.loadIfPresent();
+```
+
 # Milepost
 
 ## Evolve

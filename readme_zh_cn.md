@@ -17,6 +17,40 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 - TTL自动过期
 ## 锁
 
+# 使用
+### 引入klein
+```xml
+<dependency>
+    <groupId>com.ofcoder.klein.core</groupId>
+    <artifactId>klein-core</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+```xml
+<repositories>
+    <repository>
+        <id>ossrh</id>
+        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+</repositories>
+```
+### 启动
+```
+Klein instance = Klein.startup();
+instance.getCache().put("hello", "klein");
+```
+### 配置
+所有可配置的参数，请查看：`com.ofcoder.klein.core.config.KleinProp`
+
+你可以通过System#setProperty设置，也可以获取到KleinProp对象
+```
+System.setProperty("klein.id", "2")
+
+// 或者 
+
+KleinProp prop = KleinProp.loadIfPresent();
+```
+
 # 里程map
 
 ## 进度
