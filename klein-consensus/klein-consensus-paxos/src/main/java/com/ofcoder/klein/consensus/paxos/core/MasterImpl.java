@@ -39,6 +39,7 @@ import com.google.common.collect.Sets;
 import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
@@ -87,6 +88,8 @@ public class MasterImpl implements Master {
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
     private final AtomicBoolean changing = new AtomicBoolean(false);
+    private long masterTimeNs;
+    private long localTimeNs;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
@@ -452,6 +455,7 @@ public class MasterImpl implements Master {
                         .lastCheckpoint(lastCheckpoint)
                         .lastAppliedInstanceId(curAppliedInstanceId)
                         .build())
+                .timestampMs(TrueTime.currentTimeMillis())
                 .probe(probe)
                 .build();
 
@@ -526,6 +530,8 @@ public class MasterImpl implements Master {
         }
 
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
+
+            TrueTime.heartbeat(request.getTimestampMs());
 
             // reset and restart election timer
             if (!isSelf) {

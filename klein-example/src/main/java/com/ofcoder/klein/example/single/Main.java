@@ -16,7 +16,7 @@
  */
 package com.ofcoder.klein.example.single;
 
-import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,13 +32,18 @@ import com.ofcoder.klein.core.config.KleinProp;
 public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) throws Exception {
         KleinProp prop = KleinProp.loadIfPresent();
 
         Klein instance = Klein.startup();
         instance.getCache().put("hello", "klein");
         LOG.info(instance.getCache().get("hello") + "");
-
+        instance.getCache().put("hello", "test", 1L, TimeUnit.SECONDS);
+        LOG.info(instance.getCache().get("hello") + "");
+        Thread.sleep(500L);
+        LOG.info(instance.getCache().get("hello") + "");
+        Thread.sleep(500L);
+        LOG.info(instance.getCache().get("hello") + "");
         System.in.read();
     }
 }
