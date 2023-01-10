@@ -43,7 +43,7 @@ public class SingleQuorum implements Quorum {
     public GrantResult isGranted() {
         if (grantedMembers.size() >= threshold) {
             return GrantResult.PASS;
-        } else if (failedMembers.size() >= allMembers.size() - threshold) {
+        } else if (failedMembers.size() > (allMembers.size() - threshold)) {
             return GrantResult.REFUSE;
         } else {
             return GrantResult.GRANTING;
