@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 import java.util.Set;
 
+import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -32,6 +33,9 @@ public class RedirectReq implements Serializable {
 
     private String nodeId;
     private byte redirect;
+    // propose
+    private Proposal proposal;
+    // change member
     private byte changeOp;
     private Set<Endpoint> changeTarget;
 
@@ -41,6 +45,10 @@ public class RedirectReq implements Serializable {
 
     public byte getRedirect() {
         return redirect;
+    }
+
+    public Proposal getProposal() {
+        return proposal;
     }
 
     public byte getChangeOp() {
@@ -54,6 +62,7 @@ public class RedirectReq implements Serializable {
     public static final class Builder {
         private String nodeId;
         private byte redirect;
+        private Proposal proposal;
         private byte changeOp;
         private Set<Endpoint> changeTarget;
 
@@ -92,6 +101,17 @@ public class RedirectReq implements Serializable {
         }
 
         /**
+         * proposal.
+         *
+         * @param proposal proposal
+         * @return Builder
+         */
+        public Builder proposal(final Proposal proposal) {
+            this.proposal = proposal;
+            return this;
+        }
+
+        /**
          * changeOp.
          *
          * @param changeOp changeOp
@@ -124,6 +144,7 @@ public class RedirectReq implements Serializable {
             redirectReq.changeTarget = this.changeTarget;
             redirectReq.redirect = this.redirect;
             redirectReq.nodeId = this.nodeId;
+            redirectReq.proposal = this.proposal;
             return redirectReq;
         }
     }
