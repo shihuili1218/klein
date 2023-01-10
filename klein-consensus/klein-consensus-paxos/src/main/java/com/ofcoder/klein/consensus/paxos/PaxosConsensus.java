@@ -67,9 +67,10 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private ConsensusProp prop;
     private RpcClient client;
+    private Proxy proxy;
 
     private void proposeAsync(final Proposal data, final ProposeDone done) {
-        RoleAccessor.getProposer().propose(data, done);
+        this.proxy.propose(data, done);
     }
 
     @Override
@@ -132,6 +133,8 @@ public class PaxosConsensus implements Consensus {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         loadNode();
+        this.proxy = this.prop.getPaxosProp().isOnlyMasterWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy();
+
         MemberRegistry.getInstance().init(prop.getMembers());
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
