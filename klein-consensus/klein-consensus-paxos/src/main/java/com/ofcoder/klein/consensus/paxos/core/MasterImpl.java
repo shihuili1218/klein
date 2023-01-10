@@ -472,7 +472,7 @@ public class MasterImpl implements Master {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
                     quorum.refuse(it);
                     if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE) {
-                        complete.complete(quorum.isGranted());
+                        complete.complete(SingleQuorum.GrantResult.REFUSE);
                     }
                 }
 
@@ -480,15 +480,16 @@ public class MasterImpl implements Master {
                 public void complete(final Pong result) {
                     quorum.grant(it);
                     if (quorum.isGranted() == SingleQuorum.GrantResult.PASS) {
-                        complete.complete(quorum.isGranted());
+                        complete.complete(SingleQuorum.GrantResult.PASS);
                     }
                 }
-            }, 55);
+            }, prop.getPaxosProp().getMasterHeartbeatTimeout());
         });
         try {
-            SingleQuorum.GrantResult grantResult = complete.get(60L, TimeUnit.MILLISECONDS);
+            SingleQuorum.GrantResult grantResult = complete.get(prop.getPaxosProp().getMasterHeartbeatTimeout() + 10, TimeUnit.MILLISECONDS);
             return grantResult == SingleQuorum.GrantResult.PASS;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            LOG.warn("master send heartbeat occur exception, {}", e.getMessage());
             return false;
         }
     }
@@ -517,7 +518,7 @@ public class MasterImpl implements Master {
 
         self.updateCurInstanceId(nodeState.getMaxInstanceId());
 
-        if (!request.isProbe()) {
+        if (!request.isProbe() && !isSelf) {
             // check and update instance
             ThreadExecutor.submit(() -> {
                 RoleAccessor.getLearner().pullSameData(nodeState);

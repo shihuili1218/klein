@@ -24,12 +24,20 @@ import com.ofcoder.klein.common.util.SystemPropertyUtil;
  * @author 释慧利
  */
 public class PaxosProp {
-
+    private int masterHeartbeatTimeout = SystemPropertyUtil.getInt("klein.consensus.paxos.master.heartbeat-timeout", 100);
     private int masterHeartbeatInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.heartbeat-interval", 50);
     private int masterElectMinInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-min-interval", masterHeartbeatInterval * 6);
     private int masterElectMaxInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-max-interval", masterElectMinInterval + masterHeartbeatInterval * 3);
     private boolean onlyMasterWrite = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.writer", true);
     private boolean onlyMasterRead = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.reader", true);
+
+    public int getMasterHeartbeatTimeout() {
+        return masterHeartbeatTimeout;
+    }
+
+    public void setMasterHeartbeatTimeout(int masterHeartbeatTimeout) {
+        this.masterHeartbeatTimeout = masterHeartbeatTimeout;
+    }
 
     public int getMasterHeartbeatInterval() {
         return masterHeartbeatInterval;
