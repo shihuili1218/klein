@@ -40,13 +40,13 @@ Klein instance = Klein.startup();
 instance.getCache().put("hello", "klein");
 ```
 ### 配置
-For all configurable parameters, see: `com.ofcoder.klein.core.config.KleinProp`
+所有可配置的参数，请查看：`com.ofcoder.klein.core.config.KleinProp`
 
-You can set it through `System#setProperty` or get the `KleinProp` object
+你可以通过System#setProperty设置，也可以获取到KleinProp对象
 ```
 System.setProperty("klein.id", "2")
 
-// or
+// 或者 
 
 KleinProp prop = KleinProp.loadIfPresent();
 ```
