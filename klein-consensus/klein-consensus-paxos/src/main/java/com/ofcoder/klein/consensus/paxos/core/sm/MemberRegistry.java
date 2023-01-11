@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.List;
 
+import com.ofcoder.klein.consensus.facade.Nwr;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -28,6 +29,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public final class MemberRegistry {
 
     private final PaxosMemberConfiguration memberConfiguration = new PaxosMemberConfiguration();
+    private Nwr nwr;
 
     private MemberRegistry() {
     }
@@ -36,9 +38,15 @@ public final class MemberRegistry {
      * init member configuration.
      *
      * @param members members
+     * @param nwr     quorum calculator
      */
-    public void init(final List<Endpoint> members) {
-        memberConfiguration.init(members);
+    public void init(final List<Endpoint> members, final Nwr nwr) {
+        this.memberConfiguration.init(members);
+        this.nwr = nwr;
+    }
+
+    public Nwr getNwr() {
+        return nwr;
     }
 
     /**

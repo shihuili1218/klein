@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.facade.Nwr;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -62,6 +63,7 @@ public class PaxosConsensus implements Consensus {
     private ConsensusProp prop;
     private RpcClient client;
     private Proxy proxy;
+    private Nwr nwr;
 
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
@@ -86,15 +88,16 @@ public class PaxosConsensus implements Consensus {
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin(this.prop.getNwr());
 
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);
 
-        MemberRegistry.getInstance().init(prop.getMembers());
+        MemberRegistry.getInstance().init(this.prop.getMembers(), this.nwr);
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 
-        RoleAccessor.create(this.prop, self);
+        RoleAccessor.create(this.prop, this.self);
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
         SMRegistry.getSms().forEach(this::loadSM);
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());

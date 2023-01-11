@@ -19,6 +19,7 @@ package com.ofcoder.klein.common.util;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import org.apache.logging.log4j.core.util.JsonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -179,7 +180,36 @@ public final class SystemPropertyUtil {
             // ignored
         }
 
-        LOG.warn("Unable to parse the long integer system property '{}':{} - using the default value: {}.", key, value,
+        LOG.warn("Unable to parse the long system property '{}':{} - using the default value: {}.", key, value,
+                def);
+
+        return def;
+    }
+
+    /**
+     * Returns the value of the Java system property with the
+     * specified {@code key}, while falling back to the specified
+     * default value if the property access fails.
+     *
+     * @param key key
+     * @param def default value
+     * @return the property value.
+     * {@code def} if there's no such property or if an access to the specified property is not allowed.
+     */
+    public static float getFloat(final String key, final float def) {
+        String value = get(key);
+        if (value == null) {
+            return def;
+        }
+
+        value = value.trim().toLowerCase();
+        try {
+            return Float.parseFloat(value);
+        } catch (Exception ignored) {
+            // ignored
+        }
+
+        LOG.warn("Unable to parse the float system property '{}':{} - using the default value: {}.", key, value,
                 def);
 
         return def;
