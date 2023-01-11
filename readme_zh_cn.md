@@ -12,11 +12,6 @@ Klein是一个基于Paxos的分布式收集工具库，包括分布式ArrayList�
 
 **Look forward to your star⭐**
 
-## 缓存/K-V存储
-- 最大存储的大小（LRU）
-- TTL自动过期
-## 锁
-
 # 使用
 ### 引入klein
 ```xml
