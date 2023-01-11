@@ -101,4 +101,4 @@ KleinProp prop = KleinProp.loadIfPresent();
 
 # Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=shihuili1218/klein&type=Date)](https://star-history.com/#shihuili1218/klein&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=shihuili1218/klein&type=Date)](https://star-history.com/#shihuili1218/klein&Date) [![Join the chat at https://gitter.im/klein-gitter/community](https://badges.gitter.im/klein-gitter/community.svg)](https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
