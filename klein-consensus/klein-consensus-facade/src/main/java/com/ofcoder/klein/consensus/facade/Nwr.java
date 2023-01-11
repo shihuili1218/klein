@@ -20,16 +20,25 @@ import com.ofcoder.klein.spi.SPI;
 
 /**
  * NWR: N ＞ W + R.
+ * R is read quorum, W is write quorum.
  *
  * @author 释慧利
  */
 @SPI
 public interface Nwr {
     /**
+     * calculate read quorum.
+     *
+     * @param n total size
+     * @return read quorum
+     */
+    int r(int n);
+
+    /**
      * calculate write quorum.
      *
      * @param n total size
      * @return write quorum
      */
-    int calc(int n);
+    int w(int n);
 }

@@ -67,7 +67,7 @@ public class ConsensusProp {
     private String nwr = SystemPropertyUtil.get("klein.consensus.nwr", "majority");
     private PaxosProp paxosProp = new PaxosProp();
 
-    private List<Endpoint> parseMember(String members) {
+    private List<Endpoint> parseMember(final String members) {
         List<Endpoint> endpoints = new ArrayList<>();
         if (StringUtils.isEmpty(members)) {
             return endpoints;
@@ -149,7 +149,7 @@ public class ConsensusProp {
         return nwr;
     }
 
-    public void setNwr(String nwr) {
+    public void setNwr(final String nwr) {
         this.nwr = nwr;
     }
 }

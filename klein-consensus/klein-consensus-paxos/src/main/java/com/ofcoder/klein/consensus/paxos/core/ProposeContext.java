@@ -62,9 +62,9 @@ public class ProposeContext {
         this.memberConfiguration = memberConfiguration;
         this.instanceIdHolder = instanceIdHolder;
         this.dataWithCallback = ImmutableList.copyOf(events);
-        this.prepareQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
+        this.prepareQuorum = JoinConsensusQuorum.createReadQuorum(memberConfiguration);
         this.prepareNexted = new AtomicBoolean(false);
-        this.acceptQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
+        this.acceptQuorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
         this.acceptNexted = new AtomicBoolean(false);
     }
 

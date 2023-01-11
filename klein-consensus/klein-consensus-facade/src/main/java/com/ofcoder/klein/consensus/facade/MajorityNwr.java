@@ -27,7 +27,12 @@ import com.ofcoder.klein.spi.Join;
 @Join
 public class MajorityNwr implements Nwr {
     @Override
-    public int calc(int n) {
+    public int r(final int n) {
+        return n / 2 + 1;
+    }
+
+    @Override
+    public int w(final int n) {
         return n / 2 + 1;
     }
 }

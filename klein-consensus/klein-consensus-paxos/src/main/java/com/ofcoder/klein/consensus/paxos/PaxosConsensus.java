@@ -93,7 +93,7 @@ public class PaxosConsensus implements Consensus {
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);
 
-        MemberRegistry.getInstance().init(this.prop.getMembers(), this.nwr);
+        MemberRegistry.getInstance().init(this.prop.getMembers());
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 

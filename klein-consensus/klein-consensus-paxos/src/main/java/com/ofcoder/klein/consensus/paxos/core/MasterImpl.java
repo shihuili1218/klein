@@ -43,6 +43,7 @@ import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
+import com.ofcoder.klein.consensus.facade.Nwr;
 import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -89,8 +90,7 @@ public class MasterImpl implements Master {
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
     private final AtomicBoolean changing = new AtomicBoolean(false);
-    private long masterTimeNs;
-    private long localTimeNs;
+    private final Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
@@ -271,7 +271,7 @@ public class MasterImpl implements Master {
                 .build();
 
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        Quorum quorum = new SingleQuorum(newConfig);
+        Quorum quorum = new SingleQuorum(newConfig, this.nwr.w(newConfig.size()));
         quorum.grant(self.getSelf());
         if (quorum.isGranted() == Quorum.GrantResult.PASS) {
             future.complete(true);
@@ -342,7 +342,7 @@ public class MasterImpl implements Master {
                         public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
                             LOG.info("electing master, negotiationDone: {}", result);
                             if (result && consensusDatas.contains(proposal)) {
-                                ThreadExecutor.submit(MasterImpl.this::boostInstance);
+                                ThreadExecutor.submit(MasterImpl.this::newMaster);
                             } else {
                                 latch.countDown();
                             }
@@ -366,7 +366,7 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void boostInstance() {
+    private void newMaster() {
         updateMasterState(ElectState.BOOSTING);
 
         stopAllTimer();
@@ -377,7 +377,7 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
-        Quorum quorum = JoinConsensusQuorum.createInstance(memberConfiguration);
+        Quorum quorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
         AtomicBoolean next = new AtomicBoolean(false);
 
         // for self
@@ -445,7 +445,7 @@ public class MasterImpl implements Master {
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-        final Quorum quorum = JoinConsensusQuorum.createInstance(memberConfiguration);
+        final Quorum quorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())

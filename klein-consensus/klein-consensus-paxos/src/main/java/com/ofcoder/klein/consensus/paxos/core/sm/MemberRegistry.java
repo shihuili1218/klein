@@ -29,7 +29,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public final class MemberRegistry {
 
     private final PaxosMemberConfiguration memberConfiguration = new PaxosMemberConfiguration();
-    private Nwr nwr;
 
     private MemberRegistry() {
     }
@@ -38,15 +37,9 @@ public final class MemberRegistry {
      * init member configuration.
      *
      * @param members members
-     * @param nwr     quorum calculator
      */
-    public void init(final List<Endpoint> members, final Nwr nwr) {
+    public void init(final List<Endpoint> members) {
         this.memberConfiguration.init(members);
-        this.nwr = nwr;
-    }
-
-    public Nwr getNwr() {
-        return nwr;
     }
 
     /**
