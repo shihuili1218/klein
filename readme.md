@@ -14,11 +14,6 @@ this is still in the process of implementation. 😆😆😆
 
 **Look forward to your star⭐**
 
-## Cache/K-V storage
-- Control the number of buffers based on LRU
-- Cache Automatic Expiration (TTL)
-## Lock
-
 # Quick Start
 ### dependence klein
 ```xml
