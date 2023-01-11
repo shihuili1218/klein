@@ -19,14 +19,16 @@ package com.ofcoder.klein.storage.facade.exception;
 import com.ofcoder.klein.common.exception.KleinException;
 
 /**
+ * Storage Exception.
+ *
  * @author 释慧利
  */
 public class StorageException extends KleinException {
-    public StorageException(String message) {
+    public StorageException(final String message) {
         super(message);
     }
 
-    public StorageException(String message, Throwable cause) {
+    public StorageException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

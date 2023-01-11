@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.common.util;
 
 import java.util.concurrent.ExecutorService;
@@ -9,27 +25,36 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * common thread executor.
+ *
  * @author 释慧利
  */
 public class ThreadExecutor {
     private static final Logger LOG = LoggerFactory.getLogger(ThreadExecutor.class);
     // fixme to user custom
-    private final static ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
+    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(),
             KleinThreadFactory.create("common-thread", true));
-
 
     private static int cpus() {
         return Runtime.getRuntime().availableProcessors();
     }
 
-    public static void submit(Runnable task) {
-        EXECUTOR.submit(task);
+    /**
+     * submit task to thread pool.
+     *
+     * @param task runnable
+     */
+    public static void submit(final Runnable task) {
+        EXECUTOR.execute(task);
     }
 
-
     /**
+     * graceful shutdown.
+     *
+     * @param pool need close pool
+     * @return is closed
      * @see #shutdownAndAwaitTermination(ExecutorService, long)
      */
     public static boolean shutdownAndAwaitTermination(final ExecutorService pool) {
@@ -41,6 +66,10 @@ public class ThreadExecutor {
      * phases, first by calling {@code shutdown} to reject incoming tasks,
      * and then calling {@code shutdownNow}, if necessary, to cancel any
      * lingering tasks.
+     *
+     * @param pool          need close pool
+     * @param timeoutMillis close timeout
+     * @return is closed
      */
     public static boolean shutdownAndAwaitTermination(final ExecutorService pool, final long timeoutMillis) {
         if (pool == null) {

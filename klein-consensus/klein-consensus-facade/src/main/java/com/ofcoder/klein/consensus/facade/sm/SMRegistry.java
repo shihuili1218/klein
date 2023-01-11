@@ -14,18 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.facade.sm;
 
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
+ * SMRegistry.
+ *
  * @author 释慧利
  */
-public class RunningQueue {
+public final class SMRegistry {
+    private static final Logger LOG = LoggerFactory.getLogger(SMRegistry.class);
+    private static final Map<String, SM> SMS = new HashMap<>();
 
-    private final Map<Long, List<ProposalWithDone>> applyCallback = new ConcurrentHashMap<>();
+    /**
+     * load sm.
+     *
+     * @param group sm group
+     * @param sm    sm
+     */
+    public static void register(final String group, final SM sm) {
+        if (SMS.containsKey(group)) {
+            LOG.error("the group[{}] has been loaded with sm.", group);
+            return;
+        }
+        SMS.put(group, sm);
+    }
 
-
+    /**
+     * get sm.
+     *
+     * @return all sm
+     */
+    public static Map<String, SM> getSms() {
+        return SMS;
+    }
 }

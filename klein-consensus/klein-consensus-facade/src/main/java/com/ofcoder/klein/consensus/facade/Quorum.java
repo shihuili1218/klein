@@ -16,55 +16,36 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Quorum check.
+ *
  * @author 释慧利
  */
-public abstract class Quorum {
-    private Set<Endpoint> allMembers = new HashSet<>();
+public interface Quorum {
+    /**
+     * the node refuse, refuse current request.
+     *
+     * @param node refuse node
+     * @return refuse result
+     */
+    boolean refuse(Endpoint node);
 
-    private Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
-    private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
-    private int threshold;
+    /**
+     * the node pass, grant current request.
+     *
+     * @param node pass node
+     * @return grant result
+     */
+    boolean grant(Endpoint node);
 
-    public Quorum(final Set<Endpoint> allMembers) {
+    SingleQuorum.GrantResult isGranted();
 
-        this.allMembers = allMembers;
-        this.threshold = allMembers.size() / 2 + 1;
-    }
-
-    public GrantResult isGranted() {
-        if (grantedMembers.size() >= threshold) {
-            return GrantResult.PASS;
-        } else if (failedMembers.size() >= threshold) {
-            return GrantResult.REFUSE;
-        } else {
-            return GrantResult.GRANTING;
-        }
-    }
-
-    public boolean grant(Endpoint node) {
-        if (!allMembers.contains(node)) {
-            return false;
-        }
-        return grantedMembers.add(node);
-    }
-
-    public boolean refuse(Endpoint node) {
-        if (!allMembers.contains(node)) {
-            return false;
-        }
-        return failedMembers.add(node);
-    }
-
-    public static enum GrantResult {
+    enum GrantResult {
         PASS,
         REFUSE,
         GRANTING
     }
+
 }

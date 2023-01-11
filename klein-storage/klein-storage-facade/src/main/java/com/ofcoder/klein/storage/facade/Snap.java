@@ -19,6 +19,8 @@ package com.ofcoder.klein.storage.facade;
 import java.io.Serializable;
 
 /**
+ * snapshot information.
+ *
  * @author 释慧利
  */
 public class Snap implements Serializable {
@@ -28,24 +30,45 @@ public class Snap implements Serializable {
     public Snap() {
     }
 
-    public Snap(long checkpoint, Object snap) {
+    public Snap(final long checkpoint, final Object snap) {
         this.checkpoint = checkpoint;
         this.snap = snap;
     }
 
+    /**
+     * get checkpoint.
+     * Checkpoint is the snapshot last applied instanceId
+     *
+     * @return checkpoint
+     */
     public long getCheckpoint() {
         return checkpoint;
     }
 
-    public void setCheckpoint(long checkpoint) {
+    /**
+     * set checkpoint.
+     *
+     * @param checkpoint checkpoint
+     */
+    public void setCheckpoint(final long checkpoint) {
         this.checkpoint = checkpoint;
     }
 
+    /**
+     * get snap.
+     *
+     * @return snapshot
+     */
     public Object getSnap() {
         return snap;
     }
 
-    public void setSnap(Object snap) {
+    /**
+     * set snapshot.
+     *
+     * @param snap snapshot
+     */
+    public void setSnap(final Object snap) {
         this.snap = snap;
     }
 }

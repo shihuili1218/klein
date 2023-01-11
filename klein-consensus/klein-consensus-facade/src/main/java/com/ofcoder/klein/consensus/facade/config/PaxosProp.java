@@ -14,29 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade.config;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.facade.config;
 
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
+ * paxox property.
+ *
  * @author 释慧利
  */
 public class PaxosProp {
-
+    private int masterHeartbeatTimeout = SystemPropertyUtil.getInt("klein.consensus.paxos.master.heartbeat-timeout", 20);
     private int masterHeartbeatInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.heartbeat-interval", 50);
-    private int masterElectMinInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-min-interval", masterHeartbeatInterval * 4);
+    private int masterElectMinInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-min-interval", masterHeartbeatInterval * 6);
     private int masterElectMaxInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-max-interval", masterElectMinInterval + masterHeartbeatInterval * 3);
+    private boolean write = SystemPropertyUtil.getBoolean("klein.consensus.paxos.write", true);
 
-    private boolean onlyMasterWrite = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.writer", true);
-    private boolean onlyMasterRead = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.reader", true);
+    public int getMasterHeartbeatTimeout() {
+        return masterHeartbeatTimeout;
+    }
+
+    public void setMasterHeartbeatTimeout(final int masterHeartbeatTimeout) {
+        this.masterHeartbeatTimeout = masterHeartbeatTimeout;
+    }
 
     public int getMasterHeartbeatInterval() {
         return masterHeartbeatInterval;
     }
 
-    public void setMasterHeartbeatInterval(int masterHeartbeatInterval) {
+    public void setMasterHeartbeatInterval(final int masterHeartbeatInterval) {
         this.masterHeartbeatInterval = masterHeartbeatInterval;
     }
 
@@ -44,7 +50,7 @@ public class PaxosProp {
         return masterElectMinInterval;
     }
 
-    public void setMasterElectMinInterval(int masterElectMinInterval) {
+    public void setMasterElectMinInterval(final int masterElectMinInterval) {
         this.masterElectMinInterval = masterElectMinInterval;
     }
 
@@ -52,23 +58,16 @@ public class PaxosProp {
         return masterElectMaxInterval;
     }
 
-    public void setMasterElectMaxInterval(int masterElectMaxInterval) {
+    public void setMasterElectMaxInterval(final int masterElectMaxInterval) {
         this.masterElectMaxInterval = masterElectMaxInterval;
     }
 
-    public boolean isOnlyMasterWrite() {
-        return onlyMasterWrite;
+    public boolean isWrite() {
+        return write;
     }
 
-    public void setOnlyMasterWrite(boolean onlyMasterWrite) {
-        this.onlyMasterWrite = onlyMasterWrite;
+    public void setWrite(final boolean write) {
+        this.write = write;
     }
 
-    public boolean isOnlyMasterRead() {
-        return onlyMasterRead;
-    }
-
-    public void setOnlyMasterRead(boolean onlyMasterRead) {
-        this.onlyMasterRead = onlyMasterRead;
-    }
 }

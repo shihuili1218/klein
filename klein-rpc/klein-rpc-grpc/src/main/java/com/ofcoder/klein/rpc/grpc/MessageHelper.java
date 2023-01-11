@@ -1,4 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.rpc.grpc;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
@@ -7,21 +31,21 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.ExtensionRegistryLite;
 import io.grpc.MethodDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.util.Map;
 
 /**
+ * Message Helper.
+ *
  * @author far.liu
  */
 public class MessageHelper {
     private static final Logger LOG = LoggerFactory.getLogger(MessageHelper.class);
     private static final Map<String, MethodDescriptor<DynamicMessage, DynamicMessage>> METHOD_DESCRIPTOR_CACHE = Maps.newConcurrentMap();
 
+    /**
+     * build MarshallerDescriptor.
+     *
+     * @return MarshallerDescriptor
+     */
     public static Descriptors.Descriptor buildMarshallerDescriptor() {
         // build Descriptor Proto
         DescriptorProtos.DescriptorProto.Builder jsonMarshaller = DescriptorProtos.DescriptorProto.newBuilder();
@@ -46,6 +70,12 @@ public class MessageHelper {
         }
     }
 
+    /**
+     * Build message for json.
+     *
+     * @param request request data
+     * @return DynamicMessage
+     */
     public static DynamicMessage buildMessage(final ByteBuffer request) {
         Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
@@ -53,6 +83,11 @@ public class MessageHelper {
         return jsonDynamicMessage.build();
     }
 
+    /**
+     * Build message for json.
+     *
+     * @return DynamicMessage
+     */
     public static DynamicMessage buildMessage() {
         Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
@@ -73,12 +108,22 @@ public class MessageHelper {
             String fullName = key.getFullName();
             String jsonMessageFullName = GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME + "." + GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME;
             if (jsonMessageFullName.equals(fullName)) {
-                return ByteBuffer.wrap(((ByteString) value).toByteArray()) ;
+                return ByteBuffer.wrap(((ByteString) value).toByteArray());
             }
         }
         return ByteBuffer.wrap(new byte[0]);
     }
 
+    /**
+     * create MarshallerMethodDescriptor.
+     *
+     * @param serviceName service name
+     * @param methodName  method
+     * @param methodType  method type
+     * @param request     request dara
+     * @param response    response data
+     * @return MethodDescriptor
+     */
     public static MethodDescriptor<DynamicMessage, DynamicMessage> createMarshallerMethodDescriptor(final String serviceName,
                                                                                                     final String methodName,
                                                                                                     final MethodDescriptor.MethodType methodType,
@@ -122,6 +167,5 @@ public class MessageHelper {
             return abstractMessage.toByteString().newInput();
         }
     }
-
 
 }

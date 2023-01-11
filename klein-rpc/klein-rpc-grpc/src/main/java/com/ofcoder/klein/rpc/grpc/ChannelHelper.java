@@ -16,13 +16,15 @@
  */
 package com.ofcoder.klein.rpc.grpc;
 
-import io.grpc.ManagedChannel;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.TimeUnit;
+import io.grpc.ManagedChannel;
 
 /**
+ * Channel Helper.
  *
  * @author jiachun.fjc
  */
@@ -31,6 +33,10 @@ public final class ChannelHelper {
     private static final Logger LOG = LoggerFactory.getLogger(ChannelHelper.class);
 
     /**
+     * graceful shutdown.
+     *
+     * @param mChannel mChannel
+     * @return result
      * @see #shutdownAndAwaitTermination(ManagedChannel, long)
      */
     public static boolean shutdownAndAwaitTermination(final ManagedChannel mChannel) {
@@ -42,6 +48,10 @@ public final class ChannelHelper {
      * phases, first by calling {@code shutdown} to reject incoming tasks,
      * and then calling {@code shutdownNow}, if necessary, to cancel any
      * lingering tasks.
+     *
+     * @param mChannel      mChannel
+     * @param timeoutMillis shutdown timeout
+     * @return result
      */
     public static boolean shutdownAndAwaitTermination(final ManagedChannel mChannel, final long timeoutMillis) {
         if (mChannel == null) {

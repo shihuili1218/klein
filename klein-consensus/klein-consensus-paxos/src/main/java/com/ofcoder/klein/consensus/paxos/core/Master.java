@@ -16,32 +16,45 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Master Role.
+ *
  * @author 释慧利
  */
 public interface Master extends Lifecycle<ConsensusProp> {
+    byte ADD = 0;
+    byte REMOVE = 1;
 
     /**
-     * Change member, add <code>endpoint</code> to the cluster
+     * Whether I am a Master.
      *
-     * @param endpoint new member
+     * @return true if I am master.
      */
-    void addMember(Endpoint endpoint);
+    boolean isSelf();
 
     /**
-     * Change member, remove <code>endpoint</code> from cluster
+     * Change Member.
      *
-     * @param endpoint delete member
+     * @param op     <code>o</code> is add member: ${@link Master#ADD}
+     *               <code>1</code> is remove member: ${@link Master#REMOVE}
+     * @param target target
+     * @return change result
      */
-    void removeMember(Endpoint endpoint);
+    boolean changeMember(byte op, Set<Endpoint> target);
 
     /**
-     * Election master
+     * Election master.
      */
     void electingMaster();
 
@@ -52,23 +65,66 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @param isSelf  whether heartbeat come from themselves
      * @return whether accept the heartbeat
      */
-    boolean onReceiveHeartbeat(final Ping request, boolean isSelf);
+    boolean onReceiveHeartbeat(Ping request, boolean isSelf);
+
+    /**
+     * handle NewMaster request.
+     *
+     * @param request msg data
+     * @param isSelf  from self
+     * @return handle result
+     */
+    NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf);
 
     /**
      * This is a callback method of master change.
      *
      * @param newMaster new master
      */
-    void onChangeMaster(final String newMaster);
+    void onChangeMaster(String newMaster);
 
     /**
-     * Added master health listener
+     * Added master health listener.
+     *
      * @param listener listener
      */
-    void addHealthyListener(final HealthyListener listener);
+    void addHealthyListener(HealthyListener listener);
+
+    /**
+     * get elect state.
+     *
+     * @return elect state
+     */
+    ElectState electState();
 
     interface HealthyListener {
-        void change(boolean healthy);
+        void change(ElectState healthy);
+    }
+
+    enum ElectState {
+        ELECTING(-1),
+        FOLLOWING(0),
+        BOOSTING(1),
+        DOMINANT(2);
+        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
+        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
+        private int state;
+
+        ElectState(final int state) {
+            this.state = state;
+        }
+
+        public static boolean allowBoost(final ElectState state) {
+            return BOOSTING_STATE.contains(state);
+        }
+
+        public static boolean allowPropose(final ElectState state) {
+            return PROPOSE_STATE.contains(state);
+        }
+
+        public int getState() {
+            return state;
+        }
     }
 
 }

@@ -16,20 +16,39 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import com.ofcoder.klein.consensus.facade.Result;
+import java.util.List;
+import java.util.Map;
+
+import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
+ * propose callback.
+ *
  * @author 释慧利
  */
 public interface ProposeDone {
-    void negotiationDone(Result.State result);
+    /**
+     * call the method when negotiation done.
+     *
+     * @param result         negotiation result
+     * @param consensusDatas consensus data
+     */
+    void negotiationDone(boolean result, List<Proposal> consensusDatas);
 
     /**
-     * This method may not be called because the agreed proposal is uncontrollable.
-     * @param input  Enter the value of the state machine
-     * @param output Value of state machine output
+     * call the method when apply done.
+     *
+     * @param applyResults Key: enter the value of the state machine
+     *                     Value: state machine output
      */
-    default void applyDone(Object input, Object output) {
+    default void applyDone(Map<Proposal, Object> applyResults) {
         // for subclass
+    }
+
+    class DefaultProposeDone implements ProposeDone {
+        @Override
+        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+            // do nothing.
+        }
     }
 }

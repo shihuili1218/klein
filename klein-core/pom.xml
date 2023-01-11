@@ -5,13 +5,13 @@
     <parent>
         <artifactId>klein</artifactId>
         <groupId>com.ofcoder.klein</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ofcoder.klein.core</groupId>
     <artifactId>klein-core</artifactId>
-
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <properties>
@@ -32,6 +32,10 @@
         <dependency>
             <groupId>com.ofcoder.klein.storage.jvm</groupId>
             <artifactId>klein-storage-jvm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
         </dependency>
     </dependencies>
 

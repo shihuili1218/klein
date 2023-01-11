@@ -20,22 +20,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 
 /**
+ * master sm.
+ *
  * @author 释慧利
  */
 public class MasterSM extends AbstractSM {
-    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     public static final String GROUP = "master";
-    private PaxosMemberConfiguration configuration;
+    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
+    private final PaxosMemberConfiguration memberConfig;
 
-    public MasterSM(PaxosMemberConfiguration configuration) {
-        this.configuration = configuration;
+    public MasterSM() {
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        if (memberConfig.getMaster() != null) {
+            RoleAccessor.getMaster().onChangeMaster(memberConfig.getMaster().getId());
+        }
     }
 
     @Override
-    protected Object apply(Object data) {
+    protected Object apply(final Object data) {
         LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
         if (data instanceof ElectionOp) {
             electMaster((ElectionOp) data);
@@ -47,38 +52,25 @@ public class MasterSM extends AbstractSM {
         return null;
     }
 
-    private void changeMember(ChangeMemberOp op) {
-        switch (op.getOp()) {
-            case ChangeMemberOp.ADD:
-                configuration.writeOn(op.getTarget());
-                break;
-            case ChangeMemberOp.REMOVE:
-                configuration.writeOff(op.getTarget());
-                break;
-            default:
-                LOG.warn("MasterSM.changeMember, op[{}] is invalid", op.getOp());
-                break;
-        }
+    private void changeMember(final ChangeMemberOp op) {
+        memberConfig.effectiveNewConfig(op.getVersion(), op.getNewConfig());
     }
 
-    private void electMaster(ElectionOp op) {
-        configuration.changeMaster(op.getNodeId());
+    private void electMaster(final ElectionOp op) {
+        memberConfig.changeMaster(op.getNodeId());
     }
 
     @Override
     protected Object makeImage() {
-        return configuration.createRef();
+        return MemberRegistry.getInstance().getMemberConfiguration().createRef();
     }
 
     @Override
-    protected void loadImage(Object snap) {
+    protected void loadImage(final Object snap) {
+        LOG.info("LOAD SNAP: {}", snap);
         if (!(snap instanceof PaxosMemberConfiguration)) {
             return;
         }
-        PaxosMemberConfiguration snapConfiguration = (PaxosMemberConfiguration) snap;
-
-        configuration.loadSnap(snapConfiguration);
-
-        LOG.info("LOAD SNAP: {}", configuration);
+        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
     }
 }

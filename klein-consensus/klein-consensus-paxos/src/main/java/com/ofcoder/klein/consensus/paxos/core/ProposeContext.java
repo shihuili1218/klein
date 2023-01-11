@@ -20,33 +20,36 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
+import com.ofcoder.klein.common.Holder;
+import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
 import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.paxos.PaxosMemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.PaxosQuorum;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
+ * Propose Context.
+ *
  * @author 释慧利
  */
 public class ProposeContext {
     /**
-     * The instance that stores data
+     * The instance that stores data.
      */
-    private final long instanceId;
+    private final Holder<Long> instanceIdHolder;
     /**
-     * Origin data and callback
+     * Origin data and callback.
      */
     private final List<ProposalWithDone> dataWithCallback;
     /**
-     * The data on which consensus was reached
+     * The data on which consensus was reached.
      */
     private List<Proposal> consensusData;
     /**
-     * This is a proposalNo that has executed the prepare phase;
+     * This is a proposalNo that has executed the prepare phase.
      */
     private long grantedProposalNo;
     /**
-     * Current retry times
+     * Current retry times.
      */
     private int times = 0;
     private final PaxosMemberConfiguration memberConfiguration;
@@ -55,13 +58,13 @@ public class ProposeContext {
     private final Quorum acceptQuorum;
     private final AtomicBoolean acceptNexted;
 
-    public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final long instanceId, final List<ProposalWithDone> events) {
+    public ProposeContext(final PaxosMemberConfiguration memberConfiguration, final Holder<Long> instanceIdHolder, final List<ProposalWithDone> events) {
         this.memberConfiguration = memberConfiguration;
-        this.instanceId = instanceId;
+        this.instanceIdHolder = instanceIdHolder;
         this.dataWithCallback = ImmutableList.copyOf(events);
-        this.prepareQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.prepareQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
         this.prepareNexted = new AtomicBoolean(false);
-        this.acceptQuorum = PaxosQuorum.createInstance(memberConfiguration);
+        this.acceptQuorum = JoinConsensusQuorum.createInstance(memberConfiguration);
         this.acceptNexted = new AtomicBoolean(false);
     }
 
@@ -70,7 +73,7 @@ public class ProposeContext {
     }
 
     public long getInstanceId() {
-        return instanceId;
+        return instanceIdHolder.get();
     }
 
     public List<ProposalWithDone> getDataWithCallback() {
@@ -81,7 +84,7 @@ public class ProposeContext {
         return consensusData;
     }
 
-    public void setConsensusData(List<Proposal> consensusData) {
+    public void setConsensusData(final List<Proposal> consensusData) {
         this.consensusData = consensusData;
     }
 
@@ -89,7 +92,7 @@ public class ProposeContext {
         return grantedProposalNo;
     }
 
-    public void setGrantedProposalNo(long grantedProposalNo) {
+    public void setGrantedProposalNo(final long grantedProposalNo) {
         this.grantedProposalNo = grantedProposalNo;
     }
 
@@ -118,13 +121,13 @@ public class ProposeContext {
     }
 
     /**
-     * Creating a new reference
+     * Creating a new reference.
      * Keep news of the last round's lateness from clouding this round's decision-making
      *
      * @return new object for {@link com.ofcoder.klein.consensus.paxos.core.ProposeContext}
      */
     public ProposeContext createUntappedRef() {
-        ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceId, this.dataWithCallback);
+        ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceIdHolder, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
         target.grantedProposalNo = 0;

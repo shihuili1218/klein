@@ -16,22 +16,25 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.Set;
+import java.io.Serializable;
 
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.consensus.facade.Result;
 
 /**
+ * Proxy is used for forwarding write requests.
+ *
  * @author 释慧利
  */
-public class PaxosQuorum extends Quorum {
+public interface Proxy {
+    /**
+     * propose proposal.
+     *
+     * @param data  proposal
+     * @param apply Whether you need to wait until the state machine is applied
+     *              If true, wait until the state machine is applied before returning
+     * @param <D>   result type
+     * @return propose result
+     */
+    <D extends Serializable> Result<D> propose(Proposal data, boolean apply);
 
-    private PaxosQuorum(Set<Endpoint> allMembers) {
-        super(allMembers);
-    }
-
-    public static PaxosQuorum createInstance(PaxosMemberConfiguration memberConfiguration){
-        return new PaxosQuorum(memberConfiguration.getAllMembers());
-    }
 }

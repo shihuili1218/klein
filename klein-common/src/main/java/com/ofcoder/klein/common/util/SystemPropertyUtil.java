@@ -31,11 +31,17 @@ public final class SystemPropertyUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(SystemPropertyUtil.class);
 
+    private SystemPropertyUtil() {
+    }
+
     /**
      * Returns {@code true} if and only if the system property
      * with the specified {@code key} exists.
+     *
+     * @param key check key
+     * @return true: exist, false: not exist
      */
-    public static boolean contains(String key) {
+    public static boolean contains(final String key) {
         return get(key) != null;
     }
 
@@ -44,9 +50,10 @@ public final class SystemPropertyUtil {
      * specified {@code key}, while falling back to {@code null}
      * if the property access fails.
      *
+     * @param key get key
      * @return the property value or {@code null}
      */
-    public static String get(String key) {
+    public static String get(final String key) {
         return get(key, null);
     }
 
@@ -55,11 +62,12 @@ public final class SystemPropertyUtil {
      * specified {@code key}, while falling back to the specified
      * default value if the property access fails.
      *
+     * @param key key
+     * @param def default value
      * @return the property value.
-     * {@code def} if there's no such property or if an access to
-     * the specified property is not allowed.
+     * {@code def} if there's no such property or if an access to the specified property is not allowed.
      */
-    public static String get(final String key, String def) {
+    public static String get(final String key, final String def) {
         if (key == null) {
             throw new NullPointerException("key");
         }
@@ -92,11 +100,11 @@ public final class SystemPropertyUtil {
      * specified {@code key}, while falling back to the specified
      * default value if the property access fails.
      *
+     * @param key key
+     * @param def default value, if there's no such property or if an access to the specified property is not allowed.
      * @return the property value.
-     * {@code def} if there's no such property or if an access to
-     * the specified property is not allowed.
      */
-    public static boolean getBoolean(String key, boolean def) {
+    public static boolean getBoolean(final String key, final boolean def) {
         String value = get(key);
         if (value == null) {
             return def;
@@ -125,11 +133,12 @@ public final class SystemPropertyUtil {
      * specified {@code key}, while falling back to the specified
      * default value if the property access fails.
      *
+     * @param key key
+     * @param def default value
      * @return the property value.
-     * {@code def} if there's no such property or if an access
-     * to the specified property is not allowed.
+     * {@code def} if there's no such property or if an access to the specified property is not allowed.
      */
-    public static int getInt(String key, int def) {
+    public static int getInt(final String key, final int def) {
         String value = get(key);
         if (value == null) {
             return def;
@@ -152,11 +161,12 @@ public final class SystemPropertyUtil {
      * specified {@code key}, while falling back to the specified
      * default value if the property access fails.
      *
+     * @param key key
+     * @param def default value
      * @return the property value.
-     * {@code def} if there's no such property or if an access to
-     * the specified property is not allowed.
+     * {@code def} if there's no such property or if an access to the specified property is not allowed.
      */
-    public static long getLong(String key, long def) {
+    public static long getLong(final String key, final long def) {
         String value = get(key);
         if (value == null) {
             return def;
@@ -176,13 +186,14 @@ public final class SystemPropertyUtil {
     }
 
     /**
-     * Sets the value of the Java system property with the
-     * specified {@code key}
+     * Sets the value of the Java system property with the specified {@code key}.
+     *
+     * @param key   key
+     * @param value value
+     * @return result
      */
-    public static Object setProperty(String key, String value) {
+    public static Object setProperty(final String key, final String value) {
         return System.getProperties().setProperty(key, value);
     }
 
-    private SystemPropertyUtil() {
-    }
 }

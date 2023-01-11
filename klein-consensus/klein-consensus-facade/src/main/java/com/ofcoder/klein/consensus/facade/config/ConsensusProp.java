@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.consensus.facade.config;
 
 import java.util.List;
@@ -5,25 +21,34 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
 /**
+ * consensus property.
+ *
  * @author far.liu
  */
 public class ConsensusProp {
     private Endpoint self = new Endpoint(
-            SystemPropertyUtil.get("klein.consensus.self-id", "1"),
-            RpcUtil.getLocalIp(),
-            SystemPropertyUtil.getInt("klein.consensus.self-port", 1218)
+            SystemPropertyUtil.get("klein.id", "1"),
+            SystemPropertyUtil.get("klein.ip", "127.0.0.1"),
+            SystemPropertyUtil.getInt("klein.port", 1218)
     );
     /**
      * all member, include self.
      */
     private List<Endpoint> members = Lists.newArrayList(self);
     /**
+     * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
+     */
+    private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
+    /**
      * timeout for single round.
      */
     private long roundTimeout = SystemPropertyUtil.getLong("klein.consensus.round-timeout", 150);
+    /**
+     * timeout for single change member.
+     */
+    private long changeMemberTimeout = SystemPropertyUtil.getLong("klein.consensus.change-member-timeout", roundTimeout * 2);
     /**
      * the number of proposals negotiated by the single round.
      */
@@ -40,7 +65,7 @@ public class ConsensusProp {
         return self;
     }
 
-    public void setSelf(Endpoint self) {
+    public void setSelf(final Endpoint self) {
         this.self = self;
     }
 
@@ -48,23 +73,39 @@ public class ConsensusProp {
         return members;
     }
 
-    public void setMembers(List<Endpoint> members) {
+    public void setMembers(final List<Endpoint> members) {
         this.members = members;
+    }
+
+    public boolean isJoinCluster() {
+        return joinCluster;
+    }
+
+    public void setJoinCluster(final boolean joinCluster) {
+        this.joinCluster = joinCluster;
     }
 
     public long getRoundTimeout() {
         return roundTimeout;
     }
 
-    public void setRoundTimeout(long roundTimeout) {
+    public void setRoundTimeout(final long roundTimeout) {
         this.roundTimeout = roundTimeout;
+    }
+
+    public long getChangeMemberTimeout() {
+        return changeMemberTimeout;
+    }
+
+    public void setChangeMemberTimeout(final long changeMemberTimeout) {
+        this.changeMemberTimeout = changeMemberTimeout;
     }
 
     public int getBatchSize() {
         return batchSize;
     }
 
-    public void setBatchSize(int batchSize) {
+    public void setBatchSize(final int batchSize) {
         this.batchSize = batchSize;
     }
 
@@ -72,7 +113,7 @@ public class ConsensusProp {
         return retry;
     }
 
-    public void setRetry(int retry) {
+    public void setRetry(final int retry) {
         this.retry = retry;
     }
 
@@ -80,7 +121,7 @@ public class ConsensusProp {
         return paxosProp;
     }
 
-    public void setPaxosProp(PaxosProp paxosProp) {
+    public void setPaxosProp(final PaxosProp paxosProp) {
         this.paxosProp = paxosProp;
     }
 }

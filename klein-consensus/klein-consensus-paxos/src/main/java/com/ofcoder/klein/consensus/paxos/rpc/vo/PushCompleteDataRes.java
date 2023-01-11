@@ -14,13 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade;
+package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.io.Serializable;
 
 /**
+ * PushCompleteDataRes.
+ *
  * @author 释慧利
  */
-public interface MateData extends Serializable {
-    String nodeId();
+public class PushCompleteDataRes implements Serializable {
+    private boolean success;
+
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public void setSuccess(final boolean success) {
+        this.success = success;
+    }
 }

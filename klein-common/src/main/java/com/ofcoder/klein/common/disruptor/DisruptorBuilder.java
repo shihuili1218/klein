@@ -29,9 +29,9 @@ import com.ofcoder.klein.common.util.Requires;
 /**
  * A builder to build a disruptor instance.
  *
- * @author boyan(boyan@antfin.com)
+ * @author boyan(boyan @ antfin.com)
  */
-public class DisruptorBuilder<T> {
+public final class DisruptorBuilder<T> {
     private EventFactory<T> eventFactory;
     private Integer ringBufferSize;
     private ThreadFactory threadFactory = KleinThreadFactory.create("disruptor-", true);
@@ -41,55 +41,121 @@ public class DisruptorBuilder<T> {
     private DisruptorBuilder() {
     }
 
+    /**
+     * New instance.
+     *
+     * @param <T> Disruptor element type
+     * @return DisruptorBuilder
+     */
     public static <T> DisruptorBuilder<T> newInstance() {
         return new DisruptorBuilder<>();
     }
 
+    /**
+     * Get EventFactory.
+     *
+     * @return Disruptor's EventFactory
+     */
     public EventFactory<T> getEventFactory() {
         return this.eventFactory;
     }
 
+    /**
+     * Set EventFactory.
+     *
+     * @param eventFactory Disruptor's EventFactory
+     * @return DisruptorBuilder
+     */
     public DisruptorBuilder<T> setEventFactory(final EventFactory<T> eventFactory) {
         this.eventFactory = eventFactory;
         return this;
     }
 
+    /**
+     * Get RingBufferSize.
+     *
+     * @return RingBuffer's size
+     */
     public int getRingBufferSize() {
         return this.ringBufferSize;
     }
 
+    /**
+     * Set RingBufferSize.
+     *
+     * @param ringBufferSize RingBuffer's size
+     * @return DisruptorBuilder
+     */
     public DisruptorBuilder<T> setRingBufferSize(final int ringBufferSize) {
         this.ringBufferSize = ringBufferSize;
         return this;
     }
 
+    /**
+     * Get ThreadFactory.
+     *
+     * @return Disruptor's threadFactory
+     */
     public ThreadFactory getThreadFactory() {
         return this.threadFactory;
     }
 
+    /**
+     * Set ThreadFactory.
+     *
+     * @param threadFactory Disruptor's threadFactory
+     * @return DisruptorBuilder
+     */
     public DisruptorBuilder<T> setThreadFactory(final ThreadFactory threadFactory) {
         this.threadFactory = threadFactory;
         return this;
     }
 
+    /**
+     * Get ProducerType.
+     *
+     * @return ProducerType
+     */
     public ProducerType getProducerType() {
         return this.producerType;
     }
 
+    /**
+     * Set ProducerType.
+     *
+     * @param producerType Disruptor's producerType
+     * @return DisruptorBuilder
+     */
     public DisruptorBuilder<T> setProducerType(final ProducerType producerType) {
         this.producerType = producerType;
         return this;
     }
 
+    /**
+     * Get WaitStrategy.
+     *
+     * @return WaitStrategy
+     */
     public WaitStrategy getWaitStrategy() {
         return this.waitStrategy;
     }
 
+    /**
+     * Set WaitStrategy.
+     *
+     * @param waitStrategy Disruptor's WaitStrategy
+     * @return DisruptorBuilder
+     */
     public DisruptorBuilder<T> setWaitStrategy(final WaitStrategy waitStrategy) {
         this.waitStrategy = waitStrategy;
         return this;
     }
 
+    /**
+     * Build a Disruptor.
+     *
+     * @return Disruptor
+     */
     public Disruptor<T> build() {
         Requires.requireNonNull(this.ringBufferSize, " Ring buffer size not set");
         Requires.requireNonNull(this.eventFactory, "Event factory not set");

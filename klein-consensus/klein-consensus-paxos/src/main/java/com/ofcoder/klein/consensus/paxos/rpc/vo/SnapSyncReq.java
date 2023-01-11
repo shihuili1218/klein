@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.rpc.vo;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * SnapSync request data.
+ *
  * @author 释慧利
  */
 public class SnapSyncReq extends BaseReq {
@@ -29,7 +29,7 @@ public class SnapSyncReq extends BaseReq {
         return checkpoint;
     }
 
-    public void setCheckpoint(long checkpoint) {
+    public void setCheckpoint(final long checkpoint) {
         this.checkpoint = checkpoint;
     }
 
@@ -42,30 +42,64 @@ public class SnapSyncReq extends BaseReq {
         private Builder() {
         }
 
+        /**
+         * aSnapSyncReq.
+         *
+         * @return Builder
+         */
         public static Builder aSnapSyncReq() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        /**
+         * proposalNo.
+         *
+         * @param proposalNo proposalNo
+         * @return Builder
+         */
+        public Builder proposalNo(final long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder memberConfigurationVersion(int memberConfigurationVersion) {
+        /**
+         * memberConfigurationVersion.
+         *
+         * @param memberConfigurationVersion memberConfigurationVersion
+         * @return Builder
+         */
+        public Builder memberConfigurationVersion(final int memberConfigurationVersion) {
             this.memberConfigurationVersion = memberConfigurationVersion;
             return this;
         }
 
-        public Builder checkpoint(long checkpoint) {
+        /**
+         * checkpoint.
+         *
+         * @param checkpoint checkpoint
+         * @return Builder
+         */
+        public Builder checkpoint(final long checkpoint) {
             this.checkpoint = checkpoint;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return SnapSyncReq
+         */
         public SnapSyncReq build() {
             SnapSyncReq snapSyncReq = new SnapSyncReq();
             snapSyncReq.setNodeId(nodeId);

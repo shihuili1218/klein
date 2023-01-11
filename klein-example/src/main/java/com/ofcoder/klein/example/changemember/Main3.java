@@ -14,28 +14,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.cluster;
+package com.ofcoder.klein.example.changemember;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * Main3: cluster member.
+ *
  * @author 释慧利
  */
 public class Main3 {
-    public static void main(String[] args) throws IOException {
+    private static final Logger LOG = LoggerFactory.getLogger(Main3.class);
+
+    public static void main(final String[] args) throws IOException {
+        SystemPropertyUtil.setProperty("klein.id", "3");
+        SystemPropertyUtil.setProperty("klein.port", "1220");
+        SystemPropertyUtil.setProperty("klein.ip", "127.0.0.1");
+        SystemPropertyUtil.setProperty("klein.consensus.join-cluster", "false");
+
         KleinProp prop3 = KleinProp.loadIfPresent();
 
-        prop3.getConsensusProp().setMembers(Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220)));
-        prop3.getConsensusProp().setSelf(new Endpoint("3", "127.0.0.1", 1220));
-        prop3.getRpcProp().setPort(1220);
+        prop3.getConsensusProp().setMembers(
+                Lists.newArrayList(
+                        new Endpoint("2", "127.0.0.1", 1219),
+                        new Endpoint("3", "127.0.0.1", 1220)
+                )
+        );
 
-        Klein instance3 = Klein.getInstance();
-
+        Klein instance = Klein.startup();
         System.in.read();
     }
 }

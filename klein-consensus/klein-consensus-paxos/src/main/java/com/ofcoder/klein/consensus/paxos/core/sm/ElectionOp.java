@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 
 /**
+ * system operator for eletion master.
+ *
  * @author 释慧利
  */
 public class ElectionOp implements SystemOp {
@@ -28,7 +30,7 @@ public class ElectionOp implements SystemOp {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 

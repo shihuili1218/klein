@@ -17,10 +17,12 @@
 package com.ofcoder.klein.spi;
 
 /**
+ * SPI exception.
+ *
  * @author 释慧利
  */
 public class SpiException extends RuntimeException {
-    public SpiException(String message) {
+    public SpiException(final String message) {
         super(message);
     }
 }

@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.facade.sm;
 import java.io.Serializable;
 
 /**
+ * System Operator.
+ *
  * @author 释慧利
  */
 public interface SystemOp extends Serializable {

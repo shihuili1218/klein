@@ -33,15 +33,15 @@ public class PropertyChangeTest {
     private Boolean test = false;
 
     @Test
-    public void testMonitoringVariables() throws IOException {
+    public void testMonitoringVariables() throws Exception {
         PropertyChangeSupport changes = new PropertyChangeSupport(test);
         changes.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-                LOG.info("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz");
+                LOG.info("propertyChange");
             }
         });
         test = true;
-        System.in.read();
+        Thread.sleep(200L);
     }
 }

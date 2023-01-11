@@ -14,16 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade.config;/**
- * @author far.liu
- */
-
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
+package com.ofcoder.klein.consensus.facade.config;
 
 /**
+ * snap prop.
+ *
  * @author 释慧利
  */
 public class SnapProp {
-    private long generateSnapInterval ;
+    private long generateSnapInterval;
 
 }

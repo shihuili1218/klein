@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.rpc.grpc;
 
 import java.nio.ByteBuffer;
@@ -11,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.DynamicMessage;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
@@ -21,7 +38,6 @@ import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
 import com.ofcoder.klein.spi.Join;
-
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ConnectivityState;
@@ -32,6 +48,8 @@ import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
 
 /**
+ * Grpc Client.
+ *
  * @author 释慧利
  */
 @Join
@@ -50,7 +68,7 @@ public class GrpcClient implements RpcClient {
         channels.put(endpoint, ch);
     }
 
-    private ManagedChannel newChannel(Endpoint endpoint) {
+    private ManagedChannel newChannel(final Endpoint endpoint) {
         final ManagedChannel ch = ManagedChannelBuilder.forAddress(endpoint.getIp(), endpoint.getPort())
                 .usePlaintext()
                 .directExecutor()
@@ -60,12 +78,12 @@ public class GrpcClient implements RpcClient {
         return ch;
     }
 
-    private void onStateChanged(Endpoint endpoint, ManagedChannel channel) {
+    private void onStateChanged(final Endpoint endpoint, final ManagedChannel channel) {
 
     }
 
     @Override
-    public boolean checkConnection(Endpoint endpoint) {
+    public boolean checkConnection(final Endpoint endpoint) {
         if (!channels.containsKey(endpoint)) {
             return false;
         }
@@ -75,7 +93,7 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public void closeConnection(Endpoint endpoint) {
+    public void closeConnection(final Endpoint endpoint) {
         if (channels.containsKey(endpoint)) {
             return;
         }
@@ -95,28 +113,30 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public void sendRequestAsync(Endpoint target, InvokeParam request, InvokeCallback callback, long timeoutMs) {
+    public void sendRequestAsync(final Endpoint target, final InvokeParam request, final InvokeCallback callback,
+                                 final long timeoutMs) {
         invokeAsync(target, request, callback, timeoutMs);
     }
 
     @Override
-    public Object sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs) {
-        final CompletableFuture<Object> future = new CompletableFuture<>();
+    public <R> R sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
+        final CompletableFuture<ByteBuffer> future = new CompletableFuture<>();
 
         invokeAsync(target, request, new InvokeCallback() {
             @Override
-            public void error(Throwable err) {
+            public void error(final Throwable err) {
                 future.completeExceptionally(err);
             }
 
             @Override
-            public void complete(ByteBuffer result) {
+            public void complete(final ByteBuffer result) {
                 future.complete(result);
             }
         }, timeoutMs);
 
         try {
-            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            ByteBuffer result = future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            return Hessian2Util.deserialize(result.array());
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
@@ -143,7 +163,15 @@ public class GrpcClient implements RpcClient {
         }
     }
 
-    public void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
+    /**
+     * invoke async.
+     *
+     * @param endpoint    remote target
+     * @param invokeParam request data
+     * @param callback    invoke callback
+     * @param timeoutMs   invoke timeout
+     */
+    private void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
             ThreadExecutor.submit(() -> {

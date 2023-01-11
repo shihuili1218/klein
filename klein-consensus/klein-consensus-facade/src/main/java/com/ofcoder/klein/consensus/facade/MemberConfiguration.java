@@ -1,3 +1,19 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.consensus.facade;
 
 import java.io.Serializable;
@@ -11,74 +27,163 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * MemberConfiguration.
+ *
  * @author far.liu
  */
-public abstract class MemberConfiguration implements Serializable {
+public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
     protected AtomicInteger version = new AtomicInteger(0);
-    protected volatile Map<String, Endpoint> allMembers = new ConcurrentHashMap<>();
-    protected volatile Endpoint self;
+    protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
+    protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
+    private int changeVersion = 0;
 
     public int getVersion() {
         return version.get();
     }
 
-    public Set<Endpoint> getAllMembers() {
-        return new HashSet<>(allMembers.values());
+    /**
+     * Set the last seen configuration.
+     *
+     * @param newConfig new configuration
+     * @return version
+     */
+    public int seenNewConfig(final Set<Endpoint> newConfig) {
+        if (MapUtils.isNotEmpty(lastMembers)) {
+            throw new ChangeMemberException(String.format("lastMembers is not empty, lastMembers: %s, newConfig: %s", lastMembers, newConfig));
+        }
+        this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        return this.version.get();
     }
 
-    public Set<Endpoint> getMembersWithoutSelf() {
-        final String selfId = self.getId();
-        return allMembers.values().stream().filter(it -> !StringUtils.equals(selfId, it.getId()))
+    /**
+     * Set the last seen configuration.
+     *
+     * @param version   new config version
+     * @param newConfig new configuration
+     */
+    public void seenNewConfig(final int version, final Set<Endpoint> newConfig) {
+        LOG.info("see a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
+        int selfVersion = this.version.get();
+        if (version <= selfVersion || version <= changeVersion) {
+            return;
+        }
+        this.changeVersion = version;
+        seenNewConfig(newConfig);
+    }
+
+    /**
+     * Commit the last seen configuration.
+     *
+     * @param version   config version
+     * @param newConfig new configuration
+     */
+    public void effectiveNewConfig(final int version, final Set<Endpoint> newConfig) {
+        LOG.info("commit a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
+
+        int selfVersion = this.version.get();
+        if (version < selfVersion || version < changeVersion) {
+            return;
+        }
+        this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.lastMembers = new ConcurrentHashMap<>();
+        this.version.incrementAndGet();
+        this.changeVersion = version;
+    }
+
+    /**
+     * get all members.
+     *
+     * @return all members
+     */
+    public Set<Endpoint> getAllMembers() {
+        Set<Endpoint> endpoints = new HashSet<>(effectMembers.values());
+        endpoints.addAll(lastMembers.values());
+        return endpoints;
+    }
+
+    /**
+     * get effect members.
+     *
+     * @return effect members
+     */
+    public Set<Endpoint> getEffectMembers() {
+        return new HashSet<>(effectMembers.values());
+    }
+
+    /**
+     * get last see members.
+     *
+     * @return all members
+     */
+    public Set<Endpoint> getLastMembers() {
+        return new HashSet<>(lastMembers.values());
+    }
+
+    /**
+     * As {@link MemberConfiguration#getAllMembers()} has no benchmark, remove param: removeId.
+     *
+     * @param removeId remove id.
+     * @return get all members exclude param removeId
+     */
+    public Set<Endpoint> getMembersWithout(final String removeId) {
+        return getAllMembers().stream().filter(it -> !StringUtils.equals(removeId, it.getId()))
                 .collect(Collectors.toSet());
     }
 
-    public Endpoint getEndpointById(String id) {
+    /**
+     * check node is valid.
+     *
+     * @param nodeId check node id
+     * @return is valid
+     */
+    public boolean isValid(final String nodeId) {
+        return effectMembers.containsKey(nodeId) || lastMembers.containsKey(nodeId);
+    }
+
+    /**
+     * get endpoint info by node id.
+     *
+     * @param id node id
+     * @return endpoint
+     */
+    public Endpoint getEndpointById(final String id) {
         if (StringUtils.isEmpty(id)) {
             return null;
         }
-        return allMembers.getOrDefault(id, null);
+        if (effectMembers.containsKey(id)) {
+            return effectMembers.get(id);
+        }
+        return lastMembers.getOrDefault(id, null);
     }
 
-    public boolean isValid(String nodeId) {
-        return allMembers.containsKey(nodeId);
-    }
-
-    public void init(List<Endpoint> nodes, Endpoint self) {
+    /**
+     * init configuration.
+     *
+     * @param nodes all members
+     */
+    public void init(final List<Endpoint> nodes) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
-        allMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
-        this.self = self;
-        version.incrementAndGet();
-
+        this.effectMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.version.incrementAndGet();
     }
-
-    public void writeOn(Endpoint node) {
-        allMembers.put(node.getId(), node);
-        version.incrementAndGet();
-    }
-
-    public void writeOff(Endpoint node) {
-        allMembers.remove(node.getId());
-        version.incrementAndGet();
-    }
-
-    public abstract MemberConfiguration createRef();
 
     @Override
     public String toString() {
-        return "MemberConfiguration{" +
-                "version=" + version +
-                ", allMembers=" + allMembers +
-                ", self=" + self +
-                '}';
+        return "MemberConfiguration{"
+                + "version=" + version
+                + ", allMembers=" + effectMembers
+                + '}';
     }
 }

@@ -18,6 +18,9 @@
 *.zip
 *.tar.gz
 *.rar
+*.mdb.*
+*.filemap
+*.mdb
 
 # dir
 .idea

@@ -19,14 +19,16 @@ package com.ofcoder.klein.consensus.facade.exception;
 import com.ofcoder.klein.common.exception.KleinException;
 
 /**
+ * Consensus Exception.
+ *
  * @author 释慧利
  */
 public class ConsensusException extends KleinException {
-    public ConsensusException(String message) {
+    public ConsensusException(final String message) {
         super(message);
     }
 
-    public ConsensusException(String message, Throwable cause) {
+    public ConsensusException(final String message, final Throwable cause) {
         super(message, cause);
     }
 }

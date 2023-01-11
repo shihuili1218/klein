@@ -17,91 +17,127 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * ping request data.
+ *
  * @author 释慧利
  */
 public class Ping extends BaseReq {
+    private NodeState nodeState;
+    private boolean probe;
+    private long timestampMs;
 
-    private long maxAppliedInstanceId;
-    private long maxInstanceId;
-    private long lastCheckpoint;
-
-    public long getMaxAppliedInstanceId() {
-        return maxAppliedInstanceId;
+    public NodeState getNodeState() {
+        return nodeState;
     }
 
-    public void setMaxAppliedInstanceId(long maxAppliedInstanceId) {
-        this.maxAppliedInstanceId = maxAppliedInstanceId;
+    public boolean isProbe() {
+        return probe;
     }
 
-    public long getMaxInstanceId() {
-        return maxInstanceId;
-    }
-
-    public void setMaxInstanceId(long maxInstanceId) {
-        this.maxInstanceId = maxInstanceId;
-    }
-
-    public long getLastCheckpoint() {
-        return lastCheckpoint;
-    }
-
-    public void setLastCheckpoint(long lastCheckpoint) {
-        this.lastCheckpoint = lastCheckpoint;
+    public long getTimestampMs() {
+        return timestampMs;
     }
 
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
-        private long maxAppliedInstanceId;
-        private long maxInstanceId;
-        private long lastCheckpoint;
+        private NodeState nodeState;
+        private boolean probe;
+        private long timestampMs;
 
         private Builder() {
+
         }
 
+        /**
+         * a ping .
+         *
+         * @return Builder
+         */
         public static Builder aPing() {
             return new Builder();
         }
 
-        public Builder nodeId(String nodeId) {
+        /**
+         * nodeId.
+         *
+         * @param nodeId nodeId
+         * @return Builder
+         */
+        public Builder nodeId(final String nodeId) {
             this.nodeId = nodeId;
             return this;
         }
 
-        public Builder proposalNo(long proposalNo) {
+        /**
+         * proposalNo.
+         *
+         * @param proposalNo proposalNo
+         * @return Builder
+         */
+        public Builder proposalNo(final long proposalNo) {
             this.proposalNo = proposalNo;
             return this;
         }
 
-        public Builder memberConfigurationVersion(int memberConfigurationVersion) {
+        /**
+         * memberConfigurationVersion.
+         *
+         * @param memberConfigurationVersion memberConfigurationVersion
+         * @return Builder
+         */
+        public Builder memberConfigurationVersion(final int memberConfigurationVersion) {
             this.memberConfigurationVersion = memberConfigurationVersion;
             return this;
         }
 
-        public Builder maxAppliedInstanceId(long maxAppliedInstanceId) {
-            this.maxAppliedInstanceId = maxAppliedInstanceId;
+        /**
+         * nodeState.
+         *
+         * @param nodeState nodeState
+         * @return Builder
+         */
+        public Builder nodeState(final NodeState nodeState) {
+            this.nodeState = nodeState;
             return this;
         }
 
-        public Builder maxInstanceId(long maxInstanceId) {
-            this.maxInstanceId = maxInstanceId;
+        /**
+         * probe.
+         *
+         * @param probe probe
+         * @return Builder
+         */
+        public Builder probe(final boolean probe) {
+            this.probe = probe;
             return this;
         }
 
-        public Builder lastCheckpoint(long lastCheckpoint) {
-            this.lastCheckpoint = lastCheckpoint;
+        /**
+         * timestampMs.
+         *
+         * @param timestampMs timestampMs
+         * @return Builder
+         */
+        public Builder timestampMs(final long timestampMs) {
+            this.timestampMs = timestampMs;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return Ping
+         */
         public Ping build() {
             Ping ping = new Ping();
             ping.setNodeId(nodeId);
             ping.setProposalNo(proposalNo);
             ping.setMemberConfigurationVersion(memberConfigurationVersion);
-            ping.maxInstanceId = this.maxInstanceId;
-            ping.maxAppliedInstanceId = this.maxAppliedInstanceId;
-            ping.lastCheckpoint = this.lastCheckpoint;
+            ping.nodeState = this.nodeState;
+            ping.probe = this.probe;
+            ping.timestampMs = this.timestampMs;
             return ping;
         }
     }

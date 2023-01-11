@@ -19,6 +19,8 @@ package com.ofcoder.klein.consensus.facade;
 import java.io.Serializable;
 
 /**
+ * propose Result.
+ *
  * @author 释慧利
  */
 public class Result<D extends Serializable> implements Serializable {
@@ -27,7 +29,17 @@ public class Result<D extends Serializable> implements Serializable {
     private D data;
 
     public enum State {
+        /**
+         * negotiation done, and consensus data eq client’s data.
+         */
         SUCCESS,
+        /**
+         * negotiation done, and consensus data not eq client’s data.
+         */
+        FAILURE,
+        /**
+         * negotiation unknown.
+         */
         UNKNOWN;
     }
 
@@ -35,7 +47,7 @@ public class Result<D extends Serializable> implements Serializable {
         return state;
     }
 
-    public void setState(State state) {
+    public void setState(final State state) {
         this.state = state;
     }
 
@@ -43,7 +55,7 @@ public class Result<D extends Serializable> implements Serializable {
         return data;
     }
 
-    public void setData(D data) {
+    public void setData(final D data) {
         this.data = data;
     }
 
@@ -54,20 +66,43 @@ public class Result<D extends Serializable> implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aResult.
+         *
+         * @param <D> data type
+         * @return Builder
+         */
         public static <D extends Serializable> Builder<D> aResult() {
             return new Builder<>();
         }
 
-        public Builder<D> state(State state) {
+        /**
+         * state.
+         *
+         * @param state state
+         * @return Builder
+         */
+        public Builder<D> state(final State state) {
             this.state = state;
             return this;
         }
 
-        public Builder<D> data(D data) {
+        /**
+         * data.
+         *
+         * @param data data
+         * @return Builder
+         */
+        public Builder<D> data(final D data) {
             this.data = data;
             return this;
         }
 
+        /**
+         * build a result object.
+         *
+         * @return Result object
+         */
         public Result<D> build() {
             Result<D> result = new Result<>();
             result.setState(state);

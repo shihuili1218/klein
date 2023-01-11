@@ -17,55 +17,59 @@
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.Objects;
+import java.util.Set;
 
 import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * system operator for change member.
+ *
  * @author 释慧利
  */
 public class ChangeMemberOp implements SystemOp {
-    public static final byte ADD = 0;
-    public static final byte REMOVE = 1;
     private String nodeId;
-    private byte op;
-    private Endpoint target;
-
+    private Set<Endpoint> newConfig;
+    private int version;
 
     public String getNodeId() {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId) {
+    public Set<Endpoint> getNewConfig() {
+        return newConfig;
+    }
+
+    public void setNewConfig(final Set<Endpoint> newConfig) {
+        this.newConfig = newConfig;
+    }
+
+    public void setNodeId(final String nodeId) {
         this.nodeId = nodeId;
     }
 
-    public byte getOp() {
-        return op;
+    public int getVersion() {
+        return version;
     }
 
-    public void setOp(byte op) {
-        this.op = op;
-    }
-
-    public Endpoint getTarget() {
-        return target;
-    }
-
-    public void setTarget(Endpoint target) {
-        this.target = target;
+    public void setVersion(final int version) {
+        this.version = version;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ChangeMemberOp that = (ChangeMemberOp) o;
-        return getOp() == that.getOp() && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getTarget(), that.getTarget());
+        return version == that.version && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getNewConfig(), that.getNewConfig());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getNodeId(), getOp(), getTarget());
+        return Objects.hash(getNodeId(), getNewConfig(), version);
     }
 }

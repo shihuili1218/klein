@@ -23,40 +23,42 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * Accept Processor.
+ *
  * @author 释慧利
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptProcessor.class);
     private final PaxosNode self;
 
-    public AcceptProcessor(PaxosNode self) {
+    public AcceptProcessor(final PaxosNode self) {
         this.self = self;
     }
+
     @Override
     public String service() {
         return AcceptReq.class.getSimpleName();
     }
 
     @Override
-    public void handleRequest(AcceptReq request, RpcContext context) {
+    public void handleRequest(final AcceptReq request, final RpcContext context) {
 
-        if (!self.getMemberConfiguration().isValid(request.getNodeId())) {
+        if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: accept, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
             return;
         }
-        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(request);
+        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
 
     }
-
 
 }

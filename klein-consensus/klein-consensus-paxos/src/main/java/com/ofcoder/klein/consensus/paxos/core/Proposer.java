@@ -16,14 +16,17 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
 import java.util.List;
 
+import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
+ * Proposer Role.
+ *
  * @author 释慧利
  */
 public interface Proposer extends Lifecycle<ConsensusProp> {
@@ -32,27 +35,28 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      *
      * @param data client's data
      * @param done client's callback
-     * @param <E>  client's data type, extend Serializable
      */
-    <E extends Serializable> void propose(final String group, final E data, final ProposeDone done);
+    void propose(Proposal data, ProposeDone done);
 
     /**
-     * Boost the copy of the proposal to the majority, and ensure that you have executed confirm phase.
+     * Try to boost instance.
+     * Boost the copy of the proposal to the majority and the confirm status is reached
      *
-     * @param instanceId      id of boost instance
+     * @param instanceHolder  id of the instance that you want to boost
+     * @param done            boost callback, NOTICE: it may be called multiple times
      * @param defaultProposal default proposal
-     * @return <code>true</code> if the consensus proposal is defaultProposal, else <code>false</code>
      */
-    @Deprecated
-    boolean boost(final long instanceId, final Proposal defaultProposal);
+    void tryBoost(Holder<Long> instanceHolder, List<Proposal> defaultProposal, ProposeDone done);
 
     /**
-     * try to boost instance
+     * Try to boost instance.
+     * Boost the copy of the proposal to the majority and the confirm status is reached
      *
-     * @param instanceId id of the instance that you want to boost
-     * @param done       boost callback, NOTICE: it may be called multiple times
+     * @param instanceHolder      id of the instance that you want to boost
+     * @param done                boost callback, NOTICE: it may be called multiple times
+     * @param defaultProposal     default proposal
+     * @param memberConfiguration member config
      */
-    void tryBoost(final long instanceId, final List<Proposal> defaultProposal, final ProposeDone done);
+    void tryBoost(Holder<Long> instanceHolder, PaxosMemberConfiguration memberConfiguration, List<Proposal> defaultProposal, ProposeDone done);
 
-    boolean healthy();
 }

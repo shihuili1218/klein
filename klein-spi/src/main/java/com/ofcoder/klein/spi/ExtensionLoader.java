@@ -37,8 +37,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.misc.Unsafe;
-
 /**
  * The type Extension loader.
  * This is done by loading the properties file.
@@ -151,9 +149,15 @@ public final class ExtensionLoader<T> {
         return getJoin(cachedDefaultName);
     }
 
+    /**
+     * get join use global.
+     *
+     * @param name join name
+     * @return join
+     */
     public T getJoinWithGlobal(final String name) {
         if (!globalName.compareAndSet(null, name)) {
-            if (!StringUtils.equals(name, globalName.get())){
+            if (!StringUtils.equals(name, globalName.get())) {
                 throw new SpiException(String.format("get global join, but global join[%s] already exists", globalName));
             }
         }

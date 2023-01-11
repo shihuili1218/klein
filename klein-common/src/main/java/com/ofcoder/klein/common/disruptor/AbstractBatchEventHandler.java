@@ -22,14 +22,16 @@ import java.util.Vector;
 import com.lmax.disruptor.EventHandler;
 
 /**
+ * Convert a single event into a batch event and handle it together.
+ *
  * @author 释慧利
  */
 public abstract class AbstractBatchEventHandler<E extends DisruptorEvent> implements EventHandler<E> {
 
-    private int batchSize;
+    private final int batchSize;
     private final List<E> tasks;
 
-    public AbstractBatchEventHandler(int batchSize) {
+    public AbstractBatchEventHandler(final int batchSize) {
         this.batchSize = batchSize;
         tasks = new Vector<>(this.batchSize);
 
@@ -37,12 +39,15 @@ public abstract class AbstractBatchEventHandler<E extends DisruptorEvent> implem
 
     protected abstract void handle(List<E> events);
 
+    /**
+     * Clear batch event container.
+     */
     public void reset() {
         tasks.clear();
     }
 
     @Override
-    public void onEvent(E event, long sequence, boolean endOfBatch) throws Exception {
+    public void onEvent(final E event, final long sequence, final boolean endOfBatch) throws Exception {
         if (event.getShutdownLatch() != null) {
             if (!this.tasks.isEmpty()) {
                 handle(this.tasks);

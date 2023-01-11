@@ -14,9 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.rpc;/**
- * @author far.liu
- */
+package com.ofcoder.klein.consensus.paxos.rpc;
 
 import java.nio.ByteBuffer;
 
@@ -29,17 +27,19 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * Heartbeat Processor.
+ *
  * @author 释慧利
  */
 public class HeartbeatProcessor extends AbstractRpcProcessor<Ping> {
     private PaxosNode self;
 
-    public HeartbeatProcessor(PaxosNode self) {
+    public HeartbeatProcessor(final PaxosNode self) {
         this.self = self;
     }
 
     @Override
-    public void handleRequest(Ping request, RpcContext context) {
+    public void handleRequest(final Ping request, final RpcContext context) {
         if (RoleAccessor.getMaster().onReceiveHeartbeat(request, false)) {
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Pong())));
         }

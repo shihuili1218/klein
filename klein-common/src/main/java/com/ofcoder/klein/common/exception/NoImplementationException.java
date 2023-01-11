@@ -17,10 +17,12 @@
 package com.ofcoder.klein.common.exception;
 
 /**
+ * No Implementation Exception, Used to mark abstract methods.
+ *
  * @author 释慧利
  */
-public class NoImplementationException extends KleinException{
-    public NoImplementationException(String message) {
+public class NoImplementationException extends KleinException {
+    public NoImplementationException(final String message) {
         super(message);
     }
 }

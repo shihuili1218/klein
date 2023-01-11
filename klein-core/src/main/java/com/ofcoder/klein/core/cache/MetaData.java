@@ -14,14 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.core.cache;
+
+import java.io.Serializable;
 
 /**
+ * MetaData.
+ *
  * @author 释慧利
  */
-public enum PrepareState {
-    NO_PREPARE,
-    PREPARING,
-    PREPARED,
-    ;
+public class MetaData implements Serializable {
+    private long expire = -1;
+    private Serializable data;
+
+    public MetaData() {
+    }
+
+    public MetaData(final long expire, final Serializable data) {
+        this.expire = expire;
+        this.data = data;
+    }
+
+    public long getExpire() {
+        return expire;
+    }
+
+    public void setExpire(final long expire) {
+        this.expire = expire;
+    }
+
+    public Serializable getData() {
+        return data;
+    }
+
+    public void setData(final Serializable data) {
+        this.data = data;
+    }
 }

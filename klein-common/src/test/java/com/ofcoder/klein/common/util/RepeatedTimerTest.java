@@ -1,7 +1,10 @@
 package com.ofcoder.klein.common.util;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.CountDownLatch;
 
+import org.apache.commons.lang3.time.DateUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +37,7 @@ public class RepeatedTimerTest extends TestCase {
 
     @Test
     public void testRestart() throws InterruptedException {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
         CountDownLatch latch = new CountDownLatch(4);
         RepeatedTimer timer = new RepeatedTimer("test-timer", 100) {
             @Override
@@ -41,11 +45,17 @@ public class RepeatedTimerTest extends TestCase {
                 LOG.info("==============run==============");
                 latch.countDown();
             }
+
+            @Override
+            protected int adjustTimeout(int timeoutMs) {
+                return 1000;
+            }
         };
         timer.start();
         timer.stop();
 
         timer.restart();
+        System.out.println(simpleDateFormat.format(new Date()));
         latch.await();
     }
 
