@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
-import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
@@ -65,7 +64,7 @@ public class ConsensusProp {
 
     private PaxosProp paxosProp = new PaxosProp();
 
-    private List<Endpoint> parseMember(String members) {
+    private List<Endpoint> parseMember(final String members) {
         List<Endpoint> endpoints = new ArrayList<>();
         if (StringUtils.isEmpty(members)) {
             return endpoints;
