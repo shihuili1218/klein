@@ -260,8 +260,8 @@
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>${maven-checkstyle-plugin.version}</version>
                 <configuration>
-                    <configLocation>/script/klein_checkstyle.xml</configLocation>
-                    <headerLocation>/script/checkstyle-header.txt</headerLocation>
+                    <configLocation>checkstyle.xml</configLocation>
+                    <headerLocation>checkstyle-header.txt</headerLocation>
                     <includeTestSourceDirectory>false</includeTestSourceDirectory>
                     <consoleOutput>true</consoleOutput>
                 </configuration>
