@@ -28,22 +28,24 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class SingleQuorum implements Quorum {
-    private Set<Endpoint> allMembers = new HashSet<>();
-
-    private Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
-    private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
-    private int threshold;
+    private final Set<Endpoint> allMembers;
+    private final Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
+    private final int successThreshold;
+    private final int failureThreshold;
 
     public SingleQuorum(final Set<Endpoint> allMembers) {
-        this.allMembers = allMembers;
-        this.threshold = allMembers.size() / 2 + 1;
+        this.allMembers = new HashSet<>(allMembers);
+        int n = allMembers.size();
+        this.successThreshold = n / 2 + 1;
+        this.failureThreshold = n - successThreshold;
     }
 
     @Override
     public GrantResult isGranted() {
-        if (grantedMembers.size() >= threshold) {
+        if (grantedMembers.size() >= successThreshold) {
             return GrantResult.PASS;
-        } else if (failedMembers.size() > (allMembers.size() - threshold)) {
+        } else if (failedMembers.size() > failureThreshold) {
             return GrantResult.REFUSE;
         } else {
             return GrantResult.GRANTING;

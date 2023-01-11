@@ -50,9 +50,7 @@ public class RpcUtil {
      *
      * @param s e.g. 127.0.0.1:1218
      * @return endpoint
-     * @deprecated no use method
      */
-    @Deprecated
     public static Endpoint parseEndpoint(final String s) {
         if (StringUtils.isEmpty(s)) {
             throw new IllegalArgumentException("parse Endpoint, but address is empty.");
