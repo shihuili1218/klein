@@ -88,7 +88,7 @@ public class PaxosConsensus implements Consensus {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         loadNode();
-        this.proxy = this.prop.getPaxosProp().isOnlyMasterWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);
+        this.proxy = this.prop.getPaxosProp().isWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);
 
         MemberRegistry.getInstance().init(prop.getMembers());
         registerProcessor();

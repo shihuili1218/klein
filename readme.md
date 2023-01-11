@@ -70,19 +70,17 @@ KleinProp prop = KleinProp.loadIfPresent();
     - [x] Master heartbeat triggers data synchronization
     - [x] Snapshot synchronization (the heartbeat carries the checkpoint and the learn message returns the checkpoint)
     - [x] New members join the cluster and actively learn from the master
-  - [ ] Optimize read requests (write requests must be copied to the master)
-  - [ ] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
+  - [ ] ~~Optimize read requests (write requests must be copied to the master)~~
+  - [x] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
 - [ ] Automatic member discovery (research)
 - [ ] NWR
-- [ ] Confirm Optimize read requests
-- [ ] There is no interference key, so a round of Prepare is unnecessary
 - [ ] Verified by jepsen
 
 ### Cache
 - [x] Basic functions such as reading, writing, etc
 - [x] Implement LRU with persistence
 - [x] Cache Automatic Expiration (TTL)
-- [ ] Clock skew
+- [x] Clock skew
 
 ### Collection
 - [ ] list
