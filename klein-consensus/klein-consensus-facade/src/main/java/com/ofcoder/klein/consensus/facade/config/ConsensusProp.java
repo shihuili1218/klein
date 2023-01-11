@@ -16,11 +16,15 @@
  */
 package com.ofcoder.klein.consensus.facade.config;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
 /**
  * consensus property.
@@ -36,7 +40,7 @@ public class ConsensusProp {
     /**
      * all member, include self.
      */
-    private List<Endpoint> members = Lists.newArrayList(self);
+    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "127.0.0.1:1218"));
     /**
      * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
      */
@@ -55,11 +59,25 @@ public class ConsensusProp {
     private int batchSize = SystemPropertyUtil.getInt("klein.consensus.batch-size", 5);
     /**
      * negotiation failed, number of retry times.
-     * if set 2, then runs 3 times
+     * if set 3, then runs 1 times and retry 2 times.
      */
     private int retry = SystemPropertyUtil.getInt("klein.consensus.retry", 2);
 
     private PaxosProp paxosProp = new PaxosProp();
+
+    private List<Endpoint> parseMember(String members) {
+        List<Endpoint> endpoints = new ArrayList<>();
+        if (StringUtils.isEmpty(members)) {
+            return endpoints;
+        }
+        for (String item : StringUtils.split(members, ";")) {
+            if (StringUtils.isEmpty(item)) {
+                continue;
+            }
+            endpoints.add(RpcUtil.parseEndpoint(item));
+        }
+        return endpoints;
+    }
 
     public Endpoint getSelf() {
         return self;
