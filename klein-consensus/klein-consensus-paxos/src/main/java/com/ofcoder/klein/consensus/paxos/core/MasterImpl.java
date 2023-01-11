@@ -47,6 +47,7 @@ import com.ofcoder.klein.consensus.facade.Quorum;
 import com.ofcoder.klein.consensus.facade.SingleQuorum;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
+import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
@@ -305,7 +306,7 @@ public class MasterImpl implements Master {
                 pushCompleteData(newConfig, cur);
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new ConsensusException(String.format("push data to %s, %s", newConfig, e.getMessage()), e);
         }
     }
 

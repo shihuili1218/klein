@@ -30,6 +30,7 @@ import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.ExtensionRegistryLite;
+import com.ofcoder.klein.rpc.facade.exception.RpcException;
 import io.grpc.MethodDescriptor;
 
 /**
@@ -66,7 +67,7 @@ public class MessageHelper {
             return fileDescriptor.findMessageTypeByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME);
         } catch (Descriptors.DescriptorValidationException e) {
             LOG.error("dynamic build JsonMarshaller descriptor is fail: {}", e.getMessage());
-            throw new RuntimeException("dynamic build JsonMarshaller descriptor is fail", e);
+            throw new RpcException("dynamic build JsonMarshaller descriptor is fail", e);
         }
     }
 
