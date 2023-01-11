@@ -68,19 +68,17 @@ KleinProp prop = KleinProp.loadIfPresent();
     - [x] Master心跳触发对齐
     - [x] 快照同步（心跳携带checkpoint、learn消息返回checkpoint）
     - [x] 新成员加入集群，主动向master学习
-  - [ ] 优化读请求(写请求一定要复制到Master)
-  - [ ] 优化写请求(写请求只能由Master执行，避免活锁)
+  - [ ] ~~优化读请求(写请求一定要复制到Master)~~
+  - [x] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)
 - [ ] NWR
-- [ ] confirm优化读请求
-- [ ] 不存在干扰key，无需执行一轮Prepare
 - [ ] Verified by jepsen
 
 ### 缓存
 - [x] 读、写、等基础功能
 - [x] 配合持久化实现LRU
 - [x] TTL自动过期
-- [ ] 时间偏移
+- [x] 时间偏移
 
 ### 集合
 - [ ] list
