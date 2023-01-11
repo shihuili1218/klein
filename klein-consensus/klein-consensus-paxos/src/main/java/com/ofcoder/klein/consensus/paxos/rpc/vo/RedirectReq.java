@@ -35,6 +35,7 @@ public class RedirectReq implements Serializable {
     private byte redirect;
     // propose
     private Proposal proposal;
+    private boolean apply;
     // change member
     private byte changeOp;
     private Set<Endpoint> changeTarget;
@@ -51,6 +52,10 @@ public class RedirectReq implements Serializable {
         return proposal;
     }
 
+    public boolean isApply() {
+        return apply;
+    }
+
     public byte getChangeOp() {
         return changeOp;
     }
@@ -65,6 +70,7 @@ public class RedirectReq implements Serializable {
         private Proposal proposal;
         private byte changeOp;
         private Set<Endpoint> changeTarget;
+        private boolean apply;
 
         private Builder() {
         }
@@ -134,6 +140,17 @@ public class RedirectReq implements Serializable {
         }
 
         /**
+         * apply.
+         *
+         * @param apply apply
+         * @return Builder
+         */
+        public Builder apply(final boolean apply) {
+            this.apply = apply;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return RedirectReq
@@ -145,6 +162,7 @@ public class RedirectReq implements Serializable {
             redirectReq.redirect = this.redirect;
             redirectReq.nodeId = this.nodeId;
             redirectReq.proposal = this.proposal;
+            redirectReq.apply = this.apply;
             return redirectReq;
         }
     }

@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -25,8 +26,11 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.DirectProxy;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.Proxy;
 import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -46,11 +50,13 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     private final PaxosNode self;
     private ConsensusProp prop;
     private long takeMasterTimeout;
+    private Proxy directProxy;
 
     public RedirectProcessor(final PaxosNode self, final ConsensusProp prop) {
         this.prop = prop;
         this.self = self;
         this.takeMasterTimeout = this.prop.getRoundTimeout() * this.prop.getRetry() + this.prop.getPaxosProp().getMasterElectMaxInterval();
+        this.directProxy = new DirectProxy(prop);
     }
 
     @Override
@@ -90,6 +96,8 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(result).build())));
                 break;
             case RedirectReq.TRANSACTION_REQUEST:
+                Result<Serializable> proposeResult = directProxy.propose(request.getProposal(), request.isApply());
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().proposeResult(proposeResult).build())));
                 break;
             default:
                 break;

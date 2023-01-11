@@ -16,12 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.io.Serializable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
@@ -29,10 +30,11 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
-
 import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
 /**
+ * Forward the Proposal request to the Master.
+ *
  * @author 释慧利
  */
 public class RedirectProxy implements Proxy {
@@ -40,41 +42,37 @@ public class RedirectProxy implements Proxy {
     private RpcClient client;
     private PaxosNode self;
     private ConsensusProp prop;
+    private Proxy directProxy;
 
     public RedirectProxy(final ConsensusProp op, final PaxosNode self) {
         this.self = self;
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.directProxy = new DirectProxy(op);
     }
 
     @Override
-    public void propose(Proposal data, ProposeDone done) {
+    public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
         if (RoleAccessor.getMaster().isSelf()) {
-            RoleAccessor.getProposer().propose(data, done);
-            return;
+            return this.directProxy.propose(data, apply);
         }
+
+        Result.Builder<D> builder = Result.Builder.aResult();
+
         Endpoint master = MemberRegistry.getInstance().getMemberConfiguration().getMaster();
         if (master == null) {
             LOG.warn("redirect propose request failure, because master is null");
-            done.negotiationDone(false, null);
-            return;
+            builder.state(Result.State.FAILURE);
+            return builder.build();
         }
+
         RedirectReq req = RedirectReq.Builder.aRedirectReq()
                 .nodeId(this.self.getSelf().getId())
                 .redirect(TRANSACTION_REQUEST)
                 .proposal(data)
+                .apply(apply)
                 .build();
-        this.client.sendRequestAsync(master, req, new AbstractInvokeCallback<RedirectRes>() {
-            @Override
-            public void error(Throwable err) {
-                done.negotiationDone(false, null);
-            }
-
-            @Override
-            public void complete(RedirectRes result) {
-
-            }
-        }, this.prop.getRoundTimeout() * this.prop.getRetry() + 50);
-
+        RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + 50);
+        return (Result<D>) res.getProposeResult();
     }
 }

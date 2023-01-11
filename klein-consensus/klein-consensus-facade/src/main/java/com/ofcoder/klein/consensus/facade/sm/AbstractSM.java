@@ -82,6 +82,9 @@ public abstract class AbstractSM implements SM {
 
     @Override
     public void loadSnap(final Snap snap) {
+        if (snap == null) {
+            return;
+        }
         if (SNAP.compareAndSet(false, true)) {
             try {
                 SNAP_LOCK.lock();
