@@ -17,10 +17,6 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,11 +26,9 @@ import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.Master;
-import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -69,49 +63,10 @@ public class PaxosConsensus implements Consensus {
     private RpcClient client;
     private Proxy proxy;
 
-    private void proposeAsync(final Proposal data, final ProposeDone done) {
-        this.proxy.propose(data, done);
-    }
-
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        int count = apply ? 2 : 1;
-
-        CountDownLatch completed = new CountDownLatch(count);
-        Result.Builder<D> builder = Result.Builder.aResult();
         Proposal proposal = new Proposal(group, data);
-        proposeAsync(proposal, new ProposeDone() {
-            @Override
-            public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
-                completed.countDown();
-                if (result) {
-                    builder.state(consensusDatas.contains(proposal) ? Result.State.SUCCESS : Result.State.FAILURE);
-                } else {
-                    builder.state(Result.State.UNKNOWN);
-                    completed.countDown();
-                }
-            }
-
-            @Override
-            public void applyDone(final Map<Proposal, Object> applyResults) {
-                for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
-                    if (entry.getKey() == proposal) {
-                        builder.data((D) entry.getValue());
-                        break;
-                    }
-                }
-                completed.countDown();
-            }
-        });
-        try {
-            if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
-                LOG.warn("******** negotiation timeout ********");
-                builder.state(Result.State.UNKNOWN);
-            }
-        } catch (InterruptedException e) {
-            throw new ConsensusException(e.getMessage(), e);
-        }
-        return builder.build();
+        return this.proxy.propose(proposal, apply);
     }
 
     private void loadSM(final String group, final SM sm) {
@@ -133,7 +88,7 @@ public class PaxosConsensus implements Consensus {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         loadNode();
-        this.proxy = this.prop.getPaxosProp().isOnlyMasterWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy();
+        this.proxy = this.prop.getPaxosProp().isOnlyMasterWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);
 
         MemberRegistry.getInstance().init(prop.getMembers());
         registerProcessor();

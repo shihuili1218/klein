@@ -16,7 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
+import java.io.Serializable;
+
+import com.ofcoder.klein.consensus.facade.Result;
 
 /**
  * Proxy is used for forwarding write requests.
@@ -27,9 +29,12 @@ public interface Proxy {
     /**
      * propose proposal.
      *
-     * @param data proposal
-     * @param done callback
+     * @param data  proposal
+     * @param apply Whether you need to wait until the state machine is applied
+     *              If true, wait until the state machine is applied before returning
+     * @param <D>   result type
+     * @return propose result
      */
-    void propose(final Proposal data, final ProposeDone done);
+    <D extends Serializable> Result<D> propose(Proposal data, boolean apply);
 
 }

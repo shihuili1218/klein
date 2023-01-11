@@ -69,7 +69,10 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @param snap snapshot
      */
     protected void loadSnap(final PaxosMemberConfiguration snap) {
-        this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
+        this.master = null;
+        if (snap.master != null) {
+            this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
+        }
         this.version = new AtomicInteger(snap.version.get());
         this.effectMembers.clear();
         this.effectMembers.putAll(snap.effectMembers);
