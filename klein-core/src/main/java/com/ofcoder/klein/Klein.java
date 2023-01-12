@@ -64,6 +64,7 @@ public final class Klein {
         });
         try {
             boolean await = latch.await(15000L, TimeUnit.MILLISECONDS);
+            // do nothing for await.result
         } catch (InterruptedException e) {
             LOG.warn(e.getMessage(), e);
         }

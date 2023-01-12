@@ -37,10 +37,9 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  */
 public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
-    private final PaxosNode self;
 
     public PrepareProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override

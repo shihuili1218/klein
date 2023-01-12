@@ -1,4 +1,11 @@
+<center>
+
 ### [English](readme.md)
+<strong>开源地址：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
+
+[![Join the chat at https://gitter.im/klein-gitter/community](https://badges.gitter.im/klein-gitter/community.svg)](https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/764fda630fd845949ae492a1f6469173)](https://www.codacy.com/gh/shihuili1218/klein/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=shihuili1218/klein&amp;utm_campaign=Badge_Grade)
+</center>
 
 # 介绍
 ![](logo.svg)
@@ -66,7 +73,7 @@ KleinProp prop = KleinProp.loadIfPresent();
   - [ ] ~~优化读请求(写请求一定要复制到Master)~~
   - [x] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)
-- [ ] NWR
+- [x] NWR
 - [ ] Verified by jepsen
 
 ### 缓存

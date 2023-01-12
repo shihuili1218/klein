@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.cache;
+package com.ofcoder.klein.example.nwr;
 
 import java.io.IOException;
 
@@ -37,6 +37,7 @@ public class Main3 {
         System.setProperty("klein.port", "1220");
         System.setProperty("klein.ip", "127.0.0.1");
         System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
+        System.setProperty("klein.consensus.nwr", "fastWrite");
 
         KleinProp prop3 = KleinProp.loadIfPresent();
 

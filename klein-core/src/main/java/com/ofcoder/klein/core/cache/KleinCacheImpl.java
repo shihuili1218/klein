@@ -19,9 +19,6 @@ package com.ofcoder.klein.core.cache;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -33,7 +30,6 @@ import com.ofcoder.klein.core.GroupWrapper;
  * @author 释慧利
  */
 public class KleinCacheImpl implements KleinCache {
-    private static final Logger LOG = LoggerFactory.getLogger(KleinCacheImpl.class);
     protected GroupWrapper consensus;
 
     public KleinCacheImpl() {

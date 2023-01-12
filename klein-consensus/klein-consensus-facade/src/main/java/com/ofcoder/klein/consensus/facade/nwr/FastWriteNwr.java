@@ -14,32 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.nwr;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.spi.Join;
 
 /**
- * rpc processor.
+ * FastWriteNwr: w = 1, r = n.
  *
  * @author 释慧利
  */
-public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
-
-    /**
-     * handle request.
-     *
-     * @param request request param
-     * @param context rpc context
-     */
-    public abstract void handleRequest(R request, RpcContext context);
+@Join
+public class FastWriteNwr implements Nwr {
+    @Override
+    public int r(final int n) {
+        return n;
+    }
 
     @Override
-    public void handleRequest(final ByteBuffer request, final RpcContext context) {
-        R deserialize = Hessian2Util.deserialize(request.array());
-        handleRequest(deserialize, context);
+    public int w(final int n) {
+        return 1;
     }
 }

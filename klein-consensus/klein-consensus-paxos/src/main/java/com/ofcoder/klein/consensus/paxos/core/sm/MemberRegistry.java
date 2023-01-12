@@ -38,7 +38,7 @@ public final class MemberRegistry {
      * @param members members
      */
     public void init(final List<Endpoint> members) {
-        memberConfiguration.init(members);
+        this.memberConfiguration.init(members);
     }
 
     /**

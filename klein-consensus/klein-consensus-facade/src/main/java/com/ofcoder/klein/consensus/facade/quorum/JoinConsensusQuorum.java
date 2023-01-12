@@ -14,11 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.quorum;
 
 import java.util.Set;
-
-import org.apache.commons.collections4.CollectionUtils;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -31,23 +29,9 @@ public final class JoinConsensusQuorum implements Quorum {
     private final Quorum oldQuorum;
     private final Quorum newQuorum;
 
-    private JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lasMemmbers) {
-        oldQuorum = new SingleQuorum(effectMembers);
-        newQuorum = new SingleQuorum(lasMemmbers);
-    }
-
-    /**
-     * create new Quorum checker.
-     *
-     * @param memberConfiguration member config
-     * @return new Quorum checker
-     */
-    public static Quorum createInstance(final MemberConfiguration memberConfiguration) {
-        if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
-            return new SingleQuorum(memberConfiguration.getEffectMembers());
-        } else {
-            return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers());
-        }
+    public JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lasMemmbers, final int threshold) {
+        oldQuorum = new SingleQuorum(effectMembers, threshold);
+        newQuorum = new SingleQuorum(lasMemmbers, threshold);
     }
 
     @Override

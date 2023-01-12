@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.quorum;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -28,22 +28,24 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class SingleQuorum implements Quorum {
-    private Set<Endpoint> allMembers = new HashSet<>();
+    private final Set<Endpoint> allMembers;
+    private final Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
+    private final int successThreshold;
+    private final int failureThreshold;
 
-    private Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
-    private Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
-    private int threshold;
-
-    public SingleQuorum(final Set<Endpoint> allMembers) {
-        this.allMembers = allMembers;
-        this.threshold = allMembers.size() / 2 + 1;
+    public SingleQuorum(final Set<Endpoint> allMembers, final int threshold) {
+        this.allMembers = new HashSet<>(allMembers);
+        int n = allMembers.size();
+        this.successThreshold = threshold;
+        this.failureThreshold = n - threshold;
     }
 
     @Override
     public GrantResult isGranted() {
-        if (grantedMembers.size() >= threshold) {
+        if (grantedMembers.size() >= successThreshold) {
             return GrantResult.PASS;
-        } else if (failedMembers.size() > (allMembers.size() - threshold)) {
+        } else if (failedMembers.size() > failureThreshold) {
             return GrantResult.REFUSE;
         } else {
             return GrantResult.GRANTING;

@@ -14,32 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.quorum;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.rpc.facade.RpcContext;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * rpc processor.
+ * Quorum check.
  *
  * @author 释慧利
  */
-public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
+public interface Quorum {
+    /**
+     * the node refuse, refuse current request.
+     *
+     * @param node refuse node
+     * @return refuse result
+     */
+    boolean refuse(Endpoint node);
 
     /**
-     * handle request.
+     * the node pass, grant current request.
      *
-     * @param request request param
-     * @param context rpc context
+     * @param node pass node
+     * @return grant result
      */
-    public abstract void handleRequest(R request, RpcContext context);
+    boolean grant(Endpoint node);
 
-    @Override
-    public void handleRequest(final ByteBuffer request, final RpcContext context) {
-        R deserialize = Hessian2Util.deserialize(request.array());
-        handleRequest(deserialize, context);
+    SingleQuorum.GrantResult isGranted();
+
+    enum GrantResult {
+        PASS,
+        REFUSE,
+        GRANTING
     }
+
 }
