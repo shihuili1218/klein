@@ -26,12 +26,12 @@ import com.ofcoder.klein.spi.Join;
 @Join
 public class FastWriteNwr implements Nwr {
     @Override
-    public int r(int n) {
+    public int r(final int n) {
         return n;
     }
 
     @Override
-    public int w(int n) {
+    public int w(final int n) {
         return 1;
     }
 }
