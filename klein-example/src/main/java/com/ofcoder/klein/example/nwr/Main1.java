@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.cache;
+package com.ofcoder.klein.example.nwr;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,7 @@ public class Main1 {
 
     public static void main(final String[] args) throws Exception {
         System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
+        System.setProperty("klein.consensus.nwr", "fastWrite");
         KleinProp prop1 = KleinProp.loadIfPresent();
 
         prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218));

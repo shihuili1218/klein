@@ -73,7 +73,7 @@ KleinProp prop = KleinProp.loadIfPresent();
   - [ ] ~~优化读请求(写请求一定要复制到Master)~~
   - [x] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)
-- [ ] NWR
+- [x] NWR
 - [ ] Verified by jepsen
 
 ### 缓存

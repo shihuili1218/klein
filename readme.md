@@ -74,7 +74,7 @@ KleinProp prop = KleinProp.loadIfPresent();
   - [ ] ~~Optimize read requests (write requests must be copied to the master)~~
   - [x] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
 - [ ] Automatic member discovery (research)
-- [ ] NWR
+- [x] NWR
 - [ ] Verified by jepsen
 
 ### Cache

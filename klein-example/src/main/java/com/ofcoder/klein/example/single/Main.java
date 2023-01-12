@@ -36,6 +36,7 @@ public class Main {
         KleinProp prop = KleinProp.loadIfPresent();
 
         Klein instance = Klein.startup();
+        instance.awaitInit();
         instance.getCache().put("hello", "klein");
         LOG.info(instance.getCache().get("hello") + "");
         instance.getCache().put("hello", "test", 1L, TimeUnit.SECONDS);

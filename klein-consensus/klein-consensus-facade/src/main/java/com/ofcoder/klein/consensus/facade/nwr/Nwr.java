@@ -14,38 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.nwr;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.spi.SPI;
 
 /**
- * Quorum check.
+ * NWR: N ＞ W + R.
+ * R is read quorum, W is write quorum.
  *
  * @author 释慧利
  */
-public interface Quorum {
+@SPI
+public interface Nwr {
     /**
-     * the node refuse, refuse current request.
+     * calculate read quorum.
      *
-     * @param node refuse node
-     * @return refuse result
+     * @param n total size
+     * @return read quorum
      */
-    boolean refuse(Endpoint node);
+    int r(int n);
 
     /**
-     * the node pass, grant current request.
+     * calculate write quorum.
      *
-     * @param node pass node
-     * @return grant result
+     * @param n total size
+     * @return write quorum
      */
-    boolean grant(Endpoint node);
-
-    SingleQuorum.GrantResult isGranted();
-
-    enum GrantResult {
-        PASS,
-        REFUSE,
-        GRANTING
-    }
-
+    int w(int n);
 }

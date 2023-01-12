@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
+package com.ofcoder.klein.consensus.facade.quorum;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -34,11 +34,11 @@ public class SingleQuorum implements Quorum {
     private final int successThreshold;
     private final int failureThreshold;
 
-    public SingleQuorum(final Set<Endpoint> allMembers) {
+    public SingleQuorum(final Set<Endpoint> allMembers, final int threshold) {
         this.allMembers = new HashSet<>(allMembers);
         int n = allMembers.size();
-        this.successThreshold = n / 2 + 1;
-        this.failureThreshold = n - successThreshold;
+        this.successThreshold = threshold;
+        this.failureThreshold = n - threshold;
     }
 
     @Override

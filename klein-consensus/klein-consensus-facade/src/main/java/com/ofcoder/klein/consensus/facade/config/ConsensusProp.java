@@ -39,7 +39,7 @@ public class ConsensusProp {
     /**
      * all member, include self.
      */
-    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "127.0.0.1:1218"));
+    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218"));
     /**
      * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
      */
@@ -61,7 +61,10 @@ public class ConsensusProp {
      * if set 3, then runs 1 times and retry 2 times.
      */
     private int retry = SystemPropertyUtil.getInt("klein.consensus.retry", 2);
-
+    /**
+     * calculate quorum.
+     */
+    private String nwr = SystemPropertyUtil.get("klein.consensus.nwr", "majority");
     private PaxosProp paxosProp = new PaxosProp();
 
     private List<Endpoint> parseMember(final String members) {
@@ -140,5 +143,13 @@ public class ConsensusProp {
 
     public void setPaxosProp(final PaxosProp paxosProp) {
         this.paxosProp = paxosProp;
+    }
+
+    public String getNwr() {
+        return nwr;
+    }
+
+    public void setNwr(final String nwr) {
+        this.nwr = nwr;
     }
 }
