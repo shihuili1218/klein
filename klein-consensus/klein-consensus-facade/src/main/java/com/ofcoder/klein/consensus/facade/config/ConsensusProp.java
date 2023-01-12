@@ -39,7 +39,7 @@ public class ConsensusProp {
     /**
      * all member, include self.
      */
-    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "127.0.0.1:1218"));
+    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218"));
     /**
      * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
      */
