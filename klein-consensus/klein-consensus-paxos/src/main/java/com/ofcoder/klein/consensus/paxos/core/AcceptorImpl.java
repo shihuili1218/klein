@@ -63,7 +63,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public void shutdown() {
-
+        // do nothing.
     }
 
     @Override

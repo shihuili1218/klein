@@ -32,10 +32,9 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author 释慧利
  */
 public class SnapSyncProcessor extends AbstractRpcProcessor<SnapSyncReq> {
-    private PaxosNode self;
 
     public SnapSyncProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override

@@ -38,10 +38,8 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
 public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
     private static final Logger LOG = LoggerFactory.getLogger(LearnProcessor.class);
 
-    private final PaxosNode self;
-
     public LearnProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override

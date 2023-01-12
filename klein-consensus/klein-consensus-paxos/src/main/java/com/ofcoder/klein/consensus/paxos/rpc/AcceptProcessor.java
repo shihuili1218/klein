@@ -37,10 +37,9 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  */
 public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
     private static final Logger LOG = LoggerFactory.getLogger(AcceptProcessor.class);
-    private final PaxosNode self;
 
     public AcceptProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override

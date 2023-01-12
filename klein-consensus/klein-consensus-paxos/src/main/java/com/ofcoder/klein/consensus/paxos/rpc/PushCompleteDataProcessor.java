@@ -40,11 +40,9 @@ import com.ofcoder.klein.storage.facade.LogManager;
  */
 public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushCompleteDataReq> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
-    private final PaxosNode self;
     private LogManager<Proposal> logManager;
 
     public PushCompleteDataProcessor(final PaxosNode self) {
-        this.self = self;
         logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
     }
 

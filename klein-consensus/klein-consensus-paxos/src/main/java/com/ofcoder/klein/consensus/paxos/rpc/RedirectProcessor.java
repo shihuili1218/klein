@@ -47,14 +47,12 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
 public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     private static final Logger LOG = LoggerFactory.getLogger(RedirectProcessor.class);
 
-    private final PaxosNode self;
     private ConsensusProp prop;
     private long takeMasterTimeout;
     private Proxy directProxy;
 
     public RedirectProcessor(final PaxosNode self, final ConsensusProp prop) {
         this.prop = prop;
-        this.self = self;
         this.takeMasterTimeout = this.prop.getRoundTimeout() * this.prop.getRetry() + this.prop.getPaxosProp().getMasterElectMaxInterval();
         this.directProxy = new DirectProxy(prop);
     }
