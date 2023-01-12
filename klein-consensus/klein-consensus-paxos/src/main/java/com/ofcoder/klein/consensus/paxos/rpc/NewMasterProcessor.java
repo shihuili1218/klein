@@ -32,10 +32,9 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author 释慧利
  */
 public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
-    private PaxosNode self;
 
     public NewMasterProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override

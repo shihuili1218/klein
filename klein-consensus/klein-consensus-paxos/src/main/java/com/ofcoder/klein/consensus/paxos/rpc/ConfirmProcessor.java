@@ -37,10 +37,9 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  */
 public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
     private static final Logger LOG = LoggerFactory.getLogger(ConfirmProcessor.class);
-    private final PaxosNode self;
 
     public ConfirmProcessor(final PaxosNode self) {
-        this.self = self;
+        // do nothing.
     }
 
     @Override
