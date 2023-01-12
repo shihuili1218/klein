@@ -21,10 +21,8 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * Main2: cluster member.
@@ -38,16 +36,10 @@ public class Main2 {
         System.setProperty("klein.id", "2");
         System.setProperty("klein.port", "1219");
         System.setProperty("klein.ip", "127.0.0.1");
+        System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
 
         KleinProp prop2 = KleinProp.loadIfPresent();
 
-        prop2.getConsensusProp().setMembers(
-                Lists.newArrayList(
-                        new Endpoint("1", "127.0.0.1", 1218),
-                        new Endpoint("2", "127.0.0.1", 1219),
-                        new Endpoint("3", "127.0.0.1", 1220)
-                )
-        );
 //        prop2.getConsensusProp().setSelf(new Endpoint("2", "127.0.0.1", 1219));
 //        prop2.getRpcProp().setPort(1219);
 

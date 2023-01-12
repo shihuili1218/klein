@@ -98,12 +98,12 @@ public class Endpoint implements Serializable {
             return false;
         }
         Endpoint endpoint = (Endpoint) o;
-        return port == endpoint.port && Objects.equals(ip, endpoint.ip);
+        return port == endpoint.port && Objects.equals(id, endpoint.id) && Objects.equals(ip, endpoint.ip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(ip, port);
+        return Objects.hash(id, ip, port);
     }
 
     @Override

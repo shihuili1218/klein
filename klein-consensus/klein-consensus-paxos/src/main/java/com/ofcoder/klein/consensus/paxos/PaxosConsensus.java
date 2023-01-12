@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.Sets;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.facade.Nwr;
+import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -88,7 +88,7 @@ public class PaxosConsensus implements Consensus {
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin(this.prop.getNwr());
+        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
 
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new RedirectProxy(this.prop, this.self) : new DirectProxy(this.prop);

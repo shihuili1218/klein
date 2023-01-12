@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.List;
 
-import com.ofcoder.klein.consensus.facade.Nwr;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**

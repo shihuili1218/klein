@@ -3,8 +3,7 @@ package com.ofcoder.klein.consensus.paxos;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.Lists;
-import com.ofcoder.klein.consensus.facade.MajorityNwr;
-import com.ofcoder.klein.consensus.facade.Nwr;
+import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.spi.ExtensionLoader;

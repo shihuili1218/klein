@@ -14,28 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.facade;
-
-import java.util.Set;
+package com.ofcoder.klein.consensus.facade.quorum;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.consensus.facade.MemberConfiguration;
+import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
- * Join Consensus Quorum.
+ * Create Quorum Factory.
  *
  * @author 释慧利
  */
-public final class JoinConsensusQuorum implements Quorum {
-    private final Quorum oldQuorum;
-    private final Quorum newQuorum;
-
-    private JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lasMemmbers, final int threshold) {
-        oldQuorum = new SingleQuorum(effectMembers, threshold);
-        newQuorum = new SingleQuorum(lasMemmbers, threshold);
-    }
+public final class QuorumFactory {
+    private static final Logger LOG = LoggerFactory.getLogger(QuorumFactory.class);
 
     /**
      * create new write Quorum checker.
@@ -45,7 +40,7 @@ public final class JoinConsensusQuorum implements Quorum {
      */
     public static Quorum createWriteQuorum(final MemberConfiguration memberConfiguration) {
         Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
-
+        LOG.debug("create write quorum, nwr: {}", nwr.getClass());
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
             return new SingleQuorum(memberConfiguration.getEffectMembers(),
                     nwr.w(memberConfiguration.getEffectMembers().size()));
@@ -63,6 +58,7 @@ public final class JoinConsensusQuorum implements Quorum {
      */
     public static Quorum createReadQuorum(final MemberConfiguration memberConfiguration) {
         Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
+        LOG.debug("create read quorum, nwr: {}", nwr.getClass());
 
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
             return new SingleQuorum(memberConfiguration.getEffectMembers(),
@@ -71,30 +67,5 @@ public final class JoinConsensusQuorum implements Quorum {
             return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers(),
                     nwr.r(memberConfiguration.getAllMembers().size()));
         }
-    }
-
-    @Override
-    public boolean refuse(final Endpoint node) {
-        oldQuorum.refuse(node);
-        newQuorum.refuse(node);
-        return true;
-    }
-
-    @Override
-    public boolean grant(final Endpoint node) {
-        oldQuorum.grant(node);
-        newQuorum.grant(node);
-        return true;
-    }
-
-    @Override
-    public GrantResult isGranted() {
-        if (oldQuorum.isGranted() == GrantResult.REFUSE || newQuorum.isGranted() == GrantResult.REFUSE) {
-            return GrantResult.REFUSE;
-        }
-        if (oldQuorum.isGranted() == GrantResult.PASS && newQuorum.isGranted() == GrantResult.PASS) {
-            return GrantResult.PASS;
-        }
-        return GrantResult.GRANTING;
     }
 }

@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
-import com.ofcoder.klein.consensus.facade.Quorum;
+import com.ofcoder.klein.consensus.facade.quorum.Quorum;
+import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
@@ -62,9 +62,9 @@ public class ProposeContext {
         this.memberConfiguration = memberConfiguration;
         this.instanceIdHolder = instanceIdHolder;
         this.dataWithCallback = ImmutableList.copyOf(events);
-        this.prepareQuorum = JoinConsensusQuorum.createReadQuorum(memberConfiguration);
+        this.prepareQuorum = QuorumFactory.createReadQuorum(memberConfiguration);
         this.prepareNexted = new AtomicBoolean(false);
-        this.acceptQuorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
+        this.acceptQuorum = QuorumFactory.createWriteQuorum(memberConfiguration);
         this.acceptNexted = new AtomicBoolean(false);
     }
 

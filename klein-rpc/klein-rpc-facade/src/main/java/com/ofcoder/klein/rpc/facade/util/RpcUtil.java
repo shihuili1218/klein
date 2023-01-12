@@ -56,15 +56,22 @@ public class RpcUtil {
             throw new IllegalArgumentException("parse Endpoint, but address is empty.");
         }
         final String[] tmps = StringUtils.split(s, ":");
-        if (tmps.length != 2) {
-            throw new IllegalArgumentException(String.format("parse Endpoint, but address: %s is invalid, e.g. ip:port", s));
+        if (tmps.length == 2) {
+            try {
+                final int port = Integer.parseInt(tmps[1]);
+                return new Endpoint(null, tmps[0], port);
+            } catch (final Exception e) {
+                throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
+            }
+        } else if (tmps.length == 3) {
+            try {
+                final int port = Integer.parseInt(tmps[2]);
+                return new Endpoint(tmps[0], tmps[1], port);
+            } catch (final Exception e) {
+                throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
+            }
         }
-        try {
-            final int port = Integer.parseInt(tmps[1]);
-            return new Endpoint(null, tmps[0], port);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
-        }
+        throw new IllegalArgumentException(String.format("parse Endpoint, but address: %s is invalid, e.g. id:ip:port or ip:port", s));
     }
 
 }

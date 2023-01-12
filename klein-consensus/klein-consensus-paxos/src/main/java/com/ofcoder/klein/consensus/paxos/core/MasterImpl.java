@@ -42,13 +42,13 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.JoinConsensusQuorum;
-import com.ofcoder.klein.consensus.facade.Nwr;
-import com.ofcoder.klein.consensus.facade.Quorum;
-import com.ofcoder.klein.consensus.facade.SingleQuorum;
+import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
+import com.ofcoder.klein.consensus.facade.quorum.Quorum;
+import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
+import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
@@ -90,11 +90,12 @@ public class MasterImpl implements Master {
     private LogManager<Proposal> logManager;
     private ElectState state = ElectState.ELECTING;
     private final AtomicBoolean changing = new AtomicBoolean(false);
-    private final Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
+    private final Nwr nwr;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
     }
 
     @Override
@@ -377,7 +378,7 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
-        Quorum quorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
+        Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
         AtomicBoolean next = new AtomicBoolean(false);
 
         // for self
@@ -445,7 +446,7 @@ public class MasterImpl implements Master {
         long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-        final Quorum quorum = JoinConsensusQuorum.createWriteQuorum(memberConfiguration);
+        final Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(self.getCurProposalNo())
