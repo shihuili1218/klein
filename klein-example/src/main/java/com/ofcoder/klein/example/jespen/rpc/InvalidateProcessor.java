@@ -14,34 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen;
+package com.ofcoder.klein.example.jespen.rpc;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.ByteBuffer;
 
-import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
- * Main: operate cache.
- *
  * @author 释慧利
  */
-public class Main1 {
-    private static final Logger LOG = LoggerFactory.getLogger(Main1.class);
+public class InvalidateProcessor extends AbstractRpcProcessor<InvalidateReq> {
 
-    public static void main(final String[] args) throws Exception {
-        System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
-        KleinProp prop1 = KleinProp.loadIfPresent();
+    private KleinCache cache;
 
-        prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218));
-        prop1.getRpcProp().setPort(1218);
+    public InvalidateProcessor(KleinCache cache) {
+        this.cache = cache;
+    }
 
-        Klein instance1 = Klein.startup();
+    @Override
+    public void handleRequest(InvalidateReq request, RpcContext context) {
+        cache.invalidate(request.getKey());
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(true)));
+    }
 
-        instance1.awaitInit();
+    @Override
+    public String service() {
+        return InvalidateReq.class.getSimpleName();
 
-        System.in.read();
     }
 }
