@@ -16,6 +16,10 @@
  */
 package com.ofcoder.klein.core.config;
 
+import java.io.FileInputStream;
+import java.util.Properties;
+
+import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
@@ -23,6 +27,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
 
 /**
  * Klein Prop.
+ *
  * @author 释慧利
  */
 public class KleinProp {
@@ -118,7 +123,25 @@ public class KleinProp {
     }
 
     /**
+     * load KleinProp from file.
+     *
+     * @param file file path
+     * @return KleinProp
+     */
+    public static KleinProp loadFromFile(final String file) {
+        try (FileInputStream fin = new FileInputStream(file)) {
+            Properties props = new Properties();
+            props.load(fin);
+            System.setProperties(props);
+        } catch (Exception e) {
+            throw new KleinException(e.getMessage(), e);
+        }
+        return loadIfPresent();
+    }
+
+    /**
      * loadIfPresent.
+     *
      * @return KleinProp
      */
     public static KleinProp loadIfPresent() {

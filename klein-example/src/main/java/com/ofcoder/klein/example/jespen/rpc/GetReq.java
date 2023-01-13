@@ -14,32 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen;
-
-import java.io.IOException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.core.config.KleinProp;
+package com.ofcoder.klein.example.jespen.rpc;
 
 /**
- * Main2: cluster member.
- *
  * @author 释慧利
  */
-public class Main2 {
-    private static final Logger LOG = LoggerFactory.getLogger(Main2.class);
-
-    public static void main(final String[] args) throws IOException {
-        System.setProperty("klein.id", "2");
-        System.setProperty("klein.port", "1219");
-        System.setProperty("klein.ip", "127.0.0.1");
-        System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
-
-        Klein instance2 = Klein.startup();
-
-        System.in.read();
-    }
+public class GetReq extends BaseReq {
 }
