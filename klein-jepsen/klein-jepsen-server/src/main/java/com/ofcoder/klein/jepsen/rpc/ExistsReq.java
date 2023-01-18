@@ -14,21 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
-
-import java.io.Serializable;
+package com.ofcoder.klein.jepsen.rpc;
 
 /**
+ * cache exists request.
+ *
  * @author 释慧利
  */
-public class BaseReq implements Serializable {
-    private String key;
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
+public class ExistsReq extends BaseReq {
 }

@@ -14,21 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package com.ofcoder.klein.jepsen;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.example.jespen.rpc.ExistsProcessor;
-import com.ofcoder.klein.example.jespen.rpc.GetProcessor;
-import com.ofcoder.klein.example.jespen.rpc.InvalidateProcessor;
-import com.ofcoder.klein.example.jespen.rpc.PutProcessor;
+import com.ofcoder.klein.jepsen.rpc.ExistsProcessor;
+import com.ofcoder.klein.jepsen.rpc.GetProcessor;
+import com.ofcoder.klein.jepsen.rpc.InvalidateProcessor;
+import com.ofcoder.klein.jepsen.rpc.PutProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main: operate cache.
@@ -37,12 +36,12 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
  */
 public class Main {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper()
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
     public static void main(final String[] args) throws Exception {
         KleinProp kleinProp = KleinProp.loadFromFile("config/server.properties");
-        LOG.info(objectMapper.writeValueAsString(kleinProp));
+        LOG.info(OBJECT_MAPPER.writeValueAsString(kleinProp));
 
         Klein instance = Klein.startup();
         KleinCache cache = instance.getCache();

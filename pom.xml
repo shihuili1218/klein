@@ -73,11 +73,6 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.ofcoder.klein.consensus.paxos</groupId>
-                <artifactId>klein-consensus-paxos</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.ofcoder.klein.storage.h2</groupId>
                 <artifactId>klein-storage-h2</artifactId>
                 <version>${project.version}</version>

@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
+package com.ofcoder.klein.jepsen.rpc;
 
 /**
+ * cache invidate request.
+ *
  * @author 释慧利
  */
-public class GetReq extends BaseReq {
+public class InvalidateReq extends BaseReq {
 }

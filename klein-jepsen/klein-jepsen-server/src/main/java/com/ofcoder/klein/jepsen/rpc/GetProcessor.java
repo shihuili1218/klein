@@ -14,26 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
-
-import java.nio.ByteBuffer;
+package com.ofcoder.klein.jepsen.rpc;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
+import java.nio.ByteBuffer;
+
 /**
+ * cache get request processor.
+ *
  * @author 释慧利
  */
 public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     private KleinCache cache;
 
-    public GetProcessor(KleinCache cache) {
+    public GetProcessor(final KleinCache cache) {
         this.cache = cache;
     }
+
     @Override
-    public void handleRequest(GetReq request, RpcContext context) {
+    public void handleRequest(final GetReq request, final RpcContext context) {
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(cache.get(request.getKey()))));
     }
 
