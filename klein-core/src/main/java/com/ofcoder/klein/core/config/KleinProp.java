@@ -130,9 +130,9 @@ public class KleinProp {
      */
     public static KleinProp loadFromFile(final String file) {
         try (FileInputStream fin = new FileInputStream(file)) {
-            Properties props = new Properties();
-            props.load(fin);
-            System.setProperties(props);
+            Properties sys = System.getProperties();
+            sys.load(fin);
+            System.setProperties(sys);
         } catch (Exception e) {
             throw new KleinException(e.getMessage(), e);
         }

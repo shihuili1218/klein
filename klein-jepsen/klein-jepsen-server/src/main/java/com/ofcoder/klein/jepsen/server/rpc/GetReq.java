@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen.rpc;
+package com.ofcoder.klein.jepsen.server.rpc;
 
 /**
  * cache get request.

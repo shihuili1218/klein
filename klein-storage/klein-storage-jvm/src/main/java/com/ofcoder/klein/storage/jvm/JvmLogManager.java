@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import org.apache.commons.io.IOUtils;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
@@ -48,7 +49,7 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  */
 @Join
 public class JvmLogManager<P extends Serializable> implements LogManager<P> {
-    private static final String BASE_PATH = Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data";
+    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", "/data");
     private static String selfPath;
     private static String metaPath;
 
