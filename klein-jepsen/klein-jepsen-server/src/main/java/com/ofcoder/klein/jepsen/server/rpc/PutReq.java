@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class PutReq extends BaseReq {
     private Serializable data;
-    private Long ttl;
+    private long ttl;
     private TimeUnit unit;
 
     public Serializable getData() {
@@ -37,11 +37,11 @@ public class PutReq extends BaseReq {
         this.data = data;
     }
 
-    public Long getTtl() {
+    public long getTtl() {
         return ttl;
     }
 
-    public void setTtl(final Long ttl) {
+    public void setTtl(final long ttl) {
         this.ttl = ttl;
     }
 

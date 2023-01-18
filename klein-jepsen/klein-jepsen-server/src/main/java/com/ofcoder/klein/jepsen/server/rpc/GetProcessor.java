@@ -43,6 +43,5 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     @Override
     public String service() {
         return GetReq.class.getSimpleName();
-
     }
 }
