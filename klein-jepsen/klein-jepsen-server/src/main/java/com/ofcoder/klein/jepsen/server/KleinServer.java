@@ -14,28 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen;
+package com.ofcoder.klein.jepsen.server;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.config.KleinProp;
-import com.ofcoder.klein.jepsen.rpc.ExistsProcessor;
-import com.ofcoder.klein.jepsen.rpc.GetProcessor;
-import com.ofcoder.klein.jepsen.rpc.InvalidateProcessor;
-import com.ofcoder.klein.jepsen.rpc.PutProcessor;
+import com.ofcoder.klein.jepsen.server.rpc.ExistsProcessor;
+import com.ofcoder.klein.jepsen.server.rpc.GetProcessor;
+import com.ofcoder.klein.jepsen.server.rpc.InvalidateProcessor;
+import com.ofcoder.klein.jepsen.server.rpc.PutProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Main: operate cache.
+ * KleinServer for deploy klein.
  *
  * @author 释慧利
  */
-public class Main {
-    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
+public class KleinServer {
+    static final Logger LOG = LoggerFactory.getLogger(KleinServer.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
 
@@ -44,7 +44,9 @@ public class Main {
         LOG.info(OBJECT_MAPPER.writeValueAsString(kleinProp));
 
         Klein instance = Klein.startup();
+        instance.awaitInit();
         KleinCache cache = instance.getCache();
+
         RpcEngine.registerProcessor(new ExistsProcessor(cache));
         RpcEngine.registerProcessor(new GetProcessor(cache));
         RpcEngine.registerProcessor(new InvalidateProcessor(cache));

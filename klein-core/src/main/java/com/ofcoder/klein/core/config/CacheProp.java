@@ -16,9 +16,9 @@
  */
 package com.ofcoder.klein.core.config;
 
-import java.io.File;
-
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
+
+import java.io.File;
 
 /**
  * Cache Property.
@@ -29,8 +29,7 @@ public class CacheProp {
 
     private String id = SystemPropertyUtil.get("klein.id", "1");
     private int memorySize = SystemPropertyUtil.getInt("klein.cache.lru.memory-size", 3);
-    private String dataPath = SystemPropertyUtil.get("klein.cache.lru.data-path",
-            Thread.currentThread().getContextClassLoader().getResource("").getPath() + "data" + File.separator + "klein-cache.mdb");
+    private String dataPath = SystemPropertyUtil.get("klein.data-path", "/data") + File.separator + "klein-cache.mdb";
 
     public String getId() {
         return id;

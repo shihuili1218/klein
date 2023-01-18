@@ -14,12 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen.rpc;
+package com.ofcoder.klein.jepsen.server.rpc;
+
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.rpc.facade.RpcContext;
+
+import java.nio.ByteBuffer;
 
 /**
- * cache exists request.
+ * cache exists request processor.
  *
  * @author 释慧利
  */
-public class ExistsReq extends BaseReq {
+public class ExistsProcessor extends AbstractRpcProcessor<ExistsReq> {
+    private KleinCache cache;
+
+    public ExistsProcessor(final KleinCache cache) {
+        this.cache = cache;
+    }
+
+    @Override
+    public void handleRequest(final ExistsReq request, final RpcContext context) {
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(cache.exist(request.getKey()))));
+    }
+
+    @Override
+    public String service() {
+        return ExistsReq.class.getSimpleName();
+    }
 }

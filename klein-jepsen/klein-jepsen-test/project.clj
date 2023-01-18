@@ -2,12 +2,12 @@
 (cemerick.pomegranate.aether/register-wagon-factory!
  "http" #(org.apache.maven.wagon.providers.http.HttpWagon.))
 
-(defproject jepsen.atomic "0.1.0-SNAPSHOT"
+(defproject jepsen.kelin "0.1.0-SNAPSHOT"
   :description "klein cache jepsen test"
   :url ""
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :main klein.core
+  :main jepsen.kelin
   :jvm-opts ["-Xms6g" "-Xmx6g" "-server" "-XX:+UseG1GC"]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [jepsen "0.1.8"]
@@ -15,5 +15,6 @@
                  [cider/cider-nrepl "0.17.0-SNAPSHOT"]
                  [org.clojure/tools.nrepl "0.2.13" :exclusions [org.clojure/clojure]]
                  [net.java.dev.jna/jna "4.5.1"]
+                 [com.ofcoder.klein.jepsen.server/klein-jepsen-server "0.0.1-SNAPSHOT"]
                  ]
   )

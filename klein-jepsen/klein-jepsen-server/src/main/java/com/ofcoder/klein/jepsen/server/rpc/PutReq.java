@@ -14,23 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen.rpc;
+package com.ofcoder.klein.jepsen.server.rpc;
 
 import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Cache request base req.
+ * cache put request.
  *
  * @author 释慧利
  */
-public class BaseReq implements Serializable {
-    private String key;
+public class PutReq extends BaseReq {
+    private Serializable data;
+    private Long ttl;
+    private TimeUnit unit;
 
-    public String getKey() {
-        return key;
+    public Serializable getData() {
+        return data;
     }
 
-    public void setKey(final String key) {
-        this.key = key;
+    public void setData(final Serializable data) {
+        this.data = data;
+    }
+
+    public Long getTtl() {
+        return ttl;
+    }
+
+    public void setTtl(final Long ttl) {
+        this.ttl = ttl;
+    }
+
+    public TimeUnit getUnit() {
+        return unit;
+    }
+
+    public void setUnit(final TimeUnit unit) {
+        this.unit = unit;
     }
 }
