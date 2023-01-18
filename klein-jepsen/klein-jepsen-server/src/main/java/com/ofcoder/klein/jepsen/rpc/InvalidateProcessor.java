@@ -14,33 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
-
-import java.nio.ByteBuffer;
-import java.util.HashMap;
+package com.ofcoder.klein.jepsen.rpc;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
+import java.nio.ByteBuffer;
+
 /**
+ * cache invalidate request processor.
+ *
  * @author 释慧利
  */
-public class ExistsProcessor extends AbstractRpcProcessor<ExistsReq> {
+public class InvalidateProcessor extends AbstractRpcProcessor<InvalidateReq> {
+
     private KleinCache cache;
 
-    public ExistsProcessor(KleinCache cache) {
+    public InvalidateProcessor(final KleinCache cache) {
         this.cache = cache;
     }
 
     @Override
-    public void handleRequest(ExistsReq request, RpcContext context) {
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(cache.exist(request.getKey()))));
+    public void handleRequest(final InvalidateReq request, final RpcContext context) {
+        cache.invalidate(request.getKey());
+        context.response(ByteBuffer.wrap(Hessian2Util.serialize(true)));
     }
 
     @Override
     public String service() {
-        return ExistsReq.class.getSimpleName();
+        return InvalidateReq.class.getSimpleName();
+
     }
 }

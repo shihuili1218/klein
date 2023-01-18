@@ -14,12 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
+package com.ofcoder.klein.jepsen.rpc;
 
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * cache put request.
+ *
  * @author 释慧利
  */
 public class PutReq extends BaseReq {
@@ -31,7 +33,7 @@ public class PutReq extends BaseReq {
         return data;
     }
 
-    public void setData(Serializable data) {
+    public void setData(final Serializable data) {
         this.data = data;
     }
 
@@ -39,7 +41,7 @@ public class PutReq extends BaseReq {
         return ttl;
     }
 
-    public void setTtl(Long ttl) {
+    public void setTtl(final Long ttl) {
         this.ttl = ttl;
     }
 
@@ -47,7 +49,7 @@ public class PutReq extends BaseReq {
         return unit;
     }
 
-    public void setUnit(TimeUnit unit) {
+    public void setUnit(final TimeUnit unit) {
         this.unit = unit;
     }
 }

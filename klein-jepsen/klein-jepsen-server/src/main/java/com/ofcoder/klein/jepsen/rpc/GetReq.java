@@ -14,35 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.jespen.rpc;
-
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+package com.ofcoder.klein.jepsen.rpc;
 
 /**
+ * cache get request.
+ *
  * @author 释慧利
  */
-public class InvalidateProcessor extends AbstractRpcProcessor<InvalidateReq> {
-
-    private KleinCache cache;
-
-    public InvalidateProcessor(KleinCache cache) {
-        this.cache = cache;
-    }
-
-    @Override
-    public void handleRequest(InvalidateReq request, RpcContext context) {
-        cache.invalidate(request.getKey());
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(true)));
-    }
-
-    @Override
-    public String service() {
-        return InvalidateReq.class.getSimpleName();
-
-    }
+public class GetReq extends BaseReq {
 }
