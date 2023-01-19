@@ -62,8 +62,7 @@
            (info node "installing klein" version)
            (c/cd "~" (c/exec :sh "java -jar klein-server.jar"))
            (Thread/sleep 10000)
-           (info node "installed klein" version)
-           )
+           (info node "installed klein" version))
    (teardown! [_ test node]
               (info node "tearing down klein"))))
 
@@ -86,33 +85,42 @@
         (.put key value))
     (throw (ex-info "Fail to set" {:key key :value value}))))
 
-(defn client [conn]
+(defn client
   "A client for a single register"
+  [conn]
   (reify
    client/Client
-   (open! [this test node]
-          (-> this
-              (assoc :node node)
-              (assoc :conn (create-client test))))
+   (open! [this test node] this)
 
-   (setup! [this test])
+   (setup! [this test]
+           (client (create-client test)))
 
    (invoke! [this test op]
-            (let [[kk vv] (:value op)
-                  k       (str kk)
-                  v       (str vv)
-                  crash   (if (= :read (:f op)) :fail :info)]
-              (try
-                (case (:f op)
-                  :write (do
-                           (write this k v)
-                           (assoc op :type :ok)))
-                (catch Exception e
-                  (let [^String msg (.getMessage e)]
-                    (cond
-                      (and msg (.contains msg "TIMEOUT")) (assoc op :type crash, :error :timeout)
-                      :else
-                      (assoc op :type crash :error (.getMessage e))))))))
+            (try
+              (case (:f op)
+                :write
+                (info "write operator")
+                (let [[kk vv] (:value op)
+                      k       (str kk)
+                      v       (str vv)]
+                  (do
+                    (write this k v)
+                    (assoc op :type :ok))))
+
+              (catch clojure.lang.ExceptionInfo e
+                (let [err_str (str (.getMessage e))]
+                  (let [no_leader (re-find #"ERR write InComplete: no leader node!.*" err_str)]
+                    (let [socket_closed (re-find #"socket closed.*" err_str)]
+                      (assoc op :type (if (or (= :read (:f op)) no_leader socket_closed) :fail :info), :error err_str)))))
+
+              (catch java.net.SocketTimeoutException e
+                (assoc op :type (if (= :read (:f op)) :fail :info), :error :timeout))
+
+              (catch java.io.EOFException e
+                (assoc op :type :fail, :error :eof_exception))
+
+              (catch java.lang.NumberFormatException e
+                (assoc op :type :fail, :error (str "readnil--- " e)))))
 
    (teardown! [this test])
 
@@ -125,7 +133,7 @@
          {:pure-generators true
           :name            "klein"
           ;          :os              centos/os
-          :db              (db "0.0.1")
+          ;          :db              (db "0.0.1")
           :client          (client nil)
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)

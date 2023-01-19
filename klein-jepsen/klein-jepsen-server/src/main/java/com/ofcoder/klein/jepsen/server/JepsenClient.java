@@ -18,6 +18,7 @@ package com.ofcoder.klein.jepsen.server;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
@@ -44,8 +45,11 @@ public class JepsenClient {
 
     public JepsenClient(final String clusterInfo) {
         LOG.info("clusterInfo: {}", clusterInfo);
+        KleinProp kleinProp = KleinProp.loadIfPresent();
+
         endpoints = parseMember(clusterInfo);
         client = new GrpcClient();
+        client.init(kleinProp.getRpcProp());
         for (Endpoint endpoint : endpoints) {
             client.createConnection(endpoint);
         }
