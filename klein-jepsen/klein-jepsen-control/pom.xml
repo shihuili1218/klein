@@ -35,6 +35,11 @@
             <artifactId>clojure</artifactId>
             <version>1.10.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.jepsen.server</groupId>
+            <artifactId>klein-jepsen-server</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 
 </project>

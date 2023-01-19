@@ -1,14 +1,37 @@
-
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.jepsen.control.jepsen.core;
 
+/**
+ * Database.
+ */
 public interface Database {
     /**
      * This method should be used to first install a database server onto the given node, and then launch it so that it is ready to receive operations.
+     *
+     * @param node target node
+     * @return result
      */
-    public Object setUpDatabase(String node);
+    Object setUpDatabase(String node);
 
     /**
      * Conversely to {@code setUpDatabase(Object, String)}, this method should first stop the database server, and then uninstall it.
+     *
+     * @param node teardown the node
      */
-    public void teardownDatabase(String node);
+    void teardownDatabase(String node);
 }
