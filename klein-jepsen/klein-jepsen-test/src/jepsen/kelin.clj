@@ -18,6 +18,8 @@
             [jepsen.control.util :as cu]
             [jepsen.os :as os]))
 
+(defonce klein-control "control.sh")
+
 (def fn-opts [[nil "--testfn TEST" "Test function name."]])
 
 (defn- parse-long [s] (Long/parseLong s))
@@ -57,8 +59,11 @@
   (reify
    db/DB
    (setup! [_ test node]
-           (info node "installing klein" version))
-
+           (info node "installing klein" version)
+           (c/cd "~" (c/exec :sh "java -jar klein-server.jar"))
+           (Thread/sleep 10000)
+           (info node "installed klein" version)
+           )
    (teardown! [_ test node]
               (info node "tearing down klein"))))
 
@@ -81,44 +86,47 @@
         (.put key value))
     (throw (ex-info "Fail to set" {:key key :value value}))))
 
-(defrecord Client [conn]
-  (reify client/Client
-    (open! [this test node]
-           (-> this
-               (assoc :node node)
-               (assoc :conn (create-client test))))
+(defn client [conn]
+  "A client for a single register"
+  (reify
+   client/Client
+   (open! [this test node]
+          (-> this
+              (assoc :node node)
+              (assoc :conn (create-client test))))
 
-    (setup! [this test])
+   (setup! [this test])
 
-    (invoke! [this test op]
-             (let [[kk v] (:value op)
-                   k      (str kk)
-                   crash  (if (= :read (:f op)) :fail :info)]
-               (try
-                 (case (:f op)
-                   :write (do
-                            (write this k v)
-                            (assoc op :type :ok)))
-                 (catch Exception e
-                   (let [^String msg (.getMessage e)]
-                     (cond
-                       (and msg (.contains msg "TIMEOUT")) (assoc op :type crash, :error :timeout)
-                       :else
-                       (assoc op :type crash :error (.getMessage e))))))))
+   (invoke! [this test op]
+            (let [[kk vv] (:value op)
+                  k       (str kk)
+                  v       (str vv)
+                  crash   (if (= :read (:f op)) :fail :info)]
+              (try
+                (case (:f op)
+                  :write (do
+                           (write this k v)
+                           (assoc op :type :ok)))
+                (catch Exception e
+                  (let [^String msg (.getMessage e)]
+                    (cond
+                      (and msg (.contains msg "TIMEOUT")) (assoc op :type crash, :error :timeout)
+                      :else
+                      (assoc op :type crash :error (.getMessage e))))))))
 
-    (teardown! [this test])
+   (teardown! [this test])
 
-    (close! [_ test])))
+   (close! [_ test])))
 
 (defn klein-test
-  "Given an options map from the command line runner (e.g. :nodes, :ssh,
-  :concurrency, ...), constructs a test map."
+  "Given an options map from the command line runner (e.g. :nodes, :ssh, :concurrency, ...), constructs a test map."
   [opts]
   (merge tests/noop-test
          {:pure-generators true
           :name            "klein"
+          ;          :os              centos/os
           :db              (db "0.0.1")
-          :client          (Client nil)
+          :client          (client nil)
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
                                 (gen/nemesis nil)
@@ -129,9 +137,10 @@
   "Handles command line arguments. Can either run a test, or a web server for
   browsing results."
   [& args]
-  (info "hello klein")
+  (info "hello klein: " args)
   (cli/run!
    (merge (cli/single-test-cmd {:test-fn klein-test})
           (cli/serve-cmd))
    args))
 
+;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10  --username root --password root
