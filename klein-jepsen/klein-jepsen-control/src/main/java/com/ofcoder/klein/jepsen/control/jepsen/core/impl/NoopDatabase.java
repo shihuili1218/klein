@@ -14,18 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen.control.jepsen.core;
+package com.ofcoder.klein.jepsen.control.jepsen.core.impl;
+
+import com.ofcoder.klein.jepsen.control.jepsen.core.Database;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * Checker.
+ * Database implement.
  */
-public interface CheckerCallback {
+public class NoopDatabase implements Database {
+    private static final Logger LOG = LoggerFactory.getLogger(NoopDatabase.class);
 
-    /**
-     * Method which the user uses to define the behavior of the checker.
-     *
-     * @param test    Contains information about the test
-     * @param history Lists the operations performed by the test as well as its result in sequential order
-     */
-    void check(Object test, Object history);
+    public NoopDatabase() {
+    }
+
+    @Override
+    public Object setUpDatabase(final String node) {
+        LOG.info("Setup DB");
+        return "NOOP_DB";
+    }
+
+    @Override
+    public void teardownDatabase(final String node) {
+        LOG.info("Torndown DB");
+    }
 }

@@ -1,7 +1,28 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.ofcoder.klein.jepsen.control.jepsen.core;
 
 import clojure.lang.RT;
+import com.ofcoder.klein.jepsen.control.jepsen.JepsenMain;
+import com.ofcoder.klein.jepsen.control.jepsen.core.impl.KleinClient;
+import com.ofcoder.klein.jepsen.control.jepsen.core.impl.NoopDatabase;
 import org.eclipse.jetty.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,10 +30,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * JepsenExecutable.
+ */
 public class JepsenExecutable {
+    private static final Logger LOG = LoggerFactory.getLogger(JepsenMain.class);
+
     private final String timeLimit;
     private final String nodes;
-    private final String username, password;
+    private final String username;
+    private final String password;
     private final long nemesisOpGapTime;
     private final long clientOpGapTime;
     private Client client;
@@ -46,7 +73,7 @@ public class JepsenExecutable {
         this.timeLimit = properties.get(JepsenConfig.TIME_LIMIT);
         this.testName = properties.get(JepsenConfig.TEST_NAME);
         this.checkerCallbacks = null;
-        this.client = new NoopClient();
+        this.client = new KleinClient();
         this.database = new NoopDatabase();
         this.nemesis = properties.get(JepsenConfig.NEMESIS);
         this.nemesisCallbacks = null;
@@ -64,25 +91,50 @@ public class JepsenExecutable {
         return this;
     }
 
+    /**
+     * add checker.
+     *
+     * @param checkerName key
+     * @param callback    check callback
+     * @return this object
+     */
     public JepsenExecutable addChecker(final String checkerName, final CheckerCallback callback) {
-        if (checkerCallbacks == null)
+        if (checkerCallbacks == null) {
             checkerCallbacks = new HashMap<>();
+        }
         checkerCallbacks.put(checkerName, callback);
         return this;
     }
 
+    /**
+     * batch add checker.
+     *
+     * @param callbacks all checker
+     * @return this object
+     */
     public JepsenExecutable addCheckers(final Map<String, CheckerCallback> callbacks) {
-        if (checkerCallbacks == null)
+        if (checkerCallbacks == null) {
             checkerCallbacks = new HashMap<>();
-        for (final Map.Entry<String, CheckerCallback> entry : callbacks.entrySet())
+        }
+        for (final Map.Entry<String, CheckerCallback> entry : callbacks.entrySet()) {
             checkerCallbacks.put(entry.getKey(), entry.getValue());
+        }
         return this;
     }
 
+    /**
+     * add nemesis.
+     *
+     * @param callback nemesis callback
+     * @return this object
+     */
     public JepsenExecutable addNemesis(final NemesisCallback callback) {
-        if (callback == null) return this;
-        if (nemesisCallbacks == null)
+        if (callback == null) {
+            return this;
+        }
+        if (nemesisCallbacks == null) {
             nemesisCallbacks = new ArrayList<>();
+        }
         nemesisCallbacks.add(callback);
         return this;
     }
@@ -92,6 +144,9 @@ public class JepsenExecutable {
         return this;
     }
 
+    /**
+     * start jepsen test.
+     */
     public void launchTest() {
         try {
             RT.loadResourceScript("jepsen/interfaces/main.clj", true);
@@ -111,7 +166,7 @@ public class JepsenExecutable {
             RT.var("jepsen.interfaces", "setNemesisCallbacks").invoke(nemesisCallbacks);
             RT.var("jepsen.interfaces", "main").invoke(args);
         } catch (IOException exc) {
-            System.out.println("Found exception " + exc);
+            LOG.info("Found exception " + exc);
         }
     }
 }
