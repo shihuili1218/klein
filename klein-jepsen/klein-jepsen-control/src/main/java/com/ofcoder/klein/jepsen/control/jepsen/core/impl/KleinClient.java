@@ -22,6 +22,7 @@ import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.jepsen.control.jepsen.core.Client;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 import com.ofcoder.klein.rpc.grpc.GrpcClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,8 +65,9 @@ public class KleinClient implements Client {
 
     @Override
     public Object openClient(final String node) {
-        String id = node.replace("n", "");
-        this.endpoint = new Endpoint(id, node, 1218);
+        LOG.info("Open client node " + node);
+
+        this.endpoint = RpcUtil.parseEndpoint(node);
         this.client.createConnection(this.endpoint);
         return client;
     }

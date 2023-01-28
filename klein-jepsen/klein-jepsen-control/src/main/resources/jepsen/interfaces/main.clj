@@ -127,7 +127,8 @@
          {:name (:header @testName)
           :client (java-client nil)
           :db (db nil)
-	  :nemesis (nemesis/compose (assoc @nemesisCallbacks #{:start :stop} (determineNemesis (:nemesis @enemy)))) 
+          :ssh    {:dummy? true}
+	  :nemesis (nemesis/compose (assoc @nemesisCallbacks #{:start :stop} (determineNemesis (:nemesis @enemy))))
           :generator (defaultGenerator opts)
           :checker (checker/compose @checkers)})
 )
