@@ -35,11 +35,11 @@ public class JepsenMain {
     private static final Logger LOG = LoggerFactory.getLogger(JepsenMain.class);
 
     public static void main(final String[] args) {
-        final JepsenConfig config = (new JepsenConfig()).add(JepsenConfig.NODES, "")
+        final JepsenConfig config = (new JepsenConfig()).add(JepsenConfig.NODES, "1:172.22.0.76:1218,2:172.22.0.76:1219,3:172.22.0.76:1220,4:172.22.0.76:1221,5:172.22.0.76:1222")
                 .add(JepsenConfig.USERNAME, "root")
-                .add(JepsenConfig.PASSWORD, "root")
+                .add(JepsenConfig.PASSWORD, "123456")
                 .add(JepsenConfig.NEMESIS, "partition-majorities-ring")
-                .add(JepsenConfig.TEST_NAME, "sample_test")
+                .add(JepsenConfig.TEST_NAME, "klein_test")
                 .add(JepsenConfig.TIME_LIMIT, "13")
                 .add(JepsenConfig.CLIENT_OP_WAIT_TIME, "1")
                 .add(JepsenConfig.NEMESIS_OP_WAIT_TIME, "3");

@@ -20,7 +20,6 @@ import clojure.lang.RT;
 import com.ofcoder.klein.jepsen.control.jepsen.JepsenMain;
 import com.ofcoder.klein.jepsen.control.jepsen.core.impl.KleinClient;
 import com.ofcoder.klein.jepsen.control.jepsen.core.impl.NoopDatabase;
-import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -150,12 +149,7 @@ public class JepsenExecutable {
     public void launchTest() {
         try {
             RT.loadResourceScript("jepsen/interfaces/main.clj", true);
-            String[] args;
-            if (StringUtil.isNotBlank(nodes)) {
-                args = new String[]{"test", "--nodes", nodes, "--username", username, "--password", password, "--time-limit", timeLimit};
-            } else {
-                args = new String[]{"test", "--username", username, "--password", password, "--time-limit", timeLimit};
-            }
+            String[] args = new String[]{"test", "--nodes", nodes, "--username", username, "--password", password, "--time-limit", timeLimit};
             RT.var("jepsen.interfaces", "setTestName").invoke(testName);
             RT.var("jepsen.interfaces", "setClientOpWaitTime").invoke(clientOpGapTime);
             RT.var("jepsen.interfaces", "setClient").invoke(client);
