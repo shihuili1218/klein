@@ -72,7 +72,7 @@
 
 (defn- create-client0 [test]
        (doto
-         (JepsenClient. test)))
+         (JepsenClient. "1:172.22.0.79:1218;2:172.22.0.80:1218;3:172.22.0.90:1218;4:172.22.0.91:1218;5:172.22.0.96:1218")))
 
 (def create-client (memoize create-client0))
 
