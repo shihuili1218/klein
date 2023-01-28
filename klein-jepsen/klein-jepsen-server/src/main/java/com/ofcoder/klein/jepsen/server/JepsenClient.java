@@ -19,6 +19,7 @@ package com.ofcoder.klein.jepsen.server;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
@@ -58,16 +59,32 @@ public class JepsenClient {
     /**
      * put.
      *
-     * @param key   key
      * @param value value
      * @return result
      */
-    public boolean put(final String key, final String value) {
+    public boolean put(final Integer value) {
+        final String key = "def";
+        LOG.info("call klein-server, op: put, key: {}, val: {}", key, value);
         PutReq req = new PutReq();
         req.setData(value);
         req.setKey(key);
         boolean o = client.sendRequestSync(endpoints.get(0), req, 1000);
         LOG.info("put result: {}", o);
+        return o;
+    }
+
+
+    /**
+     * get.
+     *
+     * @return result
+     */
+    public boolean get() {
+        final String key = "def";
+        GetReq req = new GetReq();
+        req.setKey(key);
+        boolean o = client.sendRequestSync(endpoints.get(0), req, 1000);
+        LOG.info("get result: {}", o);
         return o;
     }
 
