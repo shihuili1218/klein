@@ -19,15 +19,19 @@ package com.ofcoder.klein.jepsen.server;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.InvokeParam;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 import com.ofcoder.klein.rpc.grpc.GrpcClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 /**
@@ -71,7 +75,13 @@ public class JepsenClient {
         PutReq req = new PutReq();
         req.setData(value);
         req.setKey(key);
-        boolean o = client.sendRequestSync(endpoint, req, 1000);
+
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(req.getClass().getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+
+        boolean o = client.sendRequestSync(endpoint, param, 1000);
         LOG.info("call klein-server, op: put, key: {}, val: {}, result: {}", key, value, o);
         return o;
     }
@@ -86,7 +96,13 @@ public class JepsenClient {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
-        Integer o = client.sendRequestSync(endpoint, req, 1000);
+
+        InvokeParam param = InvokeParam.Builder.anInvokeParam()
+                .service(req.getClass().getSimpleName())
+                .method(RpcProcessor.KLEIN)
+                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+
+        Integer o = client.sendRequestSync(endpoint, param, 1000);
         LOG.info("get result: {}", o);
         return o;
     }
