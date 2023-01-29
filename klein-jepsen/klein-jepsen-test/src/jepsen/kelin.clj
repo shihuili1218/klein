@@ -68,7 +68,7 @@
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
-(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 5)})
+(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 500)})
 
 (defn- create-client0 [test]
   (doto
@@ -84,7 +84,7 @@
 (defn- read
   "read value by key from klein server"
   [client]
-  (info "read result: " (-> client :conn (.get))))
+  (doto (-> client :conn (.get))))
 
 (defrecord Client [conn]
   client/Client
@@ -95,7 +95,7 @@
   (invoke! [this test op]
     (try
       (case (:f op)
-        :read  (assoc op :type :ok, :value (read this))
+        :read  (assoc op :type :ok, :value (independent/tuple (:value op) (read this)))
         :write (do
                  (write this (:value op))
                  (assoc op :type :ok)))
@@ -139,3 +139,4 @@
    args))
 
 ;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --nodes 1:172.22.0.79:1218,2:172.22.0.80:1218,3:172.22.0.90:1218,4:172.22.0.91:1218,5:172.22.0.96:1218 --username root --password 123456
+;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456
