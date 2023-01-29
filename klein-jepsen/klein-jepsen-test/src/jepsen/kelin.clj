@@ -21,6 +21,8 @@
 (def fn-opts [[nil "--testfn TEST" "Test function name."]])
 
 (defonce klein-stop "stop.sh")
+(defonce klein-start "start.sh")
+(defonce klein-path "/root")
 
 (defn- parse-long [s] (Long/parseLong s))
 (defn- parse-boolean [s] (Boolean/parseBoolean s))
@@ -33,14 +35,15 @@
    db/DB
    (setup! [_ test node]
            (info node "installing klein" version)
-           (c/cd "~" (c/exec :sh "java -jar klein-server.jar"))
+           (c/cd klein-path
+                 (c/exec :sh klein-start))
            (Thread/sleep 10000)
            (info node "installed klein" version))
+
    (teardown! [_ test node]
               (info node "tearing down klein")
-              (c/exec :sh klein-stop)
-              (Thread/sleep 5000)
-              )))
+              (c/cd klein-path (c/exec :sh klein-stop))
+              (Thread/sleep 5000))))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
@@ -93,7 +96,7 @@
   (merge tests/noop-test
          {:pure-generators true
           :name            "klein"
-          ;          :os              centos/os
+          :os              os/noop
           :db              (db "0.0.1")
           :client          (Client. nil)
           :nemesis         (nemesis/partition-random-halves)
