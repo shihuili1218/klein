@@ -96,7 +96,7 @@
   (merge tests/noop-test
          {:pure-generators true
           :name            "klein"
-          :os              os/noop
+          :os              centos/os
           :db              (db "0.0.1")
           :client          (Client. nil)
           :nemesis         (nemesis/partition-random-halves)
