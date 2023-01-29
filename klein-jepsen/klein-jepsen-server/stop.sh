@@ -1,5 +1,5 @@
 #!/bin/bash
-pid=`ps -ef |grep atomic-server |grep java |awk -F' ' '{print $2}'`
+pid=`ps -ef |grep klein-server |grep java |awk -F' ' '{print $2}'`
 if [ "$pid" != "" ]
 then
     echo "kill $pid"
