@@ -18,18 +18,17 @@ package com.ofcoder.klein.jepsen.server;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 import com.ofcoder.klein.rpc.grpc.GrpcClient;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
 
 /**
  * jepsen‘s client.
@@ -39,21 +38,26 @@ import java.util.List;
 public class JepsenClient {
 
     static final Logger LOG = LoggerFactory.getLogger(KleinServer.class);
+    private static final Map<String, String> ROUTER = ImmutableMap.of(
+            "n1", "1:172.22.0.79:1218",
+            "n2", "2:172.22.0.80:1218",
+            "n3", "3:172.22.0.90:1218",
+            "n4", "4:172.22.0.91:1218",
+            "n5", "5:172.22.0.96:1218"
+    );
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
-    private final List<Endpoint> endpoints;
+    private final Endpoint endpoint;
     private final GrpcClient client;
 
-    public JepsenClient(final String clusterInfo) {
-        LOG.info("clusterInfo: {}", clusterInfo);
+    public JepsenClient(final String node) {
+        endpoint = RpcUtil.parseEndpoint(ROUTER.get(node));
+        LOG.info("node: {}", endpoint);
         KleinProp kleinProp = KleinProp.loadIfPresent();
 
-        endpoints = parseMember(clusterInfo);
         client = new GrpcClient();
         client.init(kleinProp.getRpcProp());
-        for (Endpoint endpoint : endpoints) {
-            client.createConnection(endpoint);
-        }
+        client.createConnection(endpoint);
     }
 
     /**
@@ -64,12 +68,11 @@ public class JepsenClient {
      */
     public boolean put(final Integer value) {
         final String key = "def";
-        LOG.info("call klein-server, op: put, key: {}, val: {}", key, value);
         PutReq req = new PutReq();
         req.setData(value);
         req.setKey(key);
-        boolean o = client.sendRequestSync(endpoints.get(0), req, 1000);
-        LOG.info("put result: {}", o);
+        boolean o = client.sendRequestSync(endpoint, req, 1000);
+        LOG.info("call klein-server, op: put, key: {}, val: {}, result: {}", key, value, o);
         return o;
     }
 
@@ -79,26 +82,13 @@ public class JepsenClient {
      *
      * @return result
      */
-    public boolean get() {
+    public Object get() {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
-        boolean o = client.sendRequestSync(endpoints.get(0), req, 1000);
+        Integer o = client.sendRequestSync(endpoint, req, 1000);
         LOG.info("get result: {}", o);
         return o;
     }
 
-    private List<Endpoint> parseMember(final String members) {
-        List<Endpoint> endpoints = new ArrayList<>();
-        if (StringUtils.isEmpty(members)) {
-            return endpoints;
-        }
-        for (String item : StringUtils.split(members, ";")) {
-            if (StringUtils.isEmpty(item)) {
-                continue;
-            }
-            endpoints.add(RpcUtil.parseEndpoint(item));
-        }
-        return endpoints;
-    }
 }
