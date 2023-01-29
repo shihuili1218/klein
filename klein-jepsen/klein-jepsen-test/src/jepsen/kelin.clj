@@ -121,8 +121,13 @@
           :model (model/register 0)
           :checker (checker/compose
                     {:perf     (checker/perf)
-                     :timeline (timeline/html)
-                     :linear   (checker/linearizable)})
+                     :indep (independent/checker
+                             (checker/compose
+                              {:timeline (timeline/html)
+                               :linear (checker/linearizable)}))
+;                     :timeline (timeline/html)
+;                     :linear   (checker/linearizable)
+                     })
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
                                 (gen/nemesis nil)
