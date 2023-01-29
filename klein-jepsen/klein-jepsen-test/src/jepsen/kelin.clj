@@ -35,14 +35,14 @@
    db/DB
    (setup! [_ test node]
            (info node "installing klein" version)
-           (c/cd (clojure.string/join "\\" [klein-path node])
+           (c/cd (clojure.string/join "/" [klein-path node])
                  (c/exec :sh klein-start))
            (Thread/sleep 10000)
            (info node "installed klein" version))
 
    (teardown! [_ test node]
               (info node "tearing down klein")
-              (c/cd (clojure.string/join "\\" [klein-path node])
+              (c/cd (clojure.string/join "/" [klein-path node])
                     (c/exec :sh klein-stop))
               (Thread/sleep 5000))))
 
