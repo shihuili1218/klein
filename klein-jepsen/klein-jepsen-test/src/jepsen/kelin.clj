@@ -18,8 +18,6 @@
             [jepsen.control.util :as cu]
             [jepsen.os :as os]))
 
-(defonce klein-control "control.sh")
-
 (def fn-opts [[nil "--testfn TEST" "Test function name."]])
 
 (defn- parse-long [s] (Long/parseLong s))
@@ -120,6 +118,11 @@
           ;          :os              centos/os
           ;          :db              (db "0.0.1")
           :client          (Client. nil)
+          :model (model/register 0)
+          :checker (checker/compose
+                    {:perf     (checker/perf)
+                     :timeline (timeline/html)
+                     :linear   (checker/linearizable)})
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
                                 (gen/nemesis nil)
