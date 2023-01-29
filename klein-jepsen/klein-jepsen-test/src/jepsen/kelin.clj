@@ -42,7 +42,8 @@
 
    (teardown! [_ test node]
               (info node "tearing down klein")
-              (c/cd klein-path (c/exec :sh klein-stop))
+              (c/cd (clojure.string/join "\\" [klein-path node])
+                    (c/exec :sh klein-stop))
               (Thread/sleep 5000))))
 
 ;client
@@ -108,12 +109,12 @@
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
                                 (gen/nemesis
-                                  (gen/seq
-                                    (cycle
-                                      [(gen/sleep 5)
-                                       {:type :info, :f :start}
-                                       (gen/sleep 5)
-                                       {:type :info, :f :stop}])))
+                                 (gen/seq
+                                  (cycle
+                                   [(gen/sleep 5)
+                                    {:type :info, :f :start}
+                                    (gen/sleep 5)
+                                    {:type :info, :f :stop}])))
                                 (gen/time-limit (:time-limit opts)))}
          opts))
 
