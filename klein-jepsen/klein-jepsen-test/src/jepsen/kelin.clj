@@ -20,35 +20,10 @@
 
 (def fn-opts [[nil "--testfn TEST" "Test function name."]])
 
+(defonce klein-stop "stop.sh")
+
 (defn- parse-long [s] (Long/parseLong s))
 (defn- parse-boolean [s] (Boolean/parseBoolean s))
-
-(def cli-opts
-  "Additional command line options."
-  [["-s"
-    "--slots SLOTS"
-    "Number of klein server ranges."
-    :default  1
-    :parse-fn parse-long
-    :validate [pos? "Must be a positive number"]]
-   ["-q"
-    "--quorum BOOL"
-    "Whether to read from quorum."
-    :default  false
-    :parse-fn parse-boolean
-    :validate [boolean? "Must be a boolean value."]]
-   ["-r"
-    "--rate HZ"
-    "Approximate number of requests per second, per thread."
-    :default  10
-    :parse-fn read-string
-    :validate [#(and (number? %) (pos? %)) "Must be a positive number"]]
-   [nil
-    "--ops-per-key NUM"
-    "Maximum number of operations on any given key."
-    :default  100
-    :parse-fn parse-long
-    :validate [pos? "Must be a positive integer."]]])
 
 ;;DB
 (defn db
@@ -62,7 +37,10 @@
            (Thread/sleep 10000)
            (info node "installed klein" version))
    (teardown! [_ test node]
-              (info node "tearing down klein"))))
+              (info node "tearing down klein")
+              (c/exec :sh klein-stop)
+              (Thread/sleep 5000)
+              )))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
@@ -116,18 +94,24 @@
          {:pure-generators true
           :name            "klein"
           ;          :os              centos/os
-          ;          :db              (db "0.0.1")
+          :db              (db "0.0.1")
           :client          (Client. nil)
-          :model (model/register 0)
-          :checker (checker/compose
-                    {:perf     (checker/perf)
-                     :timeline (timeline/html)
-                     :linear   (checker/linearizable)
-                     })
+          :nemesis         (nemesis/partition-random-halves)
+          :model           (model/register 0)
+          :checker         (checker/compose
+                            {:perf     (checker/perf)
+                             :timeline (timeline/html)
+                             :linear   (checker/linearizable)})
           :generator       (->> (gen/mix [r w])
                                 (gen/stagger 1)
-                                (gen/nemesis nil)
-                                (gen/time-limit 15))}
+                                (gen/nemesis
+                                  (gen/seq
+                                    (cycle
+                                      [(gen/sleep 5)
+                                       {:type :info, :f :start}
+                                       (gen/sleep 5)
+                                       {:type :info, :f :stop}])))
+                                (gen/time-limit (:time-limit opts)))}
          opts))
 
 (defn -main
