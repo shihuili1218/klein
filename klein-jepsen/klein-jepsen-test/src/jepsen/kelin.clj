@@ -66,7 +66,7 @@
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
-(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 500)})
+(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 150)})
 
 (defn- create-client0 [test]
   (doto
@@ -93,7 +93,7 @@
   (invoke! [this test op]
     (try
       (case (:f op)
-        :read  (assoc op :type :ok, :value (independent/tuple (:value op) (read this)))
+        :read  (assoc op :type :ok, :value (read this))
         :write (do
                  (write this (:value op))
                  (assoc op :type :ok)))
