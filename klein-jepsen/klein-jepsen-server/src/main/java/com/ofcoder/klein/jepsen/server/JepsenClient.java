@@ -43,11 +43,11 @@ public class JepsenClient {
 
     static final Logger LOG = LoggerFactory.getLogger(KleinServer.class);
     private static final Map<String, String> ROUTER = ImmutableMap.of(
-            "n1", "1:172.22.0.79:1218",
-            "n2", "2:172.22.0.80:1218",
-            "n3", "3:172.22.0.90:1218",
-            "n4", "4:172.22.0.91:1218",
-            "n5", "5:172.22.0.96:1218"
+            "n1", "1:127.0.0.1:1218",
+            "n2", "2:127.0.0.1:1219",
+            "n3", "3:127.0.0.1:1220",
+            "n4", "4:127.0.0.1:1221",
+            "n5", "5:127.0.0.1:1222"
     );
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
