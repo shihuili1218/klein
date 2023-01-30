@@ -129,6 +129,20 @@
    (fn start [test node] (stop! node) [:killed node])
    (fn stop [test node] (start! node) [:restarted node])))
 
+(defn recover
+  "A generator which stops the nemesis and allows some time for recovery."
+  []
+  (gen/nemesis
+   (gen/phases
+    (gen/once {:type :info, :f :stop})
+    (gen/sleep 20))))
+
+(defn read-once
+  "A generator which reads exactly once."
+  []
+  (gen/clients
+   (gen/once {:type :invoke, :f :read})))
+
 (defn klein-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh, :concurrency, ...), constructs a test map."
   [opts]
@@ -146,7 +160,8 @@
                              :timeline (timeline/html)
                              :linear   (checker/linearizable)})
           :generator       (->> (gen/mix [r w])
-                                (gen/stagger 1)
+                                (gen/stagger 1/10)
+                                (gen/delay 1/10)
                                 (gen/nemesis
                                  (gen/seq
                                   (cycle
@@ -154,7 +169,9 @@
                                     {:type :info, :f :start}
                                     (gen/sleep 10)
                                     {:type :info, :f :stop}])))
-                                (gen/time-limit (:time-limit opts)))}
+                                (gen/time-limit (:time-limit opts))
+                                (recover)
+                                (read-once))}
          opts))
 
 (defn -main
