@@ -16,13 +16,6 @@
  */
 package com.ofcoder.klein;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
@@ -37,6 +30,12 @@ import com.ofcoder.klein.core.lock.KleinLockImpl;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Klein starter.
@@ -48,6 +47,7 @@ public final class Klein {
     private static volatile AtomicBoolean started = new AtomicBoolean(false);
     private KleinCache cache;
     private KleinLock lock;
+    private ShutdownHook shutdownHook;
 
     private Klein() {
     }
@@ -68,6 +68,10 @@ public final class Klein {
         } catch (InterruptedException e) {
             LOG.warn(e.getMessage(), e);
         }
+    }
+
+    public void setShutdownHook(final ShutdownHook shutdownHook) {
+        this.shutdownHook = shutdownHook;
     }
 
     /**
@@ -101,6 +105,9 @@ public final class Klein {
             ConsensusEngine.shutdown();
             StorageEngine.shutdown();
             RpcEngine.shutdown();
+            if (kl.shutdownHook != null) {
+                kl.shutdownHook.tearingDown();
+            }
             LOG.info("*** Klein shut down");
         }));
         return kl;
@@ -123,4 +130,10 @@ public final class Klein {
         private static final Klein INSTANCE = new Klein();
     }
 
+    public interface ShutdownHook {
+        /**
+         * tearingDown.
+         */
+        void tearingDown();
+    }
 }
