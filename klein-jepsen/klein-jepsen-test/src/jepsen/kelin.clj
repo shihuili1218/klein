@@ -164,7 +164,7 @@
                        (range)
                        (fn [k]
                          (->> (gen/mix [r w])
-                              (gen/stagger (/ (:rate opts)))
+                              (gen/stagger 1/10)
                               (gen/limit (:ops-per-key opts)))))
                       (gen/nemesis
                        (gen/seq
