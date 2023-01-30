@@ -32,17 +32,17 @@
   (info "Start" node)
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
-          (c/exec :sh klein-start)))
+          (c/exec :sh klein-start))
   (catch Exception e
-    (info "Start node occur exception " (.getMessage e))))
+    (info "Start node occur exception " (.getMessage e)))))
 
 (defn stop! [node]
   (info "Stop" node)
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
-          (c/exec :sh klein-stop)))
+          (c/exec :sh klein-stop))
   (catch Exception e
-    (info "Stop node occur exception " (.getMessage e))))
+    (info "Stop node occur exception " (.getMessage e)))))
 
 (defn db
   "klein DB for a particular version."
