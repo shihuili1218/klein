@@ -33,16 +33,16 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-start))
-  (catch Exception e
-    (info "Start node occur exception " (.getMessage e)))))
+    (catch Exception e
+      (info "Start node occur exception " (.getMessage e)))))
 
 (defn stop! [node]
   (info "Stop" node)
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-stop))
-  (catch Exception e
-    (info "Stop node occur exception " (.getMessage e)))))
+    (catch Exception e
+      (info "Stop node occur exception " (.getMessage e)))))
 
 (defn db
   "klein DB for a particular version."
@@ -159,19 +159,20 @@
                             {:perf     (checker/perf)
                              :timeline (timeline/html)
                              :linear   (checker/linearizable)})
-          :generator       (->> (gen/mix [r w])
-                                (gen/stagger 1/10)
-                                (gen/delay 1/10)
-                                (gen/nemesis
-                                 (gen/seq
-                                  (cycle
-                                   [(gen/sleep 10)
-                                    {:type :info, :f :start}
-                                    (gen/sleep 10)
-                                    {:type :info, :f :stop}])))
-                                (gen/time-limit (:time-limit opts))
-                                (recover)
-                                (read-once))}
+          :generator       (gen/phases
+                            (->> (gen/mix [r w])
+                                 (gen/stagger 1/10)
+                                 (gen/delay 1/10)
+                                 (gen/nemesis
+                                  (gen/seq
+                                   (cycle
+                                    [(gen/sleep 10)
+                                     {:type :info, :f :start}
+                                     (gen/sleep 10)
+                                     {:type :info, :f :stop}])))
+                                 (gen/time-limit (:time-limit opts)))
+                            (recover)
+                            (read-once))}
          opts))
 
 (defn -main
