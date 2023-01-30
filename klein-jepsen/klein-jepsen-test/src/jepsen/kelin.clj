@@ -28,23 +28,29 @@
 (defn- parse-boolean [s] (Boolean/parseBoolean s))
 
 ;;DB
+(defn start! [node]
+  (info "Start" node)
+
+  (c/cd (clojure.string/join "/" [klein-path ""])
+        (c/exec :sh klein-start)))
+
+(defn stop! [node]
+  (info "Stop" node)
+  (c/cd (clojure.string/join "/" [klein-path ""])
+        (c/exec :sh klein-stop)))
+
 (defn db
   "klein DB for a particular version."
   [version]
   (reify
    db/DB
    (setup! [_ test node]
-           (info node "installing klein" version)
-           (c/cd (clojure.string/join "/" [klein-path ""])
-                 (c/exec :sh klein-start))
-           (Thread/sleep 10000)
-           (info node "installed klein" version))
+           (start! node)
+           (Thread/sleep 15000))
 
    (teardown! [_ test node]
-              (info node "tearing down klein")
-              (c/cd (clojure.string/join "/" [klein-path ""])
-                    (c/exec :sh klein-stop))
-              (Thread/sleep 5000))))
+              (stop! node)
+              (Thread/sleep 10000))))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
