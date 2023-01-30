@@ -29,6 +29,8 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.CountDownLatch;
+
 /**
  * KleinServer for deploy klein.
  *
@@ -43,7 +45,7 @@ public class KleinServer {
         KleinProp kleinProp = KleinProp.loadFromFile("config/server.properties");
         LOG.info(OBJECT_MAPPER.writeValueAsString(kleinProp));
 
-        Klein instance = Klein.startup();
+        final Klein instance = Klein.startup();
         instance.awaitInit();
         KleinCache cache = instance.getCache();
 
@@ -53,6 +55,15 @@ public class KleinServer {
         RpcEngine.registerProcessor(new PutProcessor(cache));
 
         instance.awaitInit();
-        System.in.read();
+
+        final CountDownLatch latch = new CountDownLatch(1);
+        instance.setShutdownHook(new Klein.ShutdownHook() {
+            @Override
+            public void tearingDown() {
+                latch.countDown();
+            }
+        });
+
+        latch.await();
     }
 }

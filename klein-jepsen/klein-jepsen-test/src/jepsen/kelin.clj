@@ -51,11 +51,11 @@
    db/DB
    (setup! [_ test node]
            (start! node)
-           (Thread/sleep 15000))
+           (Thread/sleep 10000))
 
    (teardown! [_ test node]
               (stop! node)
-              (Thread/sleep 10000))))
+              (Thread/sleep 5000))))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
@@ -167,7 +167,7 @@
                         (cycle
                          [(gen/sleep 10)
                           {:type :info, :f :start}
-                          (gen/sleep 10)
+                          (gen/sleep 5)
                           {:type :info, :f :stop}])))
                       (gen/time-limit (:time-limit opts)))}
          opts))
