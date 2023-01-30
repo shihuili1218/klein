@@ -148,34 +148,32 @@
   [opts]
   (info "opts: " opts)
   (merge tests/noop-test
-         {:pure-generators true
-          :name            "klein"
-          :os              os/noop
-          :db              (db "0.0.1")
-          :client          (Client. nil)
-          :model           (model/register 0)
-          :nemesis         (nemesis/partition-random-halves)
-          :checker         (checker/compose
-                            {:perf     (checker/perf)
-                             :timeline (timeline/html)
-                             :linear   (checker/linearizable)})
-          :generator       (->>
-                            (independent/concurrent-generator
-                             (:concurrency opts 5)
-                             (range)
-                             (fn [k]
-                               (->> (gen/mix [r w])
-                                    (gen/stagger (/ (:rate opts)))
-                                    (gen/delay 1/10)
-                                    (gen/limit (:ops-per-key opts)))))
-                            (gen/nemesis
-                             (gen/seq
-                               (cycle
-                                 [(gen/sleep 5)
-                                  {:type :info, :f :start}
-                                  (gen/sleep 5)
-                                  {:type :info, :f :stop}])))
-                            (gen/time-limit (:time-limit opts)))}
+         {:name      "klein"
+          :os        os/noop
+          :db        (db "0.0.1")
+          :client    (Client. nil)
+          :model     (model/register 0)
+          :nemesis   (nemesis/partition-random-halves)
+          :checker   (checker/compose
+                      {:perf     (checker/perf)
+                       :timeline (timeline/html)
+                       :linear   (checker/linearizable)})
+          :generator (->>
+                      (independent/concurrent-generator
+                       (:concurrency opts 5)
+                       (range)
+                       (fn [k]
+                         (->> (gen/mix [r w])
+                              (gen/stagger (/ (:rate opts)))
+                              (gen/limit (:ops-per-key opts)))))
+                      (gen/nemesis
+                       (gen/seq
+                         (cycle
+                           [(gen/sleep 5)
+                            {:type :info, :f :start}
+                            (gen/sleep 5)
+                            {:type :info, :f :stop}])))
+                      (gen/time-limit (:time-limit opts)))}
          opts))
 
 (defn -main
