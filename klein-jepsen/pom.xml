@@ -15,7 +15,6 @@
     <packaging>pom</packaging>
     <modules>
         <module>klein-jepsen-server</module>
-        <module>klein-jepsen-control</module>
     </modules>
 
     <properties>
