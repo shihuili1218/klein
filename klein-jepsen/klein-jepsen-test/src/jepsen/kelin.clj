@@ -96,6 +96,34 @@
 
   (close! [_ test]))
 
+(defn mostly-small-nonempty-subset
+  "Returns a subset of the given collection, with a logarithmically decreasing
+  probability of selecting more elements. Always selects at least one element.
+
+      (->> #(mostly-small-nonempty-subset [1 2 3 4 5])
+           repeatedly
+           (map count)
+           (take 10000)
+           frequencies
+           sort)
+      ; => ([1 3824] [2 2340] [3 1595] [4 1266] [5 975])"
+  [xs]
+  (-> xs
+      count
+      inc
+      Math/log
+      rand
+      Math/exp
+      long
+      (take (shuffle xs))))
+
+(def crash-nemesis
+  "A nemesis that crashes a random subset of nodes."
+  (nemesis/node-start-stopper
+   mostly-small-nonempty-subset
+   (fn start [test node] (stop! node) [:killed node])
+   (fn stop [test node] (start! node) [:restarted node])))
+
 (defn klein-test
   "Given an options map from the command line runner (e.g. :nodes, :ssh, :concurrency, ...), constructs a test map."
   [opts]
@@ -106,7 +134,7 @@
           :os              os/noop
           :db              (db "0.0.1")
           :client          (Client. nil)
-          :nemesis         (nemesis/partition-random-halves)
+          :nemesis         (crash-nemesis)
           :model           (model/register 0)
           :checker         (checker/compose
                             {:perf     (checker/perf)
@@ -117,10 +145,10 @@
                                 (gen/nemesis
                                  (gen/seq
                                   (cycle
-                                   [(gen/sleep 5)
-                                    {:type :info, :f :start}
-                                    (gen/sleep 5)
-                                    {:type :info, :f :stop}])))
+                                    [(gen/sleep 10)
+                                     {:type :info, :f :start}
+                                     (gen/sleep 10)
+                                     {:type :info, :f :stop}])))
                                 (gen/time-limit (:time-limit opts)))}
          opts))
 
