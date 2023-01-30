@@ -30,14 +30,19 @@
 ;;DB
 (defn start! [node]
   (info "Start" node)
-
-  (c/cd (clojure.string/join "/" [klein-path ""])
-        (c/exec :sh klein-start)))
+  (try
+    (c/cd (clojure.string/join "/" [klein-path ""])
+          (c/exec :sh klein-start)))
+  (catch Exception e
+    (info "Start node occur exception " (.getMessage e))))
 
 (defn stop! [node]
   (info "Stop" node)
-  (c/cd (clojure.string/join "/" [klein-path ""])
-        (c/exec :sh klein-stop)))
+  (try
+    (c/cd (clojure.string/join "/" [klein-path ""])
+          (c/exec :sh klein-stop)))
+  (catch Exception e
+    (info "Stop node occur exception " (.getMessage e))))
 
 (defn db
   "klein DB for a particular version."
@@ -134,7 +139,7 @@
           :os              os/noop
           :db              (db "0.0.1")
           :client          (Client. nil)
-          :nemesis         (crash-nemesis)
+          :nemesis         crash-nemesis
           :model           (model/register 0)
           :checker         (checker/compose
                             {:perf     (checker/perf)
@@ -145,10 +150,10 @@
                                 (gen/nemesis
                                  (gen/seq
                                   (cycle
-                                    [(gen/sleep 10)
-                                     {:type :info, :f :start}
-                                     (gen/sleep 10)
-                                     {:type :info, :f :stop}])))
+                                   [(gen/sleep 10)
+                                    {:type :info, :f :start}
+                                    (gen/sleep 10)
+                                    {:type :info, :f :stop}])))
                                 (gen/time-limit (:time-limit opts)))}
          opts))
 
