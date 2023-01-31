@@ -24,7 +24,6 @@ import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.core.cache.CacheSM;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.cache.KleinCacheImpl;
-import com.ofcoder.klein.core.config.KleinProp;
 import com.ofcoder.klein.core.lock.KleinLock;
 import com.ofcoder.klein.core.lock.KleinLockImpl;
 import com.ofcoder.klein.rpc.facade.RpcEngine;

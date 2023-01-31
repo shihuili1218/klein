@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;

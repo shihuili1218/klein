@@ -23,14 +23,14 @@ import java.io.Serializable;
  *
  * @author 释慧利
  */
-public class MetaData implements Serializable {
+public class MetaData<D extends Serializable> implements Serializable {
     private long expire = -1;
-    private Serializable data;
+    private D data;
 
     public MetaData() {
     }
 
-    public MetaData(final long expire, final Serializable data) {
+    public MetaData(final long expire, final D data) {
         this.expire = expire;
         this.data = data;
     }
@@ -43,11 +43,11 @@ public class MetaData implements Serializable {
         this.expire = expire;
     }
 
-    public Serializable getData() {
+    public D getData() {
         return data;
     }
 
-    public void setData(final Serializable data) {
+    public void setData(final D data) {
         this.data = data;
     }
 }

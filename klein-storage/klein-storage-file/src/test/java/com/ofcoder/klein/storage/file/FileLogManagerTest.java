@@ -1,4 +1,4 @@
-package com.ofcoder.klein.storage.jvm;
+package com.ofcoder.klein.storage.file;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -15,7 +15,7 @@ import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
 
-public class JvmLogManagerTest {
+public class FileLogManagerTest {
     LogManager join;
 
     @Before

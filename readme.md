@@ -50,7 +50,7 @@ Klein instance = Klein.startup();
 instance.getCache().put("hello", "klein");
 ```
 ### set property
-For all configurable parameters, see: `com.ofcoder.klein.core.config.KleinProp`
+For all configurable parameters, see: `com.ofcoder.klein.KleinProp`
 
 You can set it through `System#setProperty` or get the `KleinProp` object
 ```

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.jvm;
+package com.ofcoder.klein.storage.file;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,8 +48,8 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  * @author 释慧利
  */
 @Join
-public class JvmLogManager<P extends Serializable> implements LogManager<P> {
-    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", "/data");
+public class FileLogManager<P extends Serializable> implements LogManager<P> {
+    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "/data"));
     private static String selfPath;
     private static String metaPath;
 
@@ -61,11 +61,6 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public void init(final StorageProp op) {
-        File file = new File(BASE_PATH);
-        if (!file.exists()) {
-            boolean mkdir = file.mkdir();
-            // do nothing for mkdir result
-        }
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
@@ -74,7 +69,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         selfPath = BASE_PATH + File.separator + op.getId();
         File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
-            boolean mkdir = selfFile.mkdir();
+            boolean mkdir = selfFile.mkdirs();
             // do nothing for mkdir result
         }
 
@@ -168,7 +163,7 @@ public class JvmLogManager<P extends Serializable> implements LogManager<P> {
         }
         File baseDir = new File(bastPath);
         if (!baseDir.exists()) {
-            boolean mkdir = baseDir.mkdir();
+            boolean mkdir = baseDir.mkdirs();
         }
 
         File lastFile = new File(bastPath + "last");

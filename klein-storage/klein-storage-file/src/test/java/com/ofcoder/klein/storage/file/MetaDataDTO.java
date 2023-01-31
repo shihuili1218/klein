@@ -14,44 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.core.config;
+package com.ofcoder.klein.storage.file;
 
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
-
-import java.io.File;
+import com.ofcoder.klein.storage.facade.LogManager;
 
 /**
- * Cache Property.
- *
  * @author 释慧利
  */
-public class CacheProp {
+public class MetaDataDTO implements LogManager.MetaData {
+    private int id;
+    private String name;
 
-    private String id = SystemPropertyUtil.get("klein.id", "1");
-    private int memorySize = SystemPropertyUtil.getInt("klein.cache.lru.memory-size", 3);
-    private String dataPath = SystemPropertyUtil.get("klein.data-path", "/data") + File.separator + "klein-cache.mdb";
-
-    public String getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(final String id) {
+    public void setId(int id) {
         this.id = id;
     }
 
-    public int getMemorySize() {
-        return memorySize;
+    public String getName() {
+        return name;
     }
 
-    public void setMemorySize(final int memorySize) {
-        this.memorySize = memorySize;
-    }
-
-    public String getDataPath() {
-        return dataPath;
-    }
-
-    public void setDataPath(final String dataPath) {
-        this.dataPath = dataPath;
+    public void setName(String name) {
+        this.name = name;
     }
 }
