@@ -18,6 +18,8 @@ package com.ofcoder.klein.core.cache;
 
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
+import java.io.File;
+
 /**
  * Cache Property.
  *
@@ -28,7 +30,7 @@ public class CacheProp {
     private String id = SystemPropertyUtil.get("klein.id", "1");
     private boolean lru = SystemPropertyUtil.getBoolean("klein.cache.lru", false);
     private int memorySize = SystemPropertyUtil.getInt("klein.cache.lru.memory-size", 500);
-    private String dataPath = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "/data"));
+    private String dataPath = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data");
 
     public String getId() {
         return id;
