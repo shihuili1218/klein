@@ -81,6 +81,9 @@ KleinProp prop = KleinProp.loadIfPresent();
 - [ ] Automatic member discovery (research)
 - [x] NWR
 - [ ] Verified by jepsen
+  - [x] Linearly consistent read and write
+  - [ ] Network partition
+  - [ ] Member outage
 
 ### Cache
 - [x] Basic functions such as reading, writing, etc
