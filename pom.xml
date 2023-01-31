@@ -113,8 +113,8 @@
                 <version>${project.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.ofcoder.klein.storage.jvm</groupId>
-                <artifactId>klein-storage-jvm</artifactId>
+                <groupId>com.ofcoder.klein.storage.file</groupId>
+                <artifactId>klein-storage-file</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.ExistsProcessor;
 import com.ofcoder.klein.jepsen.server.rpc.GetProcessor;
 import com.ofcoder.klein.jepsen.server.rpc.InvalidateProcessor;

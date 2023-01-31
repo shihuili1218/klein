@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.core.config;
+package com.ofcoder.klein;
 
 import java.io.FileInputStream;
 import java.util.Properties;
@@ -22,6 +22,7 @@ import java.util.Properties;
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.core.cache.CacheProp;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 
@@ -34,7 +35,7 @@ public class KleinProp {
     private String id = SystemPropertyUtil.get("klein.id", "1");
     private int port = SystemPropertyUtil.getInt("klein.port", 1218);
     private String ip = SystemPropertyUtil.get("klein.ip", "127.0.0.1");
-    private String storage = SystemPropertyUtil.get("klein.storage", "jvm");
+    private String storage = SystemPropertyUtil.get("klein.storage", "file");
     private String consensus = SystemPropertyUtil.get("klein.consensus", "paxos");
     private String rpc = SystemPropertyUtil.get("klein.rpc", "grpc");
     private ConsensusProp consensusProp = new ConsensusProp();

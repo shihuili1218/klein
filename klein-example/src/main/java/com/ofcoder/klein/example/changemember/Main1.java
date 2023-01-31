@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.core.config.KleinProp;
+import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**

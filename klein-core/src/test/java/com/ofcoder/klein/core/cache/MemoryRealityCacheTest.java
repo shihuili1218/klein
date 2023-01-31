@@ -4,11 +4,11 @@ import org.junit.Assert;
 
 import junit.framework.TestCase;
 
-public class CacheSMTest extends TestCase {
+public class MemoryRealityCacheTest extends TestCase {
 
     public void test_MemoryMap_NoUse() {
         int initialCapacity = 3;
-        CacheSM.MemoryMap cache = new CacheSM.MemoryMap(initialCapacity);
+        LruRealityCache.MemoryMap cache = new LruRealityCache.MemoryMap(initialCapacity);
         cache.put("4", 4);
         cache.put("3", 4);
         cache.put("1", 4);
@@ -21,7 +21,7 @@ public class CacheSMTest extends TestCase {
 
     public void test_MemoryMap_Used() {
         int initialCapacity = 3;
-        CacheSM.MemoryMap cache = new CacheSM.MemoryMap(initialCapacity);
+        LruRealityCache.MemoryMap cache = new LruRealityCache.MemoryMap(initialCapacity);
         cache.put("4", 4);
         cache.put("3", 4);
         cache.put("1", 4);

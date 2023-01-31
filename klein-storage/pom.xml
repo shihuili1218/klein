@@ -17,7 +17,7 @@
     <modules>
         <module>klein-storage-facade</module>
         <module>klein-storage-h2</module>
-        <module>klein-storage-jvm</module>
+        <module>klein-storage-file</module>
     </modules>
 
     <properties>
