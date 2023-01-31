@@ -1,6 +1,9 @@
 
 ### [English](readme.md)
 <p align="center">
+    <strong>感谢JetBrains提供的<a target="_blank" href="https://www.jetbrains.com/community/opensource">免费授权</a>.</strong>
+</p>
+<p align="center">
     <strong>Open source：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
 </p>
 <p align="center">
@@ -76,7 +79,10 @@ KleinProp prop = KleinProp.loadIfPresent();
   - [x] 优化写请求(写请求只能由Master执行，避免活锁)
 - [ ] 成员自动发现(调研)
 - [x] NWR
-- [ ] Verified by jepsen
+- [x] jepsen校验正确性
+  - [x] 线性一致性读写
+  - [ ] 分区
+  - [ ] 成员宕机
 
 ### 缓存
 - [x] 读、写、等基础功能
