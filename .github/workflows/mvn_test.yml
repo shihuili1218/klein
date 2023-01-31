@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Create user
-        run: useradd jepsen -p '$6$uo0o2uUfp9cmgfkZ$PEXadCNjxyWxWzG45wGqWoKxpaxx5jL6VnHmhHwxteAq21vJ6IY4r3YVbiGaaRtjx3RzAFgLTAv2ipaifGIHf0' && su jepsen && 123456
+        run: sudo useradd jepsen -p '$6$uo0o2uUfp9cmgfkZ$PEXadCNjxyWxWzG45wGqWoKxpaxx5jL6VnHmhHwxteAq21vJ6IY4r3YVbiGaaRtjx3RzAFgLTAv2ipaifGIHf0' && su jepsen && 123456
         
       - uses: actions/checkout@v2
       - name: Set up JDK 1.8
