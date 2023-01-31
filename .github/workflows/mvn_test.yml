@@ -2,7 +2,7 @@ name: mvn_test
 
 on:
   push:
-    branches: [ main test/jepsen ]
+    branches: [ test/jepsen ]
   pull_request:
     branches: [ main ]
 
