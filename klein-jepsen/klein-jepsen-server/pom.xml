@@ -99,6 +99,7 @@
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.1.1</version>
                 <configuration>
+                    <finalName>klein-jepsen-server-shade</finalName>
                     <filters>
                         <filter>
                             <artifact>*:*</artifact>

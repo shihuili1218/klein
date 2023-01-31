@@ -10,7 +10,7 @@
   :main jepsen.kelin
   :jvm-opts ["-Xms6g" "-Xmx6g" "-server" "-XX:+UseG1GC"]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [jepsen "0.1.8"]
+                 [jepsen "0.1.11"]
                  [clj-ssh "0.5.14"]
                  [cider/cider-nrepl "0.17.0-SNAPSHOT"]
                  [org.clojure/tools.nrepl "0.2.13" :exclusions [org.clojure/clojure]]

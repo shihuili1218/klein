@@ -22,7 +22,7 @@
 
 (defonce klein-stop "stop.sh")
 (defonce klein-start "start.sh")
-(defonce klein-path "/root")
+(defonce klein-path "~")
 
 (defn- parse-long [s] (Long/parseLong s))
 (defn- parse-boolean [s] (Boolean/parseBoolean s))
@@ -31,7 +31,7 @@
 (defn start! [node]
   (info "Start" node)
   (try
-    (c/cd (clojure.string/join "/" [klein-path ""])
+    (c/cd (clojure.string/join "/" [klein-path node])
           (c/exec :sh klein-start))
     (catch Exception e
       (info "Start node occur exception " (.getMessage e)))))
@@ -39,7 +39,7 @@
 (defn stop! [node]
   (info "Stop" node)
   (try
-    (c/cd (clojure.string/join "/" [klein-path ""])
+    (c/cd (clojure.string/join "/" [klein-path node])
           (c/exec :sh klein-stop))
     (catch Exception e
       (info "Stop node occur exception " (.getMessage e)))))

@@ -1,6 +1,9 @@
 ### [中文](readme_zh_cn.md)
 
 <p align="center">
+    <strong>Thanks to JetBrains for the <a target="_blank" href="https://www.jetbrains.com/community/opensource">free license</a>.</strong>
+</p>
+<p align="center">
     <strong>Open source：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
 </p>
 <p align="center">
