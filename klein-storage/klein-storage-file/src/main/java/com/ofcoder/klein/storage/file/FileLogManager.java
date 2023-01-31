@@ -16,6 +16,18 @@
  */
 package com.ofcoder.klein.storage.file;
 
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.StreamUtil;
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
+import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
+import com.ofcoder.klein.storage.facade.exception.StorageException;
+import org.apache.commons.io.IOUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -29,19 +41,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
-import org.apache.commons.io.IOUtils;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-import com.ofcoder.klein.storage.facade.exception.StorageException;
-
 /**
  * Jvm LogManager.
  *
@@ -49,7 +48,7 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  */
 @Join
 public class FileLogManager<P extends Serializable> implements LogManager<P> {
-    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "/data"));
+    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data");
     private static String selfPath;
     private static String metaPath;
 
