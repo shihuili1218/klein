@@ -2,7 +2,7 @@ name: mvn_test
 
 on:
   push:
-    branches: [ test/jepsen ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -47,43 +47,3 @@ jobs:
          
       - name: Test klein-core
         run:  mvn --projects klein-core test 
-        
-  jepsen_test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create user
-        run: sudo useradd jepsen -p '$6$uo0o2uUfp9cmgfkZ$PEXadCNjxyWxWzG45wGqWoKxpaxx5jL6VnHmhHwxteAq21vJ6IY4r3YVbiGaaRtjx3RzAFgLTAv2ipaifGIHf0' && su jepsen && 123456
-        
-      - uses: actions/checkout@v2
-      - name: Set up JDK 1.8
-        uses: actions/setup-java@v1
-        with:
-          java-version: 1.8
-          
-      - name: Maven Install
-        run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-        
-      - name: Assembly Klein-Server
-        run: mvn --projects klein-jepsen/klein-jepsen-server clean assembly:assembly
-       
-      - name: Install n1..n5
-        run: cp klein-jepsen/klein-jepsen-server/deploy/github-action/* ~
-             && cp klein-jepsen/klein-jepsen-server/target/klein-jepsen-server-shade.jar ~/n1 \
-             && cp klein-jepsen/klein-jepsen-server/target/klein-jepsen-server-shade.jar ~/n2 \
-             && cp klein-jepsen/klein-jepsen-server/target/klein-jepsen-server-shade.jar ~/n3 \
-             && cp klein-jepsen/klein-jepsen-server/target/klein-jepsen-server-shade.jar ~/n4 \
-             && cp klein-jepsen/klein-jepsen-server/target/klein-jepsen-server-shade.jar ~/n5 \
-             && ls ~ 
-             
-      - name: Init Host
-        run: sudo echo '127.0.0.1 n1' >> /etc/hosts \
-              && sudo echo '127.0.0.1 n2' >> /etc/hosts \
-              && sudo echo '127.0.0.1 n3' >> /etc/hosts \
-              && sudo echo '127.0.0.1 n4' >> /etc/hosts \
-              && sudo echo '127.0.0.1 n5' >> /etc/hosts \
-              && cat /etc/hosts 
-        
-      - name: jepsen test
-        run: lein run test --time-limit 40 --concurrency 5 --test-count 1 --username root --password 123456
-  
-                    
