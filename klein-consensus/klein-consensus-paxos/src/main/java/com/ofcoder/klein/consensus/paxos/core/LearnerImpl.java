@@ -32,7 +32,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
@@ -83,6 +82,8 @@ public class LearnerImpl implements Learner {
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
+    private Long lastAppliedId = 0L;
+    private final Object appliedIdLock = new Object();
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -143,11 +144,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void loadSnap(final Map<String, Snap> snaps) {
-        snaps.forEach(this::loadSnap);
-    }
-
-    private void loadSnap(final String group, final Snap snap) {
+    public void loadSnap(final String group, final Snap snap) {
         if (snap == null) {
             return;
         }
@@ -171,11 +168,33 @@ public class LearnerImpl implements Learner {
 
             sm.loadSnap(snap);
             self.updateLastCheckpoint(snap.getCheckpoint());
-            self.updateCurAppliedInstanceId(snap.getCheckpoint());
             self.updateCurInstanceId(snap.getCheckpoint());
+            updateAppliedId(snap.getCheckpoint());
+
+            Set<Long> applied = applyCallback.keySet().stream().filter(it -> snap.getCheckpoint() >= it).collect(Collectors.toSet());
+            applied.forEach(applyCallback::remove);
+
             LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         } finally {
             snapLock.unlock();
+        }
+    }
+
+    @Override
+    public void replayLog(final long start) {
+        //
+    }
+
+    @Override
+    public long getLastAppliedInstanceId() {
+        return lastAppliedId;
+    }
+
+    private void updateAppliedId(final long instanceId) {
+        if (lastAppliedId < instanceId) {
+            synchronized (appliedIdLock) {
+                this.lastAppliedId = Math.max(lastAppliedId, instanceId);
+            }
         }
     }
 
@@ -190,17 +209,17 @@ public class LearnerImpl implements Learner {
     }
 
     private void apply(final long instanceId) {
-        final long maxAppliedInstanceId = self.getCurAppliedInstanceId();
         final long lastCheckpoint = self.getLastCheckpoint();
-        final long lastApplyId = Math.max(maxAppliedInstanceId, lastCheckpoint);
+        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long exceptConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, maxAppliedInstanceId, lastCheckpoint);
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
 
         if (instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
-        } else if (instanceId > exceptConfirmId) {
-
+        }
+        if (instanceId > exceptConfirmId) {
+            // boost.
             for (long i = exceptConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
@@ -217,21 +236,7 @@ public class LearnerImpl implements Learner {
         }
         // else: instanceId == exceptConfirmId, do apply.
 
-        // update log to applied.
-        Instance<Proposal> localInstance;
-        try {
-            logManager.getLock().writeLock().lock();
-
-            localInstance = logManager.getInstance(instanceId);
-            if (!localInstance.getApplied().compareAndSet(false, true)) {
-                // the instance has been applied.
-                return;
-            }
-            logManager.updateInstance(localInstance);
-            self.updateCurAppliedInstanceId(instanceId);
-        } finally {
-            logManager.getLock().writeLock().unlock();
-        }
+        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
 
         try {
             Map<Proposal, Object> applyResult = new HashMap<>();
@@ -240,6 +245,8 @@ public class LearnerImpl implements Learner {
                 Object result = this._apply(localInstance.getInstanceId(), data);
                 applyResult.put(data, result);
             }
+            updateAppliedId(instanceId);
+
             List<ProposeDone> remove = applyCallback.remove(instanceId);
             if (remove != null) {
                 remove.forEach(it -> it.applyDone(applyResult));
@@ -277,7 +284,6 @@ public class LearnerImpl implements Learner {
             LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
             return null;
         }
-
     }
 
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
@@ -370,7 +376,6 @@ public class LearnerImpl implements Learner {
                             .proposalNo(result.getInstance().getProposalNo())
                             .grantedValue(result.getInstance().getGrantedValue())
                             .state(result.getInstance().getState())
-                            .applied(new AtomicBoolean(false))
                             .build();
 
                     try {
@@ -407,8 +412,8 @@ public class LearnerImpl implements Learner {
         }
         final long targetCheckpoint = state.getLastCheckpoint();
         final long targetApplied = state.getLastAppliedInstanceId();
-
-        long localApplied = self.getCurAppliedInstanceId();
+        long localApplied = lastAppliedId;
+        long localCheckpoint = self.getLastCheckpoint();
         if (targetApplied <= localApplied) {
             // same data
             return;
@@ -416,13 +421,12 @@ public class LearnerImpl implements Learner {
 
         LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
                 target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
-        if (targetCheckpoint > localApplied) {
+        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
             snapSync(target);
             pullSameData(state);
         } else {
-            long next = ++localApplied;
-            for (; next <= targetApplied; next++) {
-                RoleAccessor.getLearner().learn(localApplied, target);
+            for (long i = localApplied; i <= targetApplied; i++) {
+                RoleAccessor.getLearner().learn(i, target);
             }
         }
     }
@@ -473,10 +477,6 @@ public class LearnerImpl implements Learner {
                 loadSnap(entry.getKey(), entry.getValue());
                 checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
             }
-
-            long finalCheckpoint = checkpoint;
-            Set<Long> applied = applyCallback.keySet().stream().filter(it -> finalCheckpoint >= it).collect(Collectors.toSet());
-            applied.forEach(applyCallback::remove);
 
             return checkpoint;
         } catch (Throwable e) {
@@ -590,8 +590,8 @@ public class LearnerImpl implements Learner {
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
             return res.result(Sync.SINGLE).instance(instance).build();
         } else {
-            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, apply: {}, cur: {}", request.getInstanceId(),
-                    self.getLastCheckpoint(), self.getCurAppliedInstanceId(), self.getCurInstanceId());
+            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
+                    self.getLastCheckpoint(), self.getCurInstanceId());
             if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();

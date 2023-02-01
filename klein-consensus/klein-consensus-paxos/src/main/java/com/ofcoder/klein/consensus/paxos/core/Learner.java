@@ -50,9 +50,19 @@ public interface Learner extends Lifecycle<ConsensusProp> {
     /**
      * load snap.
      *
-     * @param snaps snaps
+     * @param group sm key
+     * @param snap  snap
      */
-    void loadSnap(Map<String, Snap> snaps);
+    void loadSnap(String group, Snap snap);
+
+    /**
+     * replay log, re-enter instance into sm.
+     *
+     * @param start start instance id
+     */
+    void replayLog(long start);
+
+    long getLastAppliedInstanceId();
 
     /**
      * Load SM, one group will only load one SM.

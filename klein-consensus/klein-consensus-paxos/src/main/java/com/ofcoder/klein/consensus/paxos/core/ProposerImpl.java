@@ -389,6 +389,7 @@ public class ProposerImpl implements Proposer {
                 ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
             }
 
+            // todo ??????
             RoleAccessor.getLearner().pullSameData(result.getNodeState());
         }
     }

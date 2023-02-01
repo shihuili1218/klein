@@ -18,7 +18,6 @@ package com.ofcoder.klein.storage.facade;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Instance information.
@@ -31,7 +30,6 @@ public class Instance<D extends Serializable> implements Serializable {
     private long proposalNo;
     private List<D> grantedValue;
     private State state = State.PREPARED;
-    private AtomicBoolean applied = new AtomicBoolean(false);
 
     /**
      * get instance id.
@@ -105,24 +103,6 @@ public class Instance<D extends Serializable> implements Serializable {
         this.state = state;
     }
 
-    /**
-     * get apply state.
-     *
-     * @return apply state
-     */
-    public AtomicBoolean getApplied() {
-        return applied;
-    }
-
-    /**
-     * set apply state.
-     *
-     * @param applied apply state
-     */
-    public void setApplied(final AtomicBoolean applied) {
-        this.applied = applied;
-    }
-
     public enum State {
         PREPARED, ACCEPTED, CONFIRMED;
     }
@@ -132,7 +112,6 @@ public class Instance<D extends Serializable> implements Serializable {
         private long proposalNo;
         private List<B> grantedValue;
         private State state;
-        private AtomicBoolean applied;
 
         private Builder() {
         }
@@ -192,17 +171,6 @@ public class Instance<D extends Serializable> implements Serializable {
         }
 
         /**
-         * applied.
-         *
-         * @param applied applied
-         * @return Builder
-         */
-        public Builder<B> applied(final AtomicBoolean applied) {
-            this.applied = applied;
-            return this;
-        }
-
-        /**
          * build.
          *
          * @return Instance
@@ -213,7 +181,6 @@ public class Instance<D extends Serializable> implements Serializable {
             instance.setProposalNo(proposalNo);
             instance.setGrantedValue(grantedValue);
             instance.setState(state);
-            instance.setApplied(applied);
             return instance;
         }
 
