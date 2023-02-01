@@ -30,8 +30,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class PaxosNode extends Node {
     private long curInstanceId = 0;
     private final Object instanceIdLock = new Object();
-    private long curAppliedInstanceId = 0;
-    private final Object appliedInstanceIdLock = new Object();
     private long curProposalNo = 0;
     private final Object proposalNoLock = new Object();
     private long lastCheckpoint = 0;
@@ -104,23 +102,6 @@ public class PaxosNode extends Node {
         return self;
     }
 
-    public long getCurAppliedInstanceId() {
-        return curAppliedInstanceId;
-    }
-
-    /**
-     * update current applied instance id.
-     *
-     * @param appliedInstanceId InstanceId
-     */
-    public void updateCurAppliedInstanceId(final long appliedInstanceId) {
-        if (this.curAppliedInstanceId < appliedInstanceId) {
-            synchronized (appliedInstanceIdLock) {
-                this.curAppliedInstanceId = Math.max(curAppliedInstanceId, appliedInstanceId);
-            }
-        }
-    }
-
     public long getLastCheckpoint() {
         return lastCheckpoint;
     }
@@ -147,20 +128,19 @@ public class PaxosNode extends Node {
             return false;
         }
         PaxosNode node = (PaxosNode) o;
-        return getCurInstanceId() == node.getCurInstanceId() && getCurAppliedInstanceId() == node.getCurAppliedInstanceId()
-                && getCurProposalNo() == node.getCurProposalNo() && lastCheckpoint == node.lastCheckpoint && Objects.equals(getSelf(), node.getSelf());
+        return getCurInstanceId() == node.getCurInstanceId() && getCurProposalNo() == node.getCurProposalNo()
+                && lastCheckpoint == node.lastCheckpoint && Objects.equals(getSelf(), node.getSelf());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCurInstanceId(), getCurAppliedInstanceId(), getCurProposalNo(), lastCheckpoint, getSelf());
+        return Objects.hash(getCurInstanceId(), getCurProposalNo(), lastCheckpoint, getSelf());
     }
 
     @Override
     public String toString() {
         return "PaxosNode{"
                 + "curInstanceId=" + curInstanceId
-                + ", curAppliedInstanceId=" + curAppliedInstanceId
                 + ", curProposalNo=" + curProposalNo
                 + ", lastCheckpoint=" + lastCheckpoint
                 + ", self=" + self
@@ -178,7 +158,6 @@ public class PaxosNode extends Node {
 
     public static final class Builder {
         private long curInstanceId;
-        private long curAppliedInstanceId;
         private long curProposalNo;
         private long lastCheckpoint;
         private Endpoint self;
@@ -203,17 +182,6 @@ public class PaxosNode extends Node {
          */
         public Builder curInstanceId(final long curInstanceId) {
             this.curInstanceId = curInstanceId;
-            return this;
-        }
-
-        /**
-         * curAppliedInstanceId.
-         *
-         * @param curAppliedInstanceId curAppliedInstanceId
-         * @return Builder
-         */
-        public Builder curAppliedInstanceId(final long curAppliedInstanceId) {
-            this.curAppliedInstanceId = curAppliedInstanceId;
             return this;
         }
 
@@ -259,7 +227,6 @@ public class PaxosNode extends Node {
             PaxosNode paxosNode = new PaxosNode();
             paxosNode.curProposalNo = this.curProposalNo;
             paxosNode.curInstanceId = this.curInstanceId;
-            paxosNode.curAppliedInstanceId = this.curAppliedInstanceId;
             paxosNode.self = this.self;
             paxosNode.lastCheckpoint = this.lastCheckpoint;
             return paxosNode;

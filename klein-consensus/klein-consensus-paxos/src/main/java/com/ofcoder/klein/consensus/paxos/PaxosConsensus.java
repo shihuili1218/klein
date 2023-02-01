@@ -144,7 +144,6 @@ public class PaxosConsensus implements Consensus {
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
-                .curAppliedInstanceId(0)
                 .curProposalNo(0)
                 .lastCheckpoint(0)
                 .self(prop.getSelf())

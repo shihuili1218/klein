@@ -42,10 +42,10 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
+import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
 import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
@@ -368,6 +368,7 @@ public class MasterImpl implements Master {
     }
 
     private void newMaster() {
+        LOG.info("start new master.");
         updateMasterState(ElectState.BOOSTING);
 
         stopAllTimer();
@@ -415,7 +416,8 @@ public class MasterImpl implements Master {
     }
 
     private void _boosting() {
-        long miniInstanceId = self.getCurAppliedInstanceId();
+        LOG.info("boosting instance.");
+        long miniInstanceId = RoleAccessor.getLearner().getLastAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
         for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
             Instance<Proposal> instance = logManager.getInstance(miniInstanceId);
@@ -443,7 +445,6 @@ public class MasterImpl implements Master {
     private boolean sendHeartbeat(final boolean probe) {
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
-        long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
         final Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
@@ -455,7 +456,7 @@ public class MasterImpl implements Master {
                         .nodeId(self.getSelf().getId())
                         .maxInstanceId(curInstanceId)
                         .lastCheckpoint(lastCheckpoint)
-                        .lastAppliedInstanceId(curAppliedInstanceId)
+                        .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
                         .build())
                 .timestampMs(TrueTime.currentTimeMillis())
                 .probe(probe)
@@ -524,14 +525,14 @@ public class MasterImpl implements Master {
 
         self.updateCurInstanceId(nodeState.getMaxInstanceId());
 
-        if (!request.isProbe() && !isSelf) {
-            // check and update instance
-            ThreadExecutor.submit(() -> {
-                RoleAccessor.getLearner().pullSameData(nodeState);
-            });
-        }
-
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
+
+            if (!request.isProbe() && !isSelf) {
+                // check and update instance
+                ThreadExecutor.submit(() -> {
+                    RoleAccessor.getLearner().pullSameData(nodeState);
+                });
+            }
 
             TrueTime.heartbeat(request.getTimestampMs());
 
@@ -539,7 +540,7 @@ public class MasterImpl implements Master {
             if (!isSelf) {
                 restartElect();
             }
-            LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
+            LOG.debug("receive heartbeat from node-{}, result: true.", request.getNodeId());
             return true;
         } else {
             LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
@@ -553,7 +554,7 @@ public class MasterImpl implements Master {
         return NewMasterRes.Builder.aNewMasterRes()
                 .checkpoint(self.getLastCheckpoint())
                 .curInstanceId(self.getCurInstanceId())
-                .lastAppliedId(self.getCurAppliedInstanceId())
+                .lastAppliedId(RoleAccessor.getLearner().getLastAppliedInstanceId())
                 .build();
     }
 

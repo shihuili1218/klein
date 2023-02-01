@@ -30,20 +30,23 @@ import com.ofcoder.klein.storage.facade.Snap;
 public abstract class AbstractSM implements SM {
     private static final AtomicBoolean SNAP = new AtomicBoolean(false);
     private static final ReentrantLock SNAP_LOCK = new ReentrantLock(true);
-    private static Long checkpoint = 0L;
+    private static Long lastAppliedId = 0L;
 
     @Override
     public Object apply(final long instanceId, final Object data) {
+        if (lastAppliedId >= instanceId) {
+            throw new StateMachineException(String.format("instance[%s] apply sm, but the instance has bean applied", instanceId));
+        }
         if (SNAP.get()) {
             try {
                 SNAP_LOCK.lock();
-                checkpoint = Math.max(instanceId, checkpoint);
+                lastAppliedId = Math.max(instanceId, lastAppliedId);
                 return apply(data);
             } finally {
                 SNAP_LOCK.unlock();
             }
         } else {
-            checkpoint = Math.max(instanceId, checkpoint);
+            lastAppliedId = Math.max(instanceId, lastAppliedId);
             return apply(data);
         }
     }
@@ -61,7 +64,7 @@ public abstract class AbstractSM implements SM {
         if (SNAP.compareAndSet(false, true)) {
             try {
                 SNAP_LOCK.lock();
-                return new Snap(checkpoint, makeImage());
+                return new Snap(lastAppliedId, makeImage());
             } catch (Exception e) {
                 throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
             } finally {
@@ -88,7 +91,7 @@ public abstract class AbstractSM implements SM {
         if (SNAP.compareAndSet(false, true)) {
             try {
                 SNAP_LOCK.lock();
-                checkpoint = snap.getCheckpoint();
+                lastAppliedId = snap.getCheckpoint();
                 loadImage(snap.getSnap());
             } catch (Exception e) {
                 throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);

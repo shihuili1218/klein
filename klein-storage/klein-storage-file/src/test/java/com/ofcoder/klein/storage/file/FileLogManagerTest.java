@@ -35,7 +35,6 @@ public class FileLogManagerTest {
         instance.setProposalNo(1);
         instance.setInstanceId(1);
         instance.setState(Instance.State.PREPARED);
-        instance.setApplied(new AtomicBoolean(false));
         instance.setGrantedValue(Lists.newArrayList("Zzz"));
         join.updateInstance(instance);
     }
@@ -49,7 +48,6 @@ public class FileLogManagerTest {
         instance.setProposalNo(1);
         instance.setInstanceId(1);
         instance.setState(Instance.State.PREPARED);
-        instance.setApplied(new AtomicBoolean(false));
         instance.setGrantedValue(Lists.newArrayList("Zzz"));
 
         join.getLock().writeLock().lock();
@@ -63,7 +61,6 @@ public class FileLogManagerTest {
         Assert.assertEquals(instance.getInstanceId(), actual.getInstanceId());
         Assert.assertEquals(instance.getProposalNo(), actual.getProposalNo());
         Assert.assertEquals(instance.getState(), actual.getState());
-        Assert.assertEquals(instance.getApplied().get(), actual.getApplied().get());
         Assert.assertEquals(instance.getGrantedValue(), actual.getGrantedValue());
     }
 
@@ -74,14 +71,12 @@ public class FileLogManagerTest {
         instance1.setProposalNo(1);
         instance1.setInstanceId(1);
         instance1.setState(Instance.State.PREPARED);
-        instance1.setApplied(new AtomicBoolean(false));
         instance1.setGrantedValue(Lists.newArrayList("Zzz"));
 
         Instance<String> instance2 = new Instance<>();
         instance2.setProposalNo(1);
         instance2.setInstanceId(2);
         instance2.setState(Instance.State.CONFIRMED);
-        instance2.setApplied(new AtomicBoolean(false));
         instance2.setGrantedValue(Lists.newArrayList("Zzz"));
 
         join.getLock().writeLock().lock();
@@ -97,7 +92,6 @@ public class FileLogManagerTest {
         Assert.assertEquals(instance1.getInstanceId(), actual.getInstanceId());
         Assert.assertEquals(instance1.getProposalNo(), actual.getProposalNo());
         Assert.assertEquals(instance1.getState(), actual.getState());
-        Assert.assertEquals(instance1.getApplied().get(), actual.getApplied().get());
         Assert.assertEquals(instance1.getGrantedValue(), actual.getGrantedValue());
     }
 

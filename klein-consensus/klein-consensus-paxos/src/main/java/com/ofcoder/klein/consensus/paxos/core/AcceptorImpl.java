@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,7 +84,7 @@ public class AcceptorImpl implements Acceptor {
                 }
             }
 
-            if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= self.getCurAppliedInstanceId()) {
+            if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RoleAccessor.getLearner().getLastAppliedInstanceId()) {
                 return AcceptRes.Builder.anAcceptRes()
                         .nodeId(self.getSelf().getId())
                         .result(false)
@@ -100,7 +99,6 @@ public class AcceptorImpl implements Acceptor {
                         .instanceId(req.getInstanceId())
                         .proposalNo(req.getProposalNo())
                         .state(Instance.State.PREPARED)
-                        .applied(new AtomicBoolean(false))
                         .build();
             }
 
@@ -153,7 +151,6 @@ public class AcceptorImpl implements Acceptor {
         final long curProposalNo = self.getCurProposalNo();
         final long curInstanceId = self.getCurInstanceId();
         long lastCheckpoint = self.getLastCheckpoint();
-        long curAppliedInstanceId = self.getCurAppliedInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
         PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
@@ -164,7 +161,7 @@ public class AcceptorImpl implements Acceptor {
                         .nodeId(self.getSelf().getId())
                         .maxInstanceId(curInstanceId)
                         .lastCheckpoint(lastCheckpoint)
-                        .lastAppliedInstanceId(curAppliedInstanceId)
+                        .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
                         .build());
 
         if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
