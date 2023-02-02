@@ -50,7 +50,7 @@ public interface RealityCache<D extends Serializable> {
      * @param key    cache key
      * @param data   cache value
      * @param expire expire
-     * @return the previous value associated with <tt>key</tt>, or <tt>null</tt>
+     * @return the previous value associated with key, or null
      */
     D put(String key, D data, Long expire);
 
@@ -60,7 +60,7 @@ public interface RealityCache<D extends Serializable> {
      * @param key    cache key
      * @param data   cache value
      * @param expire expire
-     * @return the previous value associated with <tt>key</tt>, or <tt>null</tt>
+     * @return the previous value associated with key, or null
      */
     D putIfAbsent(String key, D data, Long expire);
 
