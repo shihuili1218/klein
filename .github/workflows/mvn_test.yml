@@ -2,7 +2,7 @@ name: mvn_test
 
 on:
   push:
-    branches: [ main ]
+    branches: [ feat/replaylog ]
   pull_request:
     branches: [ main ]
 
@@ -26,24 +26,12 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-        
+
       - name: Package
         run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
-        
-      - name: Test klein-common
-        run:  mvn --projects klein-common test
-        
-      - name: Test klein-spi
-        run:  mvn --projects klein-spi test
-        
-      - name: Test klein-rpc
-        run:  mvn --projects klein-rpc test        
-        
-      - name: Test klein-storage
-        run:  mvn --projects klein-storage test
-      
-      - name: Test klein-consensus
-        run:  mvn --projects klein-consensus test
-         
-      - name: Test klein-core
-        run:  mvn --projects klein-core test 
+
+      - name: Run tests
+        run: mvn -B test
+
+      - name: Upload coverage to Codecov
+        run: curl -Os https://uploader.codecov.io/latest/linux/codecov && chmod +x codecov && ./codecov -t ${CODECOV_TOKEN}
