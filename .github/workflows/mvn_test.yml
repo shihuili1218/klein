@@ -2,7 +2,7 @@ name: mvn_test
 
 on:
   push:
-    branches: [ feat/replaylog ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 

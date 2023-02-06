@@ -11,6 +11,8 @@
     &nbsp;
     <a href="https://www.codacy.com/gh/shihuili1218/klein/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=shihuili1218/klein&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/764fda630fd845949ae492a1f6469173" alt="" /></a>
     &nbsp;
+    <a href="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml"><img src="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml/badge.svg" alt="" /></a>
+    &nbsp;
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
 </p>
 
