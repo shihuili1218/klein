@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.facade.quorum;
 
 import java.util.Set;
 
+import com.ofcoder.klein.common.OnlyForTest;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -29,9 +30,9 @@ public final class JoinConsensusQuorum implements Quorum {
     private final Quorum oldQuorum;
     private final Quorum newQuorum;
 
-    public JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lasMemmbers, final int threshold) {
-        oldQuorum = new SingleQuorum(effectMembers, threshold);
-        newQuorum = new SingleQuorum(lasMemmbers, threshold);
+    public JoinConsensusQuorum(final Set<Endpoint> effectMembers, final Set<Endpoint> lastMembers, final int effectThreshold, final int lastThreshold) {
+        oldQuorum = new SingleQuorum(effectMembers, effectThreshold);
+        newQuorum = new SingleQuorum(lastMembers, lastThreshold);
     }
 
     @Override
@@ -57,5 +58,15 @@ public final class JoinConsensusQuorum implements Quorum {
             return GrantResult.PASS;
         }
         return GrantResult.GRANTING;
+    }
+
+    @OnlyForTest
+    public Quorum getOldQuorum() {
+        return oldQuorum;
+    }
+
+    @OnlyForTest
+    public Quorum getNewQuorum() {
+        return newQuorum;
     }
 }
