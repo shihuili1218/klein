@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
-
 /**
  * generate proposal no by config.version and local.counter.
  *
@@ -25,20 +23,33 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
  */
 public class ProposalNoUtil {
 
-    public static long getEpochFromPno(long pno) {
+    public static long getEpochFromPno(final long pno) {
         return pno >> 32L;
     }
 
-    public static long getCounterFromPno(long pno) {
+    public static long getCounterFromPno(final long pno) {
         return pno & 0xffffffffL;
     }
 
-    public static long makePno(long epoch, long counter) {
+    /**
+     * generate proposal no by config.version and local.counter.
+     *
+     * @param epoch   config.version
+     * @param counter local.counter
+     * @return proposal no
+     */
+    public static long makePno(final long epoch, final long counter) {
         return (epoch << 32L) | (counter & 0xffffffffL);
     }
 
-    public static String pnoToString(long zxid) {
-        return Long.toHexString(zxid);
+    /**
+     * pno convert to Hex.
+     *
+     * @param pno pno
+     * @return hex string
+     */
+    public static String pnoToString(final long pno) {
+        return Long.toHexString(pno);
     }
 
 }
