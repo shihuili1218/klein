@@ -26,7 +26,7 @@ public class PaxosNodeTest extends TestCase {
                 .self(new Endpoint("3", "127.0.0.1", 1220))
                 .build();
 
-        assertEquals(node.generateNextProposalNo(), 3);
+        assertEquals(ProposalNoUtil.getCounterFromPno(node.generateNextProposalNo()), 3);
     }
 
     public void testRandomInt() {

@@ -43,14 +43,19 @@ public class PaxosNode extends Node {
      * @return next proposalNo
      */
     public long generateNextProposalNo() {
-        long cur = this.curProposalNo;
+        long counter = ProposalNoUtil.getCounterFromPno(this.curProposalNo);
+
+        int version = MemberRegistry.getInstance().getMemberConfiguration().getVersion();
         int n = MemberRegistry.getInstance().getMemberConfiguration().getEffectMembers().size();
-        long j = cur / n;
-        if (cur % n > 0) {
+
+        long j = counter / n;
+        if (counter % n > 0) {
             j = j + 1;
         }
         long next = n * j + Integer.parseInt(self.getId());
-        updateCurProposalNo(next);
+
+        long pno = ProposalNoUtil.makePno(version, next);
+        updateCurProposalNo(pno);
         return this.curProposalNo;
     }
 
