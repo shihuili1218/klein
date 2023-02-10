@@ -65,7 +65,7 @@ public final class QuorumFactory {
                     nwr.r(memberConfiguration.getEffectMembers().size()));
         } else {
             return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers(),
-                    nwr.r(memberConfiguration.getEffectMembers().size()),  nwr.r(memberConfiguration.getLastMembers().size()));
+                    nwr.r(memberConfiguration.getEffectMembers().size()), nwr.r(memberConfiguration.getLastMembers().size()));
         }
     }
 }
