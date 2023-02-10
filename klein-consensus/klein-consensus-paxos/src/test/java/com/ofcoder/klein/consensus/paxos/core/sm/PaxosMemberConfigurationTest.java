@@ -10,4 +10,8 @@ public class PaxosMemberConfigurationTest extends TestCase {
 
     public void tearDown() throws Exception {
     }
+
+    public void testChangeMaster(){
+
+    }
 }
