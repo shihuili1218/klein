@@ -19,11 +19,50 @@ package com.ofcoder.klein.common.util.timer;
 
 import org.junit.Test;
 
+import java.util.Random;
 import java.util.concurrent.*;
 
 import static org.junit.Assert.*;
 
 public class HashedWheelTimerTest {
+
+    @Test
+    public void testnormalizeTicksPerWheel() {
+        for (int i = 0; i < 1000; i++) {
+            int num = ThreadLocalRandom.current().nextInt(0, 100);
+            assertEquals(normalizeTicksPerWheel0(num), normalizeTicksPerWheel1(num));
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            int num = ThreadLocalRandom.current().nextInt(100, 1000);
+            assertEquals(normalizeTicksPerWheel0(num), normalizeTicksPerWheel1(num));
+        }
+
+        for (int i = 0; i < 1000; i++) {
+            int num = ThreadLocalRandom.current().nextInt(100000, 999999999);
+            assertEquals(normalizeTicksPerWheel0(num), normalizeTicksPerWheel1(num));
+        }
+    }
+
+    private int normalizeTicksPerWheel0(final int ticksPerWheel) {
+        int normalizedTicksPerWheel = 1;
+        while (normalizedTicksPerWheel < ticksPerWheel) {
+            normalizedTicksPerWheel <<= 1;
+        }
+        return normalizedTicksPerWheel;
+    }
+
+    private int normalizeTicksPerWheel1(final int ticksPerWheel) {
+        // Fixed calculation process to avoid multi-cycle inefficiency
+        int n = ticksPerWheel - 1;
+        n |= n >>> 1;
+        n |= n >>> 2;
+        n |= n >>> 4;
+        n |= n >>> 8;
+        n |= n >>> 16;
+        // Prevent spillage, 1073741824 = 2^30
+        return (n < 0) ? 1 : (n >= 1073741824) ? 1073741824 : n + 1;
+    }
 
     @Test
     public void testScheduleTimeoutShouldNotRunBeforeDelay() throws InterruptedException {
