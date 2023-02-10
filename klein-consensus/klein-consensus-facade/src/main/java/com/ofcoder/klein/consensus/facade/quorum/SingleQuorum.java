@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.ofcoder.klein.common.OnlyForTest;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -68,4 +69,18 @@ public class SingleQuorum implements Quorum {
         return failedMembers.add(node);
     }
 
+    @OnlyForTest
+    public Set<Endpoint> getAllMembers() {
+        return allMembers;
+    }
+
+    @OnlyForTest
+    public Set<Endpoint> getGrantedMembers() {
+        return grantedMembers;
+    }
+
+    @OnlyForTest
+    public Set<Endpoint> getFailedMembers() {
+        return failedMembers;
+    }
 }
