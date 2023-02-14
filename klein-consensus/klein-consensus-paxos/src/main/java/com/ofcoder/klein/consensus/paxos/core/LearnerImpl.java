@@ -27,7 +27,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -75,15 +74,15 @@ public class LearnerImpl implements Learner {
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
-    private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
+    private final BlockingQueue<Task> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.instanceId));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
-    private CountDownLatch shutdownLatch;
-    private final Map<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
+    private final TaskCallback fakeCallback = new TaskCallback() {
+    };
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -97,13 +96,24 @@ public class LearnerImpl implements Learner {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         applyExecutor.execute(() -> {
-            while (shutdownLatch == null) {
-                try {
-                    long take = applyQueue.take();
-                    apply(take);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+            try {
+                Task take = applyQueue.take();
+                switch (take.taskType) {
+                    case APPLY:
+                        apply(take);
+                        break;
+                    case REPLAY:
+                        replay(take);
+                        break;
+                    case SNAP_LOAD:
+                        break;
+                    case SNAP_TAKE:
+                        break;
+                    default:
+                        break;
                 }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -171,8 +181,7 @@ public class LearnerImpl implements Learner {
             self.updateCurInstanceId(snap.getCheckpoint());
             updateAppliedId(snap.getCheckpoint());
 
-            Set<Long> applied = applyCallback.keySet().stream().filter(it -> snap.getCheckpoint() >= it).collect(Collectors.toSet());
-            applied.forEach(applyCallback::remove);
+            replayLog(snap.getCheckpoint());
 
             LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         } finally {
@@ -182,7 +191,15 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void replayLog(final long start) {
-        //
+        long curInstanceId = self.getCurInstanceId();
+        for (long i = start; i <= curInstanceId; i++) {
+            Instance<Proposal> instance = logManager.getInstance(i);
+            if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+                break;
+            }
+            boolean offer = applyQueue.offer(new Task(i, TaskEnum.REPLAY, fakeCallback));
+            // ignore offer result.
+        }
     }
 
     @Override
@@ -208,22 +225,26 @@ public class LearnerImpl implements Learner {
         loadSnap(group, lastSnap);
     }
 
-    private void apply(final long instanceId) {
+    private void replay(final Task task) {
+
+    }
+
+    private void apply(final Task task) {
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long exceptConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", task.instanceId, lastAppliedId, lastCheckpoint);
 
-        if (instanceId <= lastApplyId) {
+        if (task.instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
         }
-        if (instanceId > exceptConfirmId) {
+        if (task.instanceId > exceptConfirmId) {
             // boost.
-            for (long i = exceptConfirmId; i < instanceId; i++) {
+            for (long i = exceptConfirmId; i < task.instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    applyQueue.add(i);
+                    applyQueue.offer(new Task(i, TaskEnum.APPLY, fakeCallback));
                 } else {
                     List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
                             ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
@@ -231,30 +252,22 @@ public class LearnerImpl implements Learner {
                 }
             }
 
-            applyQueue.add(instanceId);
+            applyQueue.offer(task);
             return;
         }
         // else: instanceId == exceptConfirmId, do apply.
 
-        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
+        Instance<Proposal> localInstance = logManager.getInstance(task.instanceId);
 
-        try {
-            Map<Proposal, Object> applyResult = new HashMap<>();
-            LOG.info("apply {}. grantedValue: {}", instanceId, localInstance.getGrantedValue());
-            for (Proposal data : localInstance.getGrantedValue()) {
-                Object result = this._apply(localInstance.getInstanceId(), data);
-                applyResult.put(data, result);
-            }
-            updateAppliedId(instanceId);
-
-            List<ProposeDone> remove = applyCallback.remove(instanceId);
-            if (remove != null) {
-                remove.forEach(it -> it.applyDone(applyResult));
-            }
-        } finally {
-            Set<Long> applied = applyCallback.keySet().stream().filter(it -> instanceId >= it).collect(Collectors.toSet());
-            applied.forEach(applyCallback::remove);
+        Map<Proposal, Object> applyResult = new HashMap<>();
+        LOG.info("apply {}. grantedValue: {}", task.instanceId, localInstance.getGrantedValue());
+        for (Proposal data : localInstance.getGrantedValue()) {
+            Object result = this._apply(localInstance.getInstanceId(), data);
+            applyResult.put(data, result);
         }
+        updateAppliedId(task.instanceId);
+
+        task.callback.onApply(applyResult);
     }
 
     private Object _apply(final long instance, final Proposal data) {
@@ -291,12 +304,16 @@ public class LearnerImpl implements Learner {
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
-                @Override
-                protected Long create() {
-                    return instanceId;
-                }
-            }, defaultValue, (result, consensusDatas) -> future.complete(result));
+            RoleAccessor.getProposer().tryBoost(
+                    new Holder<Long>() {
+                        @Override
+                        protected Long create() {
+                            return instanceId;
+                        }
+
+                    }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
+                            .collect(Collectors.toList())
+            );
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
@@ -385,7 +402,7 @@ public class LearnerImpl implements Learner {
                         logManager.getLock().writeLock().unlock();
                     }
                     // apply statemachine
-                    if (!applyQueue.offer(req.getInstanceId())) {
+                    if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, fakeCallback))) {
                         LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
                         // do nothing, other threads will boost the instance
                     }
@@ -490,11 +507,8 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(final long instanceId, final List<ProposeDone> dons) {
+    public void confirm(final long instanceId, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
-
-        applyCallback.putIfAbsent(instanceId, new ArrayList<>());
-        applyCallback.get(instanceId).addAll(dons);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -510,27 +524,29 @@ public class LearnerImpl implements Learner {
                 .build();
 
         // for self
-        handleConfirmRequest(req);
+        handleConfirmRequest(req, new TaskCallback() {
+            @Override
+            public void onApply(final Map<Proposal, Object> result) {
+                dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
+            }
+        });
 
         // for other members
-        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
-                @Override
-                public void error(final Throwable err) {
-                    LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
-                    // do nothing
-                }
+        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
+            @Override
+            public void error(final Throwable err) {
+                LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
+                // do nothing
+            }
 
-                @Override
-                public void complete(final Serializable result) {
-                    // do nothing
-                }
-            }, 1000);
-        });
+            @Override
+            public void complete(final Serializable result) {
+                // do nothing
+            }
+        }, 1000));
     }
 
-    @Override
-    public void handleConfirmRequest(final ConfirmReq req) {
+    private void handleConfirmRequest(final ConfirmReq req, final TaskCallback dons) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
         if (req.getInstanceId() <= self.getLastCheckpoint()) {
@@ -562,7 +578,7 @@ public class LearnerImpl implements Learner {
             logManager.updateInstance(localInstance);
 
             // apply statemachine
-            if (!applyQueue.offer(req.getInstanceId())) {
+            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, dons))) {
                 LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
                 // do nothing, other threads will boost the instance
             }
@@ -575,6 +591,11 @@ public class LearnerImpl implements Learner {
             self.updateCurProposalNo(req.getProposalNo());
             logManager.getLock().writeLock().unlock();
         }
+    }
+
+    @Override
+    public void handleConfirmRequest(final ConfirmReq req) {
+        handleConfirmRequest(req, fakeCallback);
     }
 
     @Override
@@ -602,7 +623,7 @@ public class LearnerImpl implements Learner {
                     protected Long create() {
                         return request.getInstanceId();
                     }
-                }, defaultValue, new ProposeDone.DefaultProposeDone());
+                }, defaultValue.stream().map(it -> new ProposalWithDone(it, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
             }
             return res.result(Sync.NO_SUPPORT).build();
         }
@@ -624,4 +645,31 @@ public class LearnerImpl implements Learner {
         return res;
     }
 
+    private enum TaskEnum {
+        APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE;
+    }
+
+    private static class Task {
+        private long instanceId;
+        private TaskEnum taskType;
+        private TaskCallback callback;
+
+        Task(final long instanceId, final TaskEnum taskType, final TaskCallback callback) {
+            this.instanceId = instanceId;
+            this.taskType = taskType;
+            this.callback = callback;
+        }
+    }
+
+    private interface TaskCallback {
+        default void onApply(Map<Proposal, Object> result) {
+        }
+
+        default void onTakeSnap(Snap result) {
+
+        }
+
+        default void onLoadSnap() {
+        }
+    }
 }

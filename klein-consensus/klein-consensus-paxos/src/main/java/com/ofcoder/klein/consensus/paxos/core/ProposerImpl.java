@@ -16,6 +16,19 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
@@ -46,17 +59,6 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
-import org.apache.commons.collections4.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.List;
-import java.util.Vector;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * Proposer implement.
@@ -170,8 +172,8 @@ public class ProposerImpl implements Proposer {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
-        ctxt.setConsensusData(preparedInstanceMap.containsKey(ctxt.getInstanceId()) && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue())
-                ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
+        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId()) && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()));
+        ctxt.setConsensusData(ctxt.isDataChange() ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
                 : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
 
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
@@ -246,21 +248,14 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final List<Proposal> defaultProposal, final ProposeDone done) {
-        tryBoost(instanceHolder, memberConfig, defaultProposal, done);
+    public void tryBoost(final Holder<Long> instanceHolder, final List<ProposalWithDone> defaultProposal) {
+        tryBoost(instanceHolder, memberConfig, defaultProposal);
     }
 
     @Override
     public void tryBoost(final Holder<Long> instanceHolder, final PaxosMemberConfiguration memberConfiguration,
-                         final List<Proposal> proposal, final ProposeDone done) {
-        List<ProposalWithDone> proposalWithDones = proposal.stream().map(it -> {
-            ProposalWithDone event = new ProposalWithDone();
-            event.setProposal(it);
-            event.setDone(done);
-            return event;
-        }).collect(Collectors.toList());
-
-        ProposeContext ctxt = new ProposeContext(memberConfiguration.createRef(), instanceHolder, proposalWithDones);
+                         final List<ProposalWithDone> defaultProposal) {
+        ProposeContext ctxt = new ProposeContext(memberConfiguration.createRef(), instanceHolder, defaultProposal);
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -407,7 +402,7 @@ public class ProposerImpl implements Proposer {
             if (tasks.isEmpty()) {
                 return;
             }
-            propose(Proposal.NOOP, new ProposeDone.DefaultProposeDone());
+            propose(Proposal.NOOP, new ProposeDone.FakeProposeDone());
         }
 
         private void handle() {
@@ -468,7 +463,7 @@ public class ProposerImpl implements Proposer {
             }
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(false, null);
+                event.getDone().negotiationDone(false, false);
             }
         }
     }
@@ -481,13 +476,12 @@ public class ProposerImpl implements Proposer {
 
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
-            for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(true, context.getConsensusData());
-            }
+            context.getDataWithCallback().forEach(it ->
+                    it.getDone().negotiationDone(true, context.isDataChange()));
 
             ThreadExecutor.submit(() -> {
                 // do confirm
-                List<ProposeDone> dons = context.getDataWithCallback().stream().map(ProposalWithDone::getDone).collect(Collectors.toList());
+                List<ProposalWithDone> dons = context.isDataChange() ? context.getDataWithCallback() : new ArrayList<>();
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
             });
 
@@ -499,7 +493,7 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(false, null);
+                event.getDone().negotiationDone(false, false);
             }
 
             ThreadExecutor.submit(() -> {

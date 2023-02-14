@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class MemoryRealityCache<D extends Serializable> implements RealityCache<D> {
+public class MemoryCacheContainer<D extends Serializable> implements CacheContainer<D> {
 
     private final ConcurrentMap<String, MetaData<D>> memory = new ConcurrentHashMap<>();
 
