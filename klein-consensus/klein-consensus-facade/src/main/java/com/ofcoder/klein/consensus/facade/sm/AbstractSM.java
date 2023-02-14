@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
@@ -28,8 +27,7 @@ import com.ofcoder.klein.storage.facade.Snap;
  * @author 释慧利
  */
 public abstract class AbstractSM implements SM {
-    private static final AtomicBoolean SNAP = new AtomicBoolean(false);
-    private static final ReentrantLock SNAP_LOCK = new ReentrantLock(true);
+    private static final ReentrantLock APPLYING_LOCK = new ReentrantLock(true);
     private static Long lastAppliedId = 0L;
 
     @Override
@@ -37,17 +35,12 @@ public abstract class AbstractSM implements SM {
         if (lastAppliedId >= instanceId) {
             throw new StateMachineException(String.format("instance[%s] apply sm, but the instance has bean applied", instanceId));
         }
-        if (SNAP.get()) {
-            try {
-                SNAP_LOCK.lock();
-                lastAppliedId = Math.max(instanceId, lastAppliedId);
-                return apply(data);
-            } finally {
-                SNAP_LOCK.unlock();
-            }
-        } else {
+        try {
+            APPLYING_LOCK.lock();
             lastAppliedId = Math.max(instanceId, lastAppliedId);
             return apply(data);
+        } finally {
+            APPLYING_LOCK.unlock();
         }
     }
 
@@ -61,18 +54,13 @@ public abstract class AbstractSM implements SM {
 
     @Override
     public Snap snapshot() {
-        if (SNAP.compareAndSet(false, true)) {
-            try {
-                SNAP_LOCK.lock();
-                return new Snap(lastAppliedId, makeImage());
-            } catch (Exception e) {
-                throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
-            } finally {
-                SNAP.compareAndSet(true, false);
-                SNAP_LOCK.unlock();
-            }
-        } else {
-            return null;
+        try {
+            APPLYING_LOCK.lock();
+            return new Snap(lastAppliedId, makeImage());
+        } catch (Exception e) {
+            throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
+        } finally {
+            APPLYING_LOCK.unlock();
         }
     }
 
@@ -88,17 +76,14 @@ public abstract class AbstractSM implements SM {
         if (snap == null) {
             return;
         }
-        if (SNAP.compareAndSet(false, true)) {
-            try {
-                SNAP_LOCK.lock();
-                lastAppliedId = snap.getCheckpoint();
-                loadImage(snap.getSnap());
-            } catch (Exception e) {
-                throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);
-            } finally {
-                SNAP.compareAndSet(true, false);
-                SNAP_LOCK.unlock();
-            }
+        try {
+            APPLYING_LOCK.lock();
+            lastAppliedId = snap.getCheckpoint();
+            loadImage(snap.getSnap());
+        } catch (Exception e) {
+            throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);
+        } finally {
+            APPLYING_LOCK.unlock();
         }
     }
 

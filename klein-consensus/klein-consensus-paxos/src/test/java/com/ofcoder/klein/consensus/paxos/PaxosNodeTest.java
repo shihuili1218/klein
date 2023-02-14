@@ -1,13 +1,10 @@
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.spi.ExtensionLoader;
-
 import junit.framework.TestCase;
 
 /**
@@ -35,9 +32,4 @@ public class PaxosNodeTest extends TestCase {
         assertEquals(ProposalNoUtil.getEpochFromPno(pno), MemberRegistry.getInstance().getMemberConfiguration().getVersion());
     }
 
-    public void testRandomInt() {
-        for (int i = 0; i < 10; i++) {
-            System.out.println(ThreadLocalRandom.current().nextInt(600, 800));
-        }
-    }
 }
