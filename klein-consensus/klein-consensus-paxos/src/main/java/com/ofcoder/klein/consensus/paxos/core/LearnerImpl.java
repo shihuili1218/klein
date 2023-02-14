@@ -77,7 +77,6 @@ public class LearnerImpl implements Learner {
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
     private final BlockingQueue<Long> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(Long::longValue));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
-    private CountDownLatch shutdownLatch;
     private final Map<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private final ReentrantLock snapLock = new ReentrantLock();
@@ -97,13 +96,11 @@ public class LearnerImpl implements Learner {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         applyExecutor.execute(() -> {
-            while (shutdownLatch == null) {
-                try {
-                    long take = applyQueue.take();
-                    apply(take);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+            try {
+                long take = applyQueue.take();
+                apply(take);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -171,6 +168,8 @@ public class LearnerImpl implements Learner {
             self.updateCurInstanceId(snap.getCheckpoint());
             updateAppliedId(snap.getCheckpoint());
 
+            replayLog(snap.getCheckpoint());
+
             Set<Long> applied = applyCallback.keySet().stream().filter(it -> snap.getCheckpoint() >= it).collect(Collectors.toSet());
             applied.forEach(applyCallback::remove);
 
@@ -182,7 +181,15 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void replayLog(final long start) {
-        //
+        long curInstanceId = self.getCurInstanceId();
+        for (long i = start; i <= curInstanceId; i++) {
+            Instance<Proposal> instance = logManager.getInstance(i);
+            if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+                break;
+            }
+            boolean offer = applyQueue.offer(i);
+            // ignore offer result.
+        }
     }
 
     @Override
@@ -223,7 +230,7 @@ public class LearnerImpl implements Learner {
             for (long i = exceptConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    applyQueue.add(i);
+                    applyQueue.offer(i);
                 } else {
                     List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
                             ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
@@ -231,7 +238,7 @@ public class LearnerImpl implements Learner {
                 }
             }
 
-            applyQueue.add(instanceId);
+            applyQueue.offer(instanceId);
             return;
         }
         // else: instanceId == exceptConfirmId, do apply.

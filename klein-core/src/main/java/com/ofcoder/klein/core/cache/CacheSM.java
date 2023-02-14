@@ -33,7 +33,7 @@ public class CacheSM extends AbstractSM {
     public static final String GROUP = "cache";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
-    private final RealityCache<Serializable> container;
+    private final CacheContainer<Serializable> container;
     private final CacheProp cacheProp;
 
     public CacheSM(final CacheProp cacheProp) {
@@ -45,10 +45,10 @@ public class CacheSM extends AbstractSM {
             // do nothing for mkdir result.
         }
         if (cacheProp.getLru()) {
-            this.container = new LruRealityCache<>(cacheProp.getMemorySize(),
+            this.container = new LruCacheContainer<>(cacheProp.getMemorySize(),
                     temp + File.separator + "klein-cache.mdb" + "." + System.currentTimeMillis());
         } else {
-            this.container = new MemoryRealityCache<>();
+            this.container = new MemoryCacheContainer<>();
         }
     }
 

@@ -26,7 +26,7 @@ import java.util.Map;
  *
  * @author 释慧利
  */
-public interface RealityCache<D extends Serializable> {
+public interface CacheContainer<D extends Serializable> {
 
     /**
      * check key is exist.
