@@ -37,12 +37,12 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class LruRealityCache<D extends Serializable> implements RealityCache<D> {
+public class LruCacheContainer<D extends Serializable> implements CacheContainer<D> {
     private final MemoryMap<String, MetaData<D>> memory;
     private final ConcurrentMap<String, MetaData<D>> file;
     private final DB db;
 
-    public LruRealityCache(final int size, final String dataPath) {
+    public LruCacheContainer(final int size, final String dataPath) {
         memory = new MemoryMap<>(size);
         db = DBMaker.fileDB(dataPath).make();
         this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData<D>>() {
