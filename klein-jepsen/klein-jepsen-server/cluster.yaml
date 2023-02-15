@@ -1,0 +1,72 @@
+version: "3"
+services:
+  n1:
+    build: .
+    image: klein-jepsen-server/0.0.1:latest
+    ports:
+      - "9001:8080"
+    environment:
+      KLEIN_ID: 1
+      KLEIN_PORT: 8080
+      KLEIN_IP: n1
+      KLEIN_MEMBERS: 1:n1:8080;2:n2:8080;3:n3:8080;4:n4:8080;5:n5:8080
+    networks:
+      - klein
+    restart: always
+  n2:
+    build: .
+    image: klein-jepsen-server/0.0.1:latest
+    ports:
+      - "9002:8080"
+    environment:
+      KLEIN_ID: 2
+      KLEIN_PORT: 8080
+      KLEIN_IP: n2
+      KLEIN_MEMBERS: 1:n1:8080;2:n2:8080;3:n3:8080;4:n4:8080;5:n5:8080
+    networks:
+      - klein
+    restart: always
+  n3:
+    build: .
+    image: klein-jepsen-server/0.0.1:latest
+    ports:
+      - "9003:8080"
+    environment:
+      KLEIN_ID: 3
+      KLEIN_PORT: 8080
+      KLEIN_IP: n3
+      KLEIN_MEMBERS: 1:n1:8080;2:n2:8080;3:n3:8080;4:n4:8080;5:n5:8080
+    networks:
+      - klein
+    restart: always
+  n4:
+    build: .
+    image: klein-jepsen-server/0.0.1:latest
+    ports:
+      - "9004:8080"
+    environment:
+      KLEIN_ID: 4
+      KLEIN_PORT: 8080
+      KLEIN_IP: n4
+      KLEIN_MEMBERS: 1:n1:8080;2:n2:8080;3:n3:8080;4:n4:8080;5:n5:8080
+    networks:
+      - klein
+    restart: always
+  n5:
+    build: .
+    image: klein-jepsen-server/0.0.1:latest
+    ports:
+      - "9005:8080"
+    environment:
+      KLEIN_ID: 5
+      KLEIN_PORT: 8080
+      KLEIN_IP: n5
+      KLEIN_MEMBERS: 1:n1:8080;2:n2:8080;3:n3:8080;4:n4:8080;5:n5:8080
+    networks:
+      - klein
+    restart: always
+
+networks:
+  klein:
+    driver: bridge
+    internal: true
