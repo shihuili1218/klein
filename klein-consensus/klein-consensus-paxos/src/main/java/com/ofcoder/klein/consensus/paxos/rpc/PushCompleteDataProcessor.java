@@ -51,7 +51,8 @@ public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushComplete
         LOG.info("receive push complete data");
         PushCompleteDataRes res = new PushCompleteDataRes();
 
-        request.getSnaps().forEach((key, value) -> RoleAccessor.getLearner().loadSnap(key, value));
+        RoleAccessor.getLearner().loadSnap(request.getSnaps());
+
         logManager.getLock().writeLock().lock();
         try {
             for (Instance<Proposal> instance : request.getConfirmedInstances()) {

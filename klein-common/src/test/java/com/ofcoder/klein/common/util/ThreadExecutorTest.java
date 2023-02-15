@@ -14,7 +14,7 @@ public class ThreadExecutorTest extends TestCase {
 
     @Test
     public void testPrintException() throws InterruptedException {
-        ThreadExecutor.submit(new Runnable() {
+        ThreadExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 throw new RuntimeException("klein exception");

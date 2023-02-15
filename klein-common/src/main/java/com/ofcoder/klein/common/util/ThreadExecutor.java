@@ -16,7 +16,9 @@
  */
 package com.ofcoder.klein.common.util;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -46,8 +48,19 @@ public class ThreadExecutor {
      *
      * @param task runnable
      */
-    public static void submit(final Runnable task) {
+    public static void execute(final Runnable task) {
         EXECUTOR.execute(task);
+    }
+
+    /**
+     * submit task to thread pool.
+     *
+     * @param task runnable
+     * @param <T>  future result type
+     * @return future
+     */
+    public static <T> Future<T> submit(final Callable<T> task) {
+        return EXECUTOR.submit(task);
     }
 
     /**
