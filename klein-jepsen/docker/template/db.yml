@@ -1,0 +1,9 @@
+  n%%N%%:
+    << : *default-node
+    container_name: jepsen-n%%N%%
+    hostname: n%%N%%
+    environment:
+        KLEIN_ID: %%N%%
+        KLEIN_PORT: 8080
+        KLEIN_IP: n%%N%%
+        KLEIN_MEMBERS: %%MEMBER%%
