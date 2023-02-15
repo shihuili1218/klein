@@ -16,9 +16,8 @@ RUN chmod +x /klein/start.sh \
     && mkdir /config && touch /config/server.properties \
     && apt-get update \
     && apt-get install openssh-server -y \
-    && apt-get install openjdk-8-jdk -y \
+    && apt-get install openjdk-8-jdk -y
 
-ADD deploy/id_rsa.pub ~/.ssh/authorized_keys
 
 EXPOSE 22
 EXPOSE 8080
