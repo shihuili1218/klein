@@ -346,7 +346,7 @@ public class MasterImpl implements Master {
                         public void negotiationDone(final boolean result, final boolean changed) {
                             LOG.info("electing master, negotiationDone: {}", result);
                             if (result && !changed) {
-                                ThreadExecutor.submit(MasterImpl.this::newMaster);
+                                ThreadExecutor.execute(MasterImpl.this::newMaster);
                             } else {
                                 latch.countDown();
                             }
@@ -392,7 +392,7 @@ public class MasterImpl implements Master {
         if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
             restartElect();
         } else if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
-            ThreadExecutor.submit(MasterImpl.this::_boosting);
+            ThreadExecutor.execute(MasterImpl.this::_boosting);
         }
         // else ignore
 
@@ -412,7 +412,7 @@ public class MasterImpl implements Master {
                         self.updateCurInstanceId(result.getCurInstanceId());
                         quorum.grant(it);
                         if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
-                            ThreadExecutor.submit(MasterImpl.this::_boosting);
+                            ThreadExecutor.execute(MasterImpl.this::_boosting);
                         }
                     }
                 }, 50L));
@@ -532,7 +532,7 @@ public class MasterImpl implements Master {
 
             if (!request.isProbe() && !isSelf) {
                 // check and update instance
-                ThreadExecutor.submit(() -> {
+                ThreadExecutor.execute(() -> {
                     RoleAccessor.getLearner().pullSameData(nodeState);
                 });
             }

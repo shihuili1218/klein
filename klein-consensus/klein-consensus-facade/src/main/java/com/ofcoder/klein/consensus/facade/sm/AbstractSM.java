@@ -31,6 +31,11 @@ public abstract class AbstractSM implements SM {
     private static Long lastAppliedId = 0L;
 
     @Override
+    public long lastAppliedId() {
+        return lastAppliedId;
+    }
+
+    @Override
     public Object apply(final long instanceId, final Object data) {
         if (lastAppliedId >= instanceId) {
             throw new StateMachineException(String.format("instance[%s] apply sm, but the instance has bean applied", instanceId));

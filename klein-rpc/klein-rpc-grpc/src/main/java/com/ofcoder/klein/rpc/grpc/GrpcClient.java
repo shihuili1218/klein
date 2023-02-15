@@ -174,7 +174,7 @@ public class GrpcClient implements RpcClient {
     private void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
-            ThreadExecutor.submit(() -> {
+            ThreadExecutor.execute(() -> {
                 callback.error(new ConnectionException(String.format("connection not available, %s", endpoint)));
             });
             return;
@@ -194,12 +194,12 @@ public class GrpcClient implements RpcClient {
             @Override
             public void onNext(final DynamicMessage value) {
                 ByteBuffer respData = MessageHelper.getDataFromDynamicMessage(value);
-                ThreadExecutor.submit(() -> callback.complete(respData));
+                ThreadExecutor.execute(() -> callback.complete(respData));
             }
 
             @Override
             public void onError(final Throwable throwable) {
-                ThreadExecutor.submit(() -> callback.error(throwable));
+                ThreadExecutor.execute(() -> callback.error(throwable));
             }
 
             @Override
