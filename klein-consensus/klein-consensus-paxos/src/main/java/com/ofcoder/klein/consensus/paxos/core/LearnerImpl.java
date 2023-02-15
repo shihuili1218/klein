@@ -27,20 +27,24 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
@@ -74,10 +78,9 @@ public class LearnerImpl implements Learner {
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
-    private final BlockingQueue<Task> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.instanceId));
+    private final BlockingQueue<Task> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.priority));
     private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
-    private final ReentrantLock snapLock = new ReentrantLock();
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
@@ -96,24 +99,28 @@ public class LearnerImpl implements Learner {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         applyExecutor.execute(() -> {
-            try {
-                Task take = applyQueue.take();
-                switch (take.taskType) {
-                    case APPLY:
-                        apply(take);
-                        break;
-                    case REPLAY:
-                        replay(take);
-                        break;
-                    case SNAP_LOAD:
-                        break;
-                    case SNAP_TAKE:
-                        break;
-                    default:
-                        break;
+            while (true) {
+                try {
+                    Task take = applyQueue.take();
+                    switch (take.taskType) {
+                        case APPLY:
+                            _apply(take);
+                            break;
+                        case REPLAY:
+                            _replay(take);
+                            break;
+                        case SNAP_LOAD:
+                            _loadSnap(take);
+                            break;
+                        case SNAP_TAKE:
+                            _generateSnap(take);
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (InterruptedException e) {
+                    LOG.warn("handle queue task, occur exception, {}", e.getMessage());
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         });
     }
@@ -124,80 +131,130 @@ public class LearnerImpl implements Learner {
         sms.values().forEach(SM::close);
     }
 
-    @Override
-    public Map<String, Snap> generateSnap() {
+    private void _generateSnap(final Task task) {
         Map<String, Snap> snaps = new HashMap<>();
-        try {
-            if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
-                    || (!snapLock.isLocked() && !snapLock.tryLock())) {
-                return snaps;
-            }
-
-            LOG.info("save snapshot, sms: {}", sms);
-            for (Map.Entry<String, SM> entry : sms.entrySet()) {
-                Snap snapshot = entry.getValue().snapshot();
-
-                Snap lastSnap = logManager.getLastSnap(entry.getKey());
-                if (lastSnap != null && lastSnap.getCheckpoint() >= snapshot.getCheckpoint()) {
-                    continue;
+        CountDownLatch latch = new CountDownLatch(sms.size());
+        sms.forEach((group, sm) -> ThreadExecutor.execute(() -> {
+            try {
+                Snap lastSnap = logManager.getLastSnap(group);
+                if (lastSnap != null && lastSnap.getCheckpoint() >= sm.lastAppliedId()) {
+                    snaps.put(group, lastSnap);
+                    return;
                 }
 
-                LOG.info("save snapshot, group: {}, cp: {}", entry.getKey(), snapshot.getCheckpoint());
+                Snap snapshot = sm.snapshot();
+                LOG.info("save snapshot, group: {}, cp: {}", group, snapshot.getCheckpoint());
                 self.updateLastCheckpoint(snapshot.getCheckpoint());
-                logManager.saveSnap(entry.getKey(), snapshot);
-                snaps.put(entry.getKey(), snapshot);
+                logManager.saveSnap(group, snapshot);
+                snaps.put(group, snapshot);
+            } finally {
+                latch.countDown();
             }
-            return snaps;
-        } finally {
-            snapLock.unlock();
-        }
-    }
+        }));
 
-    @Override
-    public void loadSnap(final String group, final Snap snap) {
-        if (snap == null) {
-            return;
-        }
-        Snap localSnap = logManager.getLastSnap(group);
-        if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
-            return;
-        }
-
-        LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         try {
-            if ((snapLock.isLocked() && !snapLock.isHeldByCurrentThread())
-                    || (!snapLock.isLocked() && !snapLock.tryLock())) {
-                return;
+            if (!latch.await(2L, TimeUnit.SECONDS)) {
+                LOG.warn("generate snapshot, after waiting for 2 seconds, still didn't get all result. finish: {}", snaps.keySet());
             }
-            SM sm = sms.get(group);
-            if (sm == null) {
-                LOG.warn("load snap failure, group: {}, The state machine is not found."
-                        + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
-                return;
+        } catch (InterruptedException e) {
+            LOG.warn("generate snapshot, {}, {}", snaps.keySet(), e.getMessage());
+        }
+        task.callback.onTakeSnap(snaps);
+    }
+
+    @Override
+    public Map<String, Snap> generateSnap() {
+        CompletableFuture<Map<String, Snap>> future = new CompletableFuture<>();
+        Task e = new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP_TAKE, new TaskCallback() {
+            @Override
+            public void onTakeSnap(final Map<String, Snap> snaps) {
+                future.complete(snaps);
             }
+        });
+        boolean offer = applyQueue.offer(e);
+        // ignore offer result.
+        try {
+            return future.get(1L, TimeUnit.SECONDS);
+        } catch (Exception ex) {
+            LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
+            return null;
+        }
+    }
 
-            sm.loadSnap(snap);
-            self.updateLastCheckpoint(snap.getCheckpoint());
-            self.updateCurInstanceId(snap.getCheckpoint());
-            updateAppliedId(snap.getCheckpoint());
+    private void _loadSnap(final Task task) {
+        CountDownLatch latch = new CountDownLatch(task.loadSnaps.size());
 
-            replayLog(snap.getCheckpoint());
+        task.loadSnaps.forEach((group, snap) -> ThreadExecutor.execute(() -> {
+            try {
+                Snap localSnap = logManager.getLastSnap(group);
+                if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
+                    return;
+                }
 
-            LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
-        } finally {
-            snapLock.unlock();
+                LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
+
+                SM sm = sms.get(group);
+                if (sm == null) {
+                    LOG.warn("load snap failure, group: {}, The state machine is not found."
+                            + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                    return;
+                }
+
+                sm.loadSnap(snap);
+                self.updateLastCheckpoint(snap.getCheckpoint());
+                self.updateCurInstanceId(snap.getCheckpoint());
+                updateAppliedId(snap.getCheckpoint());
+
+                replayLog(group, snap.getCheckpoint());
+
+                LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
+            } finally {
+                latch.countDown();
+            }
+        }));
+
+        try {
+            boolean await = latch.await(2L, TimeUnit.SECONDS);
+            // do nothing for await.result.
+        } catch (InterruptedException e) {
+            LOG.warn("load snap, {}", e.getMessage());
         }
     }
 
     @Override
-    public void replayLog(final long start) {
+    public void loadSnap(final Map<String, Snap> snaps) {
+        if (MapUtils.isEmpty(snaps)) {
+            return;
+        }
+
+        Task e = new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP_LOAD, fakeCallback);
+        e.loadSnaps = snaps;
+        boolean offer = applyQueue.offer(e);
+        // ignore offer result.
+    }
+
+    private void _replay(final Task task) {
+        Map<Proposal, Object> result = new HashMap<>();
+        task.replayProposals.forEach(it -> result.put(it, doApply(task.priority, it)));
+        task.callback.onApply(result);
+    }
+
+    @Override
+    public void replayLog(final String group, final long start) {
         long curInstanceId = self.getCurInstanceId();
         for (long i = start; i <= curInstanceId; i++) {
             Instance<Proposal> instance = logManager.getInstance(i);
             if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
                 break;
             }
-            boolean offer = applyQueue.offer(new Task(i, TaskEnum.REPLAY, fakeCallback));
+            List<Proposal> replayData = instance.getGrantedValue().stream().filter(it -> StringUtils.equals(group, it.getGroup())).collect(Collectors.toList());
+            if (CollectionUtils.isEmpty(replayData)) {
+                continue;
+            }
+
+            Task e = new Task(i, TaskEnum.REPLAY, fakeCallback);
+            e.replayProposals = replayData;
+            boolean offer = applyQueue.offer(e);
             // ignore offer result.
         }
     }
@@ -222,26 +279,25 @@ public class LearnerImpl implements Learner {
             return;
         }
         Snap lastSnap = logManager.getLastSnap(group);
-        loadSnap(group, lastSnap);
+        if (lastSnap == null) {
+            return;
+        }
+        loadSnap(ImmutableMap.of(group, lastSnap));
     }
 
-    private void replay(final Task task) {
-
-    }
-
-    private void apply(final Task task) {
+    private void _apply(final Task task) {
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long exceptConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", task.instanceId, lastAppliedId, lastCheckpoint);
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", task.priority, lastAppliedId, lastCheckpoint);
 
-        if (task.instanceId <= lastApplyId) {
+        if (task.priority <= lastApplyId) {
             // the instance has been applied.
             return;
         }
-        if (task.instanceId > exceptConfirmId) {
+        if (task.priority > exceptConfirmId) {
             // boost.
-            for (long i = exceptConfirmId; i < task.instanceId; i++) {
+            for (long i = exceptConfirmId; i < task.priority; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     applyQueue.offer(new Task(i, TaskEnum.APPLY, fakeCallback));
@@ -257,27 +313,23 @@ public class LearnerImpl implements Learner {
         }
         // else: instanceId == exceptConfirmId, do apply.
 
-        Instance<Proposal> localInstance = logManager.getInstance(task.instanceId);
+        Instance<Proposal> localInstance = logManager.getInstance(task.priority);
 
         Map<Proposal, Object> applyResult = new HashMap<>();
-        LOG.info("apply {}. grantedValue: {}", task.instanceId, localInstance.getGrantedValue());
         for (Proposal data : localInstance.getGrantedValue()) {
-            Object result = this._apply(localInstance.getInstanceId(), data);
+            Object result = this.doApply(localInstance.getInstanceId(), data);
             applyResult.put(data, result);
         }
-        updateAppliedId(task.instanceId);
+        updateAppliedId(task.priority);
 
         task.callback.onApply(applyResult);
     }
 
-    private Object _apply(final long instance, final Proposal data) {
+    private Object doApply(final long instance, final Proposal data) {
         LOG.info("doing apply instance[{}]", instance);
         if (data.getData() instanceof Proposal.Noop) {
             //do nothing
             return null;
-        }
-        if (snapLock.isLocked()) {
-            return _apply(instance, data);
         }
 
         if (instance <= self.getLastCheckpoint()) {
@@ -442,7 +494,7 @@ public class LearnerImpl implements Learner {
             snapSync(target);
             pullSameData(state);
         } else {
-            for (long i = localApplied; i <= targetApplied; i++) {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
                 RoleAccessor.getLearner().learn(i, target);
             }
         }
@@ -462,47 +514,24 @@ public class LearnerImpl implements Learner {
         LOG.info("start snap sync from node-{}", target.getId());
 
         long checkpoint = -1;
-
         try {
-            CompletableFuture<SnapSyncRes> future = new CompletableFuture<>();
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
                     .memberConfigurationVersion(memberConfig.getVersion())
                     .checkpoint(self.getLastCheckpoint())
                     .build();
-            client.sendRequestAsync(target, req, new AbstractInvokeCallback<SnapSyncRes>() {
-                @Override
-                public void error(final Throwable err) {
-                    LOG.error("snap sync from node-{}, {}", target.getId(), err.getMessage());
-                    future.completeExceptionally(err);
-                }
+            SnapSyncRes res = client.sendRequestSync(target, req, 1000);
 
-                @Override
-                public void complete(final SnapSyncRes result) {
-                    future.complete(result);
-                }
-            }, 1000);
-
-            SnapSyncRes res = future.get(1010, TimeUnit.MILLISECONDS);
-
-            if (!snapLock.tryLock()) {
-                return checkpoint;
-            }
-
-            for (Map.Entry<String, Snap> entry : res.getImages().entrySet()) {
-                loadSnap(entry.getKey(), entry.getValue());
-                checkpoint = Math.max(checkpoint, entry.getValue().getCheckpoint());
+            if (res != null) {
+                loadSnap(res.getImages());
+                checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
             }
 
             return checkpoint;
         } catch (Throwable e) {
             LOG.error(e.getMessage(), e);
             return checkpoint;
-        } finally {
-            if (snapLock.isLocked() && snapLock.isHeldByCurrentThread()) {
-                snapLock.unlock();
-            }
         }
     }
 
@@ -650,22 +679,25 @@ public class LearnerImpl implements Learner {
     }
 
     private static class Task {
-        private long instanceId;
+        private static final long HIGH_PRIORITY = -1;
+        private long priority;
         private TaskEnum taskType;
         private TaskCallback callback;
+        private List<Proposal> replayProposals;
+        private Map<String, Snap> loadSnaps;
 
-        Task(final long instanceId, final TaskEnum taskType, final TaskCallback callback) {
-            this.instanceId = instanceId;
+        Task(final long priority, final TaskEnum taskType, final TaskCallback callback) {
+            this.priority = priority;
             this.taskType = taskType;
             this.callback = callback;
         }
     }
 
     private interface TaskCallback {
-        default void onApply(Map<Proposal, Object> result) {
+        default void onApply(final Map<Proposal, Object> result) {
         }
 
-        default void onTakeSnap(Snap result) {
+        default void onTakeSnap(final Map<String, Snap> snaps) {
 
         }
 

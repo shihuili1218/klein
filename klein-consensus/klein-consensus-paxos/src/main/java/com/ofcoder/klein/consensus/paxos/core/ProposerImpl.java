@@ -202,7 +202,7 @@ public class ProposerImpl implements Proposer {
                             && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
                         skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                        ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
+                        ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
                     }
                 }
 
@@ -242,7 +242,7 @@ public class ProposerImpl implements Proposer {
             if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
                 skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                ThreadExecutor.submit(() -> prepare(ctxt, new PrepareCallback()));
+                ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
             }
         }
     }
@@ -336,7 +336,7 @@ public class ProposerImpl implements Proposer {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
+                        ThreadExecutor.execute(() -> forcePrepare(ctxt, callback));
                     }
                 }
 
@@ -381,7 +381,7 @@ public class ProposerImpl implements Proposer {
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                ThreadExecutor.submit(() -> forcePrepare(ctxt, callback));
+                ThreadExecutor.execute(() -> forcePrepare(ctxt, callback));
             }
 
             // todo ??????
@@ -451,7 +451,7 @@ public class ProposerImpl implements Proposer {
                 skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                 skipPrepare.notifyAll();
             }
-            ThreadExecutor.submit(() -> accept(grantedProposalNo, context, new AcceptCallback()));
+            ThreadExecutor.execute(() -> accept(grantedProposalNo, context, new AcceptCallback()));
         }
 
         @Override
@@ -479,9 +479,9 @@ public class ProposerImpl implements Proposer {
             context.getDataWithCallback().forEach(it ->
                     it.getDone().negotiationDone(true, context.isDataChange()));
 
-            ThreadExecutor.submit(() -> {
+            ThreadExecutor.execute(() -> {
                 // do confirm
-                List<ProposalWithDone> dons = context.isDataChange() ? context.getDataWithCallback() : new ArrayList<>();
+                List<ProposalWithDone> dons = context.isDataChange() ? new ArrayList<>() : context.getDataWithCallback();
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
             });
 
@@ -496,7 +496,7 @@ public class ProposerImpl implements Proposer {
                 event.getDone().negotiationDone(false, false);
             }
 
-            ThreadExecutor.submit(() -> {
+            ThreadExecutor.execute(() -> {
                 // do learn
                 RoleAccessor.getLearner().learn(context.getInstanceId(), it);
             });

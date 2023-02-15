@@ -26,6 +26,13 @@ import com.ofcoder.klein.storage.facade.Snap;
 public interface SM {
 
     /**
+     * last applied instance id.
+     *
+     * @return instance id
+     */
+    long lastAppliedId();
+
+    /**
      * apply instance.
      *
      * @param instanceId instance id

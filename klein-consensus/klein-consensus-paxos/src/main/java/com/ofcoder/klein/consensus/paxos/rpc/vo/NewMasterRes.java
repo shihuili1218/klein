@@ -27,6 +27,7 @@ public class NewMasterRes implements Serializable {
     private long curInstanceId;
     private long lastAppliedId;
     private long checkpoint;
+    private boolean granted;
 
     public long getCurInstanceId() {
         return curInstanceId;
@@ -52,12 +53,17 @@ public class NewMasterRes implements Serializable {
         this.checkpoint = checkpoint;
     }
 
+    public boolean isGranted() {
+        return granted;
+    }
+
     @Override
     public String toString() {
         return "NewMasterRes{"
                 + "curInstanceId=" + curInstanceId
                 + ", lastAppliedId=" + lastAppliedId
                 + ", checkpoint=" + checkpoint
+                + ", granted=" + granted
                 + '}';
     }
 
@@ -65,6 +71,7 @@ public class NewMasterRes implements Serializable {
         private long curInstanceId;
         private long lastAppliedId;
         private long checkpoint;
+        private boolean granted;
 
         private Builder() {
         }
@@ -112,6 +119,17 @@ public class NewMasterRes implements Serializable {
         }
 
         /**
+         * granted.
+         *
+         * @param granted granted
+         * @return Builder
+         */
+        public Builder granted(final boolean granted) {
+            this.granted = granted;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return NewMasterRes
@@ -121,6 +139,7 @@ public class NewMasterRes implements Serializable {
             newMasterRes.lastAppliedId = this.lastAppliedId;
             newMasterRes.curInstanceId = this.curInstanceId;
             newMasterRes.checkpoint = this.checkpoint;
+            newMasterRes.granted = this.granted;
             return newMasterRes;
         }
     }
