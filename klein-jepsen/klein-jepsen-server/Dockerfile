@@ -1,4 +1,4 @@
-FROM java:8-jdk-alpine
+FROM openjdk:8
 
 # set environment
 ENV KLEIN_ID="1" \
