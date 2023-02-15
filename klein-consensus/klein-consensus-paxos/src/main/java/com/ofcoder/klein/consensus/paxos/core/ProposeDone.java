@@ -26,6 +26,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 public interface ProposeDone {
     /**
      * call the method when negotiation done.
+     * the method is executed no matter what proposal is reached a consensus
      *
      * @param result     negotiation result
      * @param dataChange the consensus data has changed
@@ -34,6 +35,7 @@ public interface ProposeDone {
 
     /**
      * call the method when apply done.
+     * the method is executed only when the expect proposal is reached a consensus
      *
      * @param input  enter the value of the state machine
      * @param output state machine output
