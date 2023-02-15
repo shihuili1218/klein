@@ -10,7 +10,6 @@ ENV KLEIN_ID="1" \
 ADD target/klein-jepsen-server-shade.jar /klein/klein-server.jar
 ADD deploy/start.sh /klein/start.sh
 ADD deploy/stop.sh /klein/stop.sh
-ADD ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
 
 RUN chmod +x /klein/start.sh \
     && chmod +x /klein/stop.sh \
