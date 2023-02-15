@@ -1,4 +1,4 @@
-FROM ubuntu-latest
+FROM ubuntu
 
 # set environment
 ENV KLEIN_ID="1" \
@@ -16,7 +16,6 @@ RUN chmod +x /klein/start.sh \
     && chmod +x /klein/stop.sh \
     && mkdir /config && touch /config/server.properties \
     && apt-get update \
-#    && apt-get install git -y \
     && apt-get install openssh-server -y \
     && apt-get install openjdk-8-jdk -y
 
