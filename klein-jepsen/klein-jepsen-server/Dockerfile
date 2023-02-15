@@ -1,4 +1,4 @@
-FROM openjdk:8
+FROM ubuntu-latest
 
 # set environment
 ENV KLEIN_ID="1" \
@@ -10,10 +10,16 @@ ENV KLEIN_ID="1" \
 ADD target/klein-jepsen-server-shade.jar /klein/klein-server.jar
 ADD deploy/start.sh /klein/start.sh
 ADD deploy/stop.sh /klein/stop.sh
+ADD ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
 
 RUN chmod +x /klein/start.sh \
     && chmod +x /klein/stop.sh \
-    && mkdir /config && touch /config/server.properties
+    && mkdir /config && touch /config/server.properties \
+    && apt-get update \
+#    && apt-get install git -y \
+    && apt-get install openssh-server -y \
+    && apt-get install openjdk-8-jdk -y
 
+EXPOSE 22
 EXPOSE 8080
 CMD ["sh", "/klein/start.sh"]

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ lihang/jepsen-test ]
 
+
+
+
+
 jobs:
   mvn_jepsen_test:
     runs-on: ubuntu-latest
@@ -22,4 +26,4 @@ jobs:
       - name: start docker klein-jepsen-server container
         run: ls -lh && docker-compose -f klein-jepsen/klein-jepsen-server/cluster.yaml up -d
 
-      - run: sleep 5 && docker ps
+      - run: sleep 5 && docker ps && ssh -oPort=10001 lihang@127.0.0.1 'ls -lh'
