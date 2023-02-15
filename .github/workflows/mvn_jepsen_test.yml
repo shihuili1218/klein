@@ -20,12 +20,10 @@ jobs:
         with:
           java-version: 1.8
 
-      - run: ssh
-
       - name: Package
         run: mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
       - name: start docker klein-jepsen-server container
         run: ls -lh && docker-compose -f klein-jepsen/klein-jepsen-server/cluster.yaml up -d
 
-      - run: sleep 5 && docker ps && ssh -oPort=10001 lihang@127.0.0.1 'ls -lh'
+      - run: sleep 5 && docker ps && ssh -i klein-jepsen/klein-jepsen-server/deploy/id_rsa.pub -oPort=10001 lihang@127.0.0.1 'ls -lh'

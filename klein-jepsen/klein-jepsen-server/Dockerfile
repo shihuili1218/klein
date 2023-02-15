@@ -10,14 +10,15 @@ ENV KLEIN_ID="1" \
 ADD target/klein-jepsen-server-shade.jar /klein/klein-server.jar
 ADD deploy/start.sh /klein/start.sh
 ADD deploy/stop.sh /klein/stop.sh
-ADD ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
 
 RUN chmod +x /klein/start.sh \
     && chmod +x /klein/stop.sh \
     && mkdir /config && touch /config/server.properties \
     && apt-get update \
     && apt-get install openssh-server -y \
-    && apt-get install openjdk-8-jdk -y
+    && apt-get install openjdk-8-jdk -y \
+
+ADD deploy/id_rsa.pub ~/.ssh/authorized_keys
 
 EXPOSE 22
 EXPOSE 8080
