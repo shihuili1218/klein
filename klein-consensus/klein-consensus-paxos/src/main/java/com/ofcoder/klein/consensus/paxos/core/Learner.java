@@ -117,7 +117,7 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * @param instanceId id of the instance
      * @param dons       call ProposeDone#applyDone(java.util.Map) when apply done
      */
-    void confirm(long instanceId, List<ProposeDone> dons);
+    void confirm(long instanceId, List<ProposalWithDone> dons);
 
     /**
      * Keep the data consistent with master, state is master.

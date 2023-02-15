@@ -304,12 +304,16 @@ public class LearnerImpl implements Learner {
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
-                @Override
-                protected Long create() {
-                    return instanceId;
-                }
-            }, defaultValue, (result, consensusDatas) -> future.complete(result));
+            RoleAccessor.getProposer().tryBoost(
+                    new Holder<Long>() {
+                        @Override
+                        protected Long create() {
+                            return instanceId;
+                        }
+
+                    }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
+                            .collect(Collectors.toList())
+            );
             try {
                 lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
@@ -503,7 +507,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(final long instanceId, final List<ProposeDone> dons) {
+    public void confirm(final long instanceId, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
@@ -522,26 +526,24 @@ public class LearnerImpl implements Learner {
         // for self
         handleConfirmRequest(req, new TaskCallback() {
             @Override
-            public void onApply(Map<Proposal, Object> result) {
-                dons.forEach(it -> it.applyDone(result));
+            public void onApply(final Map<Proposal, Object> result) {
+                dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
             }
         });
 
         // for other members
-        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
-                @Override
-                public void error(final Throwable err) {
-                    LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
-                    // do nothing
-                }
+        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
+            @Override
+            public void error(final Throwable err) {
+                LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
+                // do nothing
+            }
 
-                @Override
-                public void complete(final Serializable result) {
-                    // do nothing
-                }
-            }, 1000);
-        });
+            @Override
+            public void complete(final Serializable result) {
+                // do nothing
+            }
+        }, 1000));
     }
 
     private void handleConfirmRequest(final ConfirmReq req, final TaskCallback dons) {
@@ -621,7 +623,7 @@ public class LearnerImpl implements Learner {
                     protected Long create() {
                         return request.getInstanceId();
                     }
-                }, defaultValue, new ProposeDone.DefaultProposeDone());
+                }, defaultValue.stream().map(it -> new ProposalWithDone(it, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
             }
             return res.result(Sync.NO_SUPPORT).build();
         }
@@ -652,7 +654,7 @@ public class LearnerImpl implements Learner {
         private TaskEnum taskType;
         private TaskCallback callback;
 
-        public Task(final long instanceId, final TaskEnum taskType, final TaskCallback callback) {
+        Task(final long instanceId, final TaskEnum taskType, final TaskCallback callback) {
             this.instanceId = instanceId;
             this.taskType = taskType;
             this.callback = callback;

@@ -29,11 +29,11 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class PaxosNode extends Node {
     private long curInstanceId = 0;
-    private transient final Object instanceIdLock = new Object();
+    private final transient Object instanceIdLock = new Object();
     private long curProposalNo = 0;
-    private transient final Object proposalNoLock = new Object();
+    private final transient Object proposalNoLock = new Object();
     private long lastCheckpoint = 0;
-    private transient final Object checkpointLock = new Object();
+    private final transient Object checkpointLock = new Object();
     private Endpoint self;
 
     /**
