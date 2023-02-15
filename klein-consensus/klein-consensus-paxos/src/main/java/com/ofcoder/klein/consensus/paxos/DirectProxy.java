@@ -17,8 +17,6 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -52,10 +50,10 @@ public class DirectProxy implements Proxy {
         Result.Builder<D> builder = Result.Builder.aResult();
         RoleAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
-            public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+            public void negotiationDone(final boolean result, final boolean changed) {
                 completed.countDown();
                 if (result) {
-                    builder.state(consensusDatas.contains(proposal) ? Result.State.SUCCESS : Result.State.FAILURE);
+                    builder.state(!changed ? Result.State.SUCCESS : Result.State.FAILURE);
                 } else {
                     builder.state(Result.State.UNKNOWN);
                     completed.countDown();
@@ -63,13 +61,9 @@ public class DirectProxy implements Proxy {
             }
 
             @Override
-            public void applyDone(final Map<Proposal, Object> applyResults) {
-                for (Map.Entry<Proposal, Object> entry : applyResults.entrySet()) {
-                    if (entry.getKey() == proposal) {
-                        builder.data((D) entry.getValue());
-                        break;
-                    }
-                }
+            @SuppressWarnings("unchecked")
+            public void applyDone(final Proposal p, final Object r) {
+                builder.data((D) r);
                 completed.countDown();
             }
         });

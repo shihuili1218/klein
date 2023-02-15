@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -227,28 +228,31 @@ public class MasterImpl implements Master {
             req.setNewConfig(newConfig);
             req.setVersion(version);
             CompletableFuture<Boolean> latch = new CompletableFuture<>();
+
             RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
                 @Override
                 protected Long create() {
                     return self.incrementInstanceId();
                 }
-            }, curConfiguration, Lists.newArrayList(new Proposal(MasterSM.GROUP, req)), new ProposeDone() {
-                @Override
-                public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
-                    if (!result) {
-                        latch.complete(false);
-                        return;
-                    }
+            }, curConfiguration, Lists.newArrayList(
+                    new ProposalWithDone(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
+                        @Override
+                        public void negotiationDone(final boolean result, final boolean changed) {
+                            if (!result || changed) {
+                                latch.complete(false);
+                                return;
+                            }
 
-                    // 2. Copy instance(version = 0, confirmed) to new quorum
-                    pushCompleteData(newConfig, 0);
-                }
+                            // 2. Copy instance(version = 0, confirmed) to new quorum
+                            pushCompleteData(newConfig, 0);
+                        }
 
-                @Override
-                public void applyDone(final Map<Proposal, Object> applyResults) {
-                    latch.complete(true);
-                }
-            });
+                        @Override
+                        public void applyDone(final Proposal p, final Object r) {
+                            latch.complete(true);
+                        }
+                    })
+            ));
             return latch.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             // do nothing
@@ -337,12 +341,11 @@ public class MasterImpl implements Master {
                         protected Long create() {
                             return self.incrementInstanceId();
                         }
-                    }, Lists.newArrayList(proposal),
-                    new ProposeDone() {
+                    }, Lists.newArrayList(new ProposalWithDone(proposal, new ProposeDone() {
                         @Override
-                        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+                        public void negotiationDone(final boolean result, final boolean changed) {
                             LOG.info("electing master, negotiationDone: {}", result);
-                            if (result && consensusDatas.contains(proposal)) {
+                            if (result && !changed) {
                                 ThreadExecutor.submit(MasterImpl.this::newMaster);
                             } else {
                                 latch.countDown();
@@ -350,11 +353,11 @@ public class MasterImpl implements Master {
                         }
 
                         @Override
-                        public void applyDone(final Map<Proposal, Object> applyResults) {
-                            LOG.info("electing master, applyDone: {}", applyResults);
+                        public void applyDone(final Proposal p, final Object r) {
+                            LOG.info("electing master, applyDone: {}", r);
                             latch.countDown();
                         }
-                    });
+                    })));
 
             try {
                 boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
@@ -432,7 +435,7 @@ public class MasterImpl implements Master {
                 protected Long create() {
                     return finalMiniInstanceId;
                 }
-            }, grantedValue, new ProposeDone.DefaultProposeDone());
+            }, grantedValue.stream().map(i -> new ProposalWithDone(i, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
         }
     }
 

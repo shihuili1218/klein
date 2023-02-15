@@ -28,6 +28,14 @@ public class ProposalWithDone extends DisruptorEvent {
     private Proposal proposal;
     private ProposeDone done;
 
+    public ProposalWithDone() {
+    }
+
+    public ProposalWithDone(final Proposal proposal, final ProposeDone done) {
+        this.proposal = proposal;
+        this.done = done;
+    }
+
     public Proposal getProposal() {
         return proposal;
     }

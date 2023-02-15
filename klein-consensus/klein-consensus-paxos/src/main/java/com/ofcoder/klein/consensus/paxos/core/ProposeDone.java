@@ -16,9 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
-import java.util.Map;
-
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
@@ -30,24 +27,24 @@ public interface ProposeDone {
     /**
      * call the method when negotiation done.
      *
-     * @param result         negotiation result
-     * @param consensusDatas consensus data
+     * @param result     negotiation result
+     * @param dataChange the consensus data has changed
      */
-    void negotiationDone(boolean result, List<Proposal> consensusDatas);
+    void negotiationDone(boolean result, boolean dataChange);
 
     /**
      * call the method when apply done.
      *
-     * @param applyResults Key: enter the value of the state machine
-     *                     Value: state machine output
+     * @param input  enter the value of the state machine
+     * @param output state machine output
      */
-    default void applyDone(Map<Proposal, Object> applyResults) {
+    default void applyDone(Proposal input, Object output) {
         // for subclass
     }
 
-    class DefaultProposeDone implements ProposeDone {
+    class FakeProposeDone implements ProposeDone {
         @Override
-        public void negotiationDone(final boolean result, final List<Proposal> consensusDatas) {
+        public void negotiationDone(final boolean result, final boolean dataChange) {
             // do nothing.
         }
     }

@@ -43,20 +43,18 @@ public interface Proposer extends Lifecycle<ConsensusProp> {
      * Boost the copy of the proposal to the majority and the confirm status is reached
      *
      * @param instanceHolder  id of the instance that you want to boost
-     * @param done            boost callback, NOTICE: it may be called multiple times
-     * @param defaultProposal default proposal
+     * @param defaultProposal default proposal and boost callback
      */
-    void tryBoost(Holder<Long> instanceHolder, List<Proposal> defaultProposal, ProposeDone done);
+    void tryBoost(Holder<Long> instanceHolder, List<ProposalWithDone> defaultProposal);
 
     /**
      * Try to boost instance.
      * Boost the copy of the proposal to the majority and the confirm status is reached
      *
      * @param instanceHolder      id of the instance that you want to boost
-     * @param done                boost callback, NOTICE: it may be called multiple times
-     * @param defaultProposal     default proposal
+     * @param defaultProposal     default proposal and boost callback
      * @param memberConfiguration member config
      */
-    void tryBoost(Holder<Long> instanceHolder, PaxosMemberConfiguration memberConfiguration, List<Proposal> defaultProposal, ProposeDone done);
+    void tryBoost(Holder<Long> instanceHolder, PaxosMemberConfiguration memberConfiguration, List<ProposalWithDone> defaultProposal);
 
 }

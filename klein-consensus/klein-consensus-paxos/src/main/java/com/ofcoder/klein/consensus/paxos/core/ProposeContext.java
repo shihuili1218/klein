@@ -44,6 +44,7 @@ public class ProposeContext {
      * The data on which consensus was reached.
      */
     private List<Proposal> consensusData;
+    private boolean dataChange = false;
     /**
      * This is a proposalNo that has executed the prepare phase.
      */
@@ -86,6 +87,14 @@ public class ProposeContext {
 
     public void setConsensusData(final List<Proposal> consensusData) {
         this.consensusData = consensusData;
+    }
+
+    public boolean isDataChange() {
+        return dataChange;
+    }
+
+    public void setDataChange(final boolean dataChange) {
+        this.dataChange = dataChange;
     }
 
     public long getGrantedProposalNo() {
