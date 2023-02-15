@@ -31,6 +31,6 @@ jobs:
         run: mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
       - name: start docker klein-jepsen-server container
-        run: docker-compose -f klein/klein-jepsen/klein-jepsen-server/cluster.yaml up -d
+        run: ls -lh && docker-compose -f klein-jepsen/klein-jepsen-server/cluster.yaml up -d
 
       - run: sleep 5 && docker ps
