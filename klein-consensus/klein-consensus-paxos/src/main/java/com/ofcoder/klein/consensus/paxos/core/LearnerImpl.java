@@ -99,26 +99,28 @@ public class LearnerImpl implements Learner {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
 
         applyExecutor.execute(() -> {
-            try {
-                Task take = applyQueue.take();
-                switch (take.taskType) {
-                    case APPLY:
-                        _apply(take);
-                        break;
-                    case REPLAY:
-                        _replay(take);
-                        break;
-                    case SNAP_LOAD:
-                        _loadSnap(take);
-                        break;
-                    case SNAP_TAKE:
-                        _generateSnap(take);
-                        break;
-                    default:
-                        break;
+            while (true) {
+                try {
+                    Task take = applyQueue.take();
+                    switch (take.taskType) {
+                        case APPLY:
+                            _apply(take);
+                            break;
+                        case REPLAY:
+                            _replay(take);
+                            break;
+                        case SNAP_LOAD:
+                            _loadSnap(take);
+                            break;
+                        case SNAP_TAKE:
+                            _generateSnap(take);
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (InterruptedException e) {
+                    LOG.warn("handle queue task, occur exception, {}", e.getMessage());
                 }
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         });
     }
@@ -277,6 +279,9 @@ public class LearnerImpl implements Learner {
             return;
         }
         Snap lastSnap = logManager.getLastSnap(group);
+        if (lastSnap == null) {
+            return;
+        }
         loadSnap(ImmutableMap.of(group, lastSnap));
     }
 
@@ -311,7 +316,6 @@ public class LearnerImpl implements Learner {
         Instance<Proposal> localInstance = logManager.getInstance(task.priority);
 
         Map<Proposal, Object> applyResult = new HashMap<>();
-        LOG.info("apply {}. grantedValue: {}", task.priority, localInstance.getGrantedValue());
         for (Proposal data : localInstance.getGrantedValue()) {
             Object result = this.doApply(localInstance.getInstanceId(), data);
             applyResult.put(data, result);
@@ -490,7 +494,7 @@ public class LearnerImpl implements Learner {
             snapSync(target);
             pullSameData(state);
         } else {
-            for (long i = localApplied; i <= targetApplied; i++) {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
                 RoleAccessor.getLearner().learn(i, target);
             }
         }
@@ -521,7 +525,7 @@ public class LearnerImpl implements Learner {
 
             if (res != null) {
                 loadSnap(res.getImages());
-                checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).get().getCheckpoint();
+                checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
             }
 
             return checkpoint;

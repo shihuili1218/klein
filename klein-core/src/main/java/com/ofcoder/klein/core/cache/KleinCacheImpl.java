@@ -105,7 +105,8 @@ public class KleinCacheImpl implements KleinCache {
         message.setOp(Message.GET);
         Result<D> result = consensus.read(message);
         if (!Result.State.SUCCESS.equals(result.getState())) {
-            throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
+            throw new KleinException(String.format("The consensus negotiation result is %s. In this case, the operation"
+                    + " may or may not be completed. You need to retry or query to confirm", result.getState()));
         }
         return result.getData();
     }

@@ -32,9 +32,10 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author 释慧利
  */
 public class HeartbeatProcessor extends AbstractRpcProcessor<Ping> {
+    private PaxosNode self;
 
     public HeartbeatProcessor(final PaxosNode self) {
-        // do nothing.
+        this.self = self;
     }
 
     @Override
