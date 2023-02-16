@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # "To provide additional docker-compose args, set the COMPOSE var. Ex:
-# COMPOSE="-f FILE_PATH_HERE"
+# COMPOSE="-f FILE_PATH_HERE./jepsen/src/j"
 
 set -o errexit
 set -o pipefail
@@ -126,29 +126,31 @@ fi
 
 
 ## Build dockerfile
+cp ../klein-jepsen-server/target/klein-jepsen-server-shade.jar node/klein-server.jar
+cp ../klein-jepsen-server/deploy/start.sh node/start.sh
+cp ../klein-jepsen-server/deploy/stop.sh node/stop.sh
 bin/build-docker-compose "${NODE_COUNT}"
-
 # Make sure folders referenced in control Dockerfile exist and don't contain leftover files
 rm -rf ./control/jepsen
 mkdir -p ./control/jepsen/jepsen
 # Copy the jepsen directory if we're not mounting the JEPSEN_ROOT
-if [ -z "${DEV}" ]; then
-    exclude_params=(
-        --exclude=./docker
-        --exclude=./.git
-    )
-    case $(uname) in
-        Linux)
-            exclude_params+=(--exclude-ignore=.gitignore)
-            ;;
-    esac
-    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
-    INFO "Copying .. to control/jepsen"
-    (
-        (cd ..; tar "${exclude_params[@]}" -cf - .)  | tar Cxf ./control/jepsen -
-        cp ../jepsen/src/jepsen/store/* ./control/jepsen/jepsen/src/jepsen/store/
-    )
-fi
+#if [ -z "${DEV}" ]; then
+#    exclude_params=(
+#        --exclude=./docker
+#        --exclude=./.git
+#    )
+#    case $(uname) in
+#        Linux)
+#            exclude_params+=(--exclude-ignore=.gitignore)
+#            ;;
+#    esac
+#    # Dockerfile does not allow `ADD ..`. So we need to copy it here in setup.
+#    INFO "Copying .. to control/jepsen"
+#    (
+#        (cd ..; tar "${exclude_params[@]}" -cf - .)  | tar Cxf ./control/jepsen -
+#        cp ../jepsen/src/jepsen/store/* ./control/jepsen/jepsen/src/jepsen/store/
+#    )
+#fi
 
 if [ "${INIT_ONLY}" -eq 1 ]; then
     exit 0
