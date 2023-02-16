@@ -47,16 +47,13 @@ public class Main1 {
         String key = "hello";
         String value = "klein";
         long start = System.currentTimeMillis();
-        instance1.getCache().put("hello1", "klein1");
-        LOG.info("++++++++++first put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++first put: " + instance1.getCache().put("hello1", "klein1") + ", cost: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        instance1.getCache().put("hello2", "klein2");
-        LOG.info("++++++++++second put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++second put: " + instance1.getCache().put("hello2", "klein2") + ", cost: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        instance1.getCache().put("hello3", "klein3");
-        LOG.info("++++++++++third put: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++third put: " + instance1.getCache().put("hello3", "klein3") + ", cots: " + (System.currentTimeMillis() - start));
 
         LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
         LOG.info("----------get hello4: " + instance1.getCache().get("hello4"));
