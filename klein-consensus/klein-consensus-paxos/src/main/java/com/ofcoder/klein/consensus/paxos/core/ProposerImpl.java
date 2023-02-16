@@ -481,7 +481,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do confirm
-                List<ProposalWithDone> dons = context.isDataChange() ? context.getDataWithCallback() : new ArrayList<>();
+                List<ProposalWithDone> dons = context.isDataChange() ? new ArrayList<>() : context.getDataWithCallback();
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
             });
 

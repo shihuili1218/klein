@@ -54,7 +54,6 @@ public class CacheSM extends AbstractSM {
 
     @Override
     public Object apply(final Object data) {
-        LOG.info("apply data: {}", data);
         if (!(data instanceof Message)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
             return null;
