@@ -1,3 +1,6 @@
 secret/*
 !.gitkeep
 ./docker-compose.yml
+./node/start.sh
+./node/stop.sh
+./docker-compose.yml
