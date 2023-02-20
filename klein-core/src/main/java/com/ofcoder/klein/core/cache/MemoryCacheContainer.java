@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class MemoryCacheContainer<D extends Serializable> implements CacheContainer<D> {
+public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCacheContainer<D> {
 
     private final ConcurrentMap<String, MetaData<D>> memory = new ConcurrentHashMap<>();
 

@@ -19,13 +19,13 @@
 # Introduce
 ![logo](logo.svg)
 
-Klein is a Paxos based distributed collection tool library, including distributed ArrayList, distributed HashMap, distributed Cache, distributed Lock, etc..
+Klein is a distributed collection tool library based on Paxos, including distributed Cache, distributed message queue, distributed List, distributed Map, distributed Lock and so on. What's interesting about this is that you can keep data consistent across members without relying on any middleware.
 
-In addition, based on Paxos, we can imagine endlessly, such as: KV-storage, Registry, Configuration center, etc.
+You can understand that Klein is a distributed tool that depends on your project through Maven. We hope it will replace your existing Redis, messaging middleware, registry, configuration center, etc.
 
-We hope that Klein can be deployed independently or embedded in your project. You can use it just like Redis,
-or embed Klein into your project without relying on any middleware to ensure data consistency among members. Of course,
-this is still in the process of implementation. 😆😆😆
+Of course, the project is huge, and we currently implement distributed caching.
+
+If you are interested in distributed message queue, distributed List, distributed Map, distributed Lock, we can share the existing design, you can participate in the coding work. 😆 😆 😆
 
 **Look forward to your star⭐**
 
