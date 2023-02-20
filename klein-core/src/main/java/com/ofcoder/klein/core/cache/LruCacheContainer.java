@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class LruCacheContainer<D extends Serializable> implements CacheContainer<D> {
+public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheContainer<D> {
     private final MemoryMap<String, MetaData<D>> memory;
     private final ConcurrentMap<String, MetaData<D>> file;
     private final DB db;
