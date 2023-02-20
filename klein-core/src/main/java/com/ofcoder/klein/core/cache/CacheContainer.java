@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import com.ofcoder.klein.common.util.TrueTime;
-
 import java.io.Serializable;
 import java.util.Map;
 
@@ -94,27 +92,5 @@ public interface CacheContainer<D extends Serializable> {
      * close.
      */
     void close();
-
-    /**
-     * check whether the data has expired.
-     *
-     * @param key value of key
-     * @param metaData check data
-     * @return whether expired
-     */
-    default boolean checkExpire(final String key, final MetaData<D> metaData) {
-        if (metaData == null) {
-            return false;
-        }
-        if (metaData.getExpire() == Message.TTL_PERPETUITY) {
-            return true;
-        }
-        if (metaData.getExpire() < TrueTime.currentTimeMillis()) {
-            remove(key);
-            return false;
-        } else {
-            return true;
-        }
-    }
 
 }
