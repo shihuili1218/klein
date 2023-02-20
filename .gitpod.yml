@@ -5,6 +5,6 @@
 # Learn more from ready-to-use templates: https://www.gitpod.io/docs/introduction/getting-started/quickstart
 
 tasks:
-  - init: mvn install -DskipTests=true
+  - init: mvn install -DskipTests=true && chmod -R +x klein-jepsen/docker && klein-jepsen/docker/bin/up
 
 
