@@ -7,7 +7,7 @@
     <groupId>com.ofcoder.klein</groupId>
     <artifactId>klein</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
 
     <name>${project.groupId}:${project.artifactId}</name>
 
