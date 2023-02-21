@@ -70,6 +70,14 @@ public class Proposal implements Serializable {
         return Objects.hash(getGroup(), getData());
     }
 
+    @Override
+    public String toString() {
+        return "Proposal{"
+                + "group='" + group + '\''
+                + ", data=" + data
+                + '}';
+    }
+
     /**
      * No operation proposal.
      */

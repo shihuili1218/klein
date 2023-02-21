@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
 import com.ofcoder.klein.storage.facade.Snap;
 
@@ -27,7 +25,6 @@ import com.ofcoder.klein.storage.facade.Snap;
  * @author 释慧利
  */
 public abstract class AbstractSM implements SM {
-    private static final ReentrantLock APPLYING_LOCK = new ReentrantLock(true);
     private static Long lastAppliedId = 0L;
 
     @Override
@@ -37,16 +34,8 @@ public abstract class AbstractSM implements SM {
 
     @Override
     public Object apply(final long instanceId, final Object data) {
-        if (lastAppliedId >= instanceId) {
-            throw new StateMachineException(String.format("instance[%s] apply sm, but the instance has bean applied", instanceId));
-        }
-        try {
-            APPLYING_LOCK.lock();
-            lastAppliedId = Math.max(instanceId, lastAppliedId);
-            return apply(data);
-        } finally {
-            APPLYING_LOCK.unlock();
-        }
+        lastAppliedId = Math.max(instanceId, lastAppliedId);
+        return apply(data);
     }
 
     /**
@@ -60,12 +49,9 @@ public abstract class AbstractSM implements SM {
     @Override
     public Snap snapshot() {
         try {
-            APPLYING_LOCK.lock();
             return new Snap(lastAppliedId, makeImage());
         } catch (Exception e) {
             throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
-        } finally {
-            APPLYING_LOCK.unlock();
         }
     }
 
@@ -82,13 +68,10 @@ public abstract class AbstractSM implements SM {
             return;
         }
         try {
-            APPLYING_LOCK.lock();
             lastAppliedId = snap.getCheckpoint();
             loadImage(snap.getSnap());
         } catch (Exception e) {
             throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);
-        } finally {
-            APPLYING_LOCK.unlock();
         }
     }
 

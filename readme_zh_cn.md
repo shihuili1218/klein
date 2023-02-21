@@ -1,20 +1,26 @@
-
 ### [English](readme.md)
 <p align="center">
     <strong>感谢JetBrains提供的<a target="_blank" href="https://www.jetbrains.com/community/opensource">免费授权</a>.</strong>
-</p>
-<p align="center">
+    <br/>
     <strong>Open source：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
+    <br/>
+    <strong>文档：</strong> <a target="_blank" href='https://klein-doc.gitbook.io/en'>Gitbook</a>
 </p>
+
 <p align="center">
    <a href="https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://badges.gitter.im/klein-gitter/community.svg"  alt=""/></a>
     &nbsp;
     <a href="https://www.codacy.com/gh/shihuili1218/klein/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=shihuili1218/klein&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/764fda630fd845949ae492a1f6469173" alt="" /></a>
     &nbsp;
     <a href="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml"><img src="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml/badge.svg" alt="" /></a>
-    &nbsp;
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
 </p>
+
+<p align="center">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
+    &nbsp;
+    <a href="https://search.maven.org/search?q=g:com.ofcoder.klein%20AND%20klein"><img src="https://img.shields.io/maven-central/v/com.ofcoder.klein/klein.svg?label=maven%20central" alt="" /></a>
+</p>
+
 
 # 介绍
 ![](logo.svg)
@@ -35,17 +41,10 @@ Klein是一个基于Paxos的分布式集合工具库，包括分布式Cache、�
 <dependency>
     <groupId>com.ofcoder.klein.core</groupId>
     <artifactId>klein-core</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>{last-version}</version>
 </dependency>
 ```
-```xml
-<repositories>
-    <repository>
-        <id>ossrh</id>
-        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-    </repository>
-</repositories>
-```
+
 ### 启动
 ```
 Klein instance = Klein.startup();
@@ -66,61 +65,6 @@ KleinProp prop = KleinProp.loadIfPresent();
 # Jepsen 测试
 
 [Run on Gitpod](https://gitpod.io/#/github.com/shihuili1218/klein)
-
-# 里程map
-
-## 进度
-### paxos
-- [x] 写请求、乱序协商，顺序确认
-- [x] 读请求，使用协商log完成
-- [x] 批量协商
-- [x] 优化prepare阶段
-- [x] 快照
-- [x] 拆分Group，proposer等角色无须隔离，只需隔离instance
-- [x] 增加Master：
-  - [x] 成员变更
-  - [x] master晋升应拥有最完整的数据(使用提案协商来选举master，如果成功晋升成master，接着推进未达成共识的提案)
-  - [x] 数据对齐
-    - [x] Master心跳触发对齐
-    - [x] 快照同步（心跳携带checkpoint、learn消息返回checkpoint）
-    - [x] 新成员加入集群，主动向master学习
-  - [ ] ~~优化读请求(写请求一定要复制到Master)~~
-  - [x] 优化写请求(写请求只能由Master执行，避免活锁)
-- [ ] 成员自动发现(调研)
-- [x] NWR
-- [x] jepsen校验正确性
-  - [x] 线性一致性读写
-  - [ ] 分区
-  - [ ] 成员宕机
-
-### 缓存
-- [x] 读、写、等基础功能
-- [x] 配合持久化实现LRU
-- [x] TTL自动过期
-- [x] 时间偏移
-
-### 集合
-- [ ] list
-- [ ] map
-
-
-### 待优化
-- [ ] LogManager行锁
-- [ ] 监控协商效率
-- [ ] 监控线程池指标(DefaultTimer, ThreadExecutor)
-- [x] ProposalNo全局唯一
-- [x] 状态机持久化（master、lock）
-
-# 章解
-[Paxos](klein-consensus/klein-consensus-paxos/readme.md)
-- ProposalNo怎么生成？
-- 是否真的能支持并行协商？
-- 到底哪个提案会达成共识？
-- Confirm阶段（应用状态转移）是否真的可以异步执行？
-- 如何为一个运行的系统创建快照？
-- Group的拆分是否有必要完全隔离？
-- 优化Prepare阶段
-- 批量协商（队列），减少RPC交互
 
 # Star History
 

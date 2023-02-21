@@ -60,7 +60,8 @@ public class RepeatedTimerTest extends TestCase {
         timer.start();
         timer.stop();
 
-        timer.restart();
+        LOG.info("==============restart==============");
+        timer.restart(true);
         System.out.println(simpleDateFormat.format(new Date()));
         latch.await();
     }

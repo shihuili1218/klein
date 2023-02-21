@@ -234,8 +234,7 @@ public class LearnerImpl implements Learner {
     }
 
     private void _replay(final Task task) {
-        Map<Proposal, Object> result = new HashMap<>();
-        task.replayProposals.forEach(it -> result.put(it, doApply(task.priority, it)));
+        Map<Proposal, Object> result = this.doApply(task.priority, task.replayProposals);
         task.callback.onApply(result);
     }
 
@@ -289,15 +288,16 @@ public class LearnerImpl implements Learner {
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long exceptConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", task.priority, lastAppliedId, lastCheckpoint);
+        final long instanceId = task.priority;
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
 
-        if (task.priority <= lastApplyId) {
+        if (instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
         }
-        if (task.priority > exceptConfirmId) {
+        if (instanceId > exceptConfirmId) {
             // boost.
-            for (long i = exceptConfirmId; i < task.priority; i++) {
+            for (long i = exceptConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     applyQueue.offer(new Task(i, TaskEnum.APPLY, fakeCallback));
@@ -313,48 +313,49 @@ public class LearnerImpl implements Learner {
         }
         // else: instanceId == exceptConfirmId, do apply.
 
-        Instance<Proposal> localInstance = logManager.getInstance(task.priority);
+        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
 
-        Map<Proposal, Object> applyResult = new HashMap<>();
-        for (Proposal data : localInstance.getGrantedValue()) {
-            Object result = this.doApply(localInstance.getInstanceId(), data);
-            applyResult.put(data, result);
-        }
-        updateAppliedId(task.priority);
+        Map<Proposal, Object> applyResult = this.doApply(localInstance.getInstanceId(), localInstance.getGrantedValue());
+        updateAppliedId(instanceId);
 
         task.callback.onApply(applyResult);
     }
 
-    private Object doApply(final long instance, final Proposal data) {
-        LOG.info("doing apply instance[{}]", instance);
-        if (data.getData() instanceof Proposal.Noop) {
-            //do nothing
-            return null;
-        }
+    private Map<Proposal, Object> doApply(final long instance, final List<Proposal> datas) {
+        Map<Proposal, Object> result = new HashMap<>();
 
         if (instance <= self.getLastCheckpoint()) {
             //do nothing
-            return null;
+            return result;
         }
+        LOG.debug("doing apply instance[{}]", instance);
 
-        if (sms.containsKey(data.getGroup())) {
-            SM sm = sms.get(data.getGroup());
-            try {
-                return sm.apply(instance, data.getData());
-            } catch (Exception e) {
-                LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
-                return null;
+        for (Proposal data : datas) {
+            if (data.getData() instanceof Proposal.Noop) {
+                result.put(data, null);
+                continue;
             }
-        } else {
-            LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
-            return null;
+            if (sms.containsKey(data.getGroup())) {
+                SM sm = sms.get(data.getGroup());
+                try {
+                    result.put(data, sm.apply(instance, data.getData()));
+                } catch (Exception e) {
+                    LOG.error(String.format("apply instance[%s].[%s] to sm, %s", instance, data, e.getMessage()), e);
+                    result.put(data, null);
+                }
+            } else {
+                LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
+                result.put(data, null);
+            }
         }
+        return result;
     }
 
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
         boolean lr = false;
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+            LOG.info("try boost instance: {}", instanceId);
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             RoleAccessor.getProposer().tryBoost(
                     new Holder<Long>() {
@@ -391,13 +392,8 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
-        List<LearnCallback> callbacks = learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
+        learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
-        if (callbacks != null) {
-            // Limit only one thread to execute learn
-            return;
-        }
-        // else callbacks = null, do learn
 
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
@@ -556,6 +552,9 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req, new TaskCallback() {
             @Override
             public void onApply(final Map<Proposal, Object> result) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("instance[{}] applied, result: {}", instanceId, result);
+                }
                 dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
             }
         });
@@ -637,24 +636,38 @@ public class LearnerImpl implements Learner {
         }
 
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            return res.result(Sync.SINGLE).instance(instance).build();
-        } else {
-            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
+
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     self.getLastCheckpoint(), self.getCurInstanceId());
             if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+                LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
+
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
+                CountDownLatch latch = new CountDownLatch(1);
 
-                LOG.info("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
                 RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
                     @Override
                     protected Long create() {
                         return request.getInstanceId();
                     }
-                }, defaultValue.stream().map(it -> new ProposalWithDone(it, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
+                }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> latch.countDown())).collect(Collectors.toList()));
+
+                try {
+                    boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                    // do nothing for await's result
+                } catch (InterruptedException e) {
+                    LOG.debug(e.getMessage());
+                }
+
+                instance = logManager.getInstance(request.getInstanceId());
             }
-            return res.result(Sync.NO_SUPPORT).build();
+        }
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            return res.result(Sync.NO_SUPPORT).instance(instance).build();
+        } else {
+            return res.result(Sync.SINGLE).instance(instance).build();
         }
     }
 
