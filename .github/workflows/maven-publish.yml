@@ -22,9 +22,9 @@ jobs:
         run: mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
       - name: Release Maven package
-        uses: cucumber/action-publish-mvn@v1.0.0
+        uses: samuelmeuli/action-maven-publish@v1
         with:
-          gpg-private-key: ${{ secrets.GPG_SECRET }}
-          gpg-passphrase: ${{ secrets.GPG_PASSWORD }}
-          nexus-username: ${{ secrets.OSSRH_USER }}
-          nexus-password: ${{ secrets.OSSRH_PASSWORD }}
+          gpg_private_key: ${{ secrets.GPG_SECRET }}
+          gpg_passphrase: ${{ secrets.GPG_PASSWORD }}
+          nexus_username: ${{ secrets.OSSRH_USER }}
+          nexus_password: ${{ secrets.OSSRH_PASSWORD }}
