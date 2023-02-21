@@ -16,13 +16,13 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
+import java.io.File;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.Serializable;
-import java.util.Map;
+import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 
 /**
  * Cache SM.
@@ -33,7 +33,7 @@ public class CacheSM extends AbstractSM {
     public static final String GROUP = "cache";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
-    private final CacheContainer<Serializable> container;
+    private final CacheContainer container;
     private final CacheProp cacheProp;
 
     public CacheSM(final CacheProp cacheProp) {
@@ -45,10 +45,10 @@ public class CacheSM extends AbstractSM {
             // do nothing for mkdir result.
         }
         if (cacheProp.getLru()) {
-            this.container = new LruCacheContainer<>(cacheProp.getMemorySize(),
+            this.container = new LruCacheContainer(cacheProp.getMemorySize(),
                     temp + File.separator + "klein-cache.mdb" + "." + System.currentTimeMillis());
         } else {
-            this.container = new MemoryCacheContainer<>();
+            this.container = new MemoryCacheContainer();
         }
     }
 
@@ -93,7 +93,7 @@ public class CacheSM extends AbstractSM {
             return;
         }
         container.clear();
-        container.loadImage((Map<String, MetaData<Serializable>>) snap);
+        container.loadImage((CacheSnap) snap);
     }
 
     @Override
