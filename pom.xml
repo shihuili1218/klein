@@ -30,6 +30,10 @@
         </license>
     </licenses>
 
+    <scm>
+        <url>https://github.com/shihuili1218/klein</url>
+    </scm>
+
     <issueManagement>
         <system>GitHub Issues</system>
         <url>https://github.com/shihuili1218/klein/issues</url>
