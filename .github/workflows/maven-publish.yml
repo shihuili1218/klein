@@ -15,11 +15,14 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+          
+      - run: echo Release
 
       - name: Release Maven package
-        uses: samuelmeuli/action-maven-publish@v1
+        uses: cucumber/action-publish-mvn@v1.0.0
         with:
-          gpg_private_key: ${{ secrets.GPG_SECRET }}
-          gpg_passphrase: ${{ secrets.GPG_PASSWORD }}
-          nexus_username: ${{ secrets.OSSRH_USER }}
-          nexus_password: ${{ secrets.OSSRH_PASSWORD }}
+          gpg-private-key: ${{ secrets.GPG_SECRET }}
+          gpg-passphrase: ${{ secrets.GPG_PASSWORD }}
+          nexus-username: ${{ secrets.OSSRH_USER }}
+          nexus-password: ${{ secrets.OSSRH_PASSWORD }}
+          working-directory: "klein-core"
