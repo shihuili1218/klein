@@ -3,8 +3,6 @@ name: Maven Central Repo Deployment
 on:
   release:
     types: [created]
-  push:
-    branches: [ 20230221 ]
 
 jobs:
   publish:
