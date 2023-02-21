@@ -28,4 +28,3 @@ jobs:
           gpg-passphrase: ${{ secrets.GPG_PASSWORD }}
           nexus-username: ${{ secrets.OSSRH_USER }}
           nexus-password: ${{ secrets.OSSRH_PASSWORD }}
-          working-directory: "klein-core"
