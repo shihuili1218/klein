@@ -63,8 +63,9 @@ System.setProperty("klein.id", "2")
 KleinProp prop = KleinProp.loadIfPresent();
 ```
 
-### 在gitpod上运行
-[gitpod](https://gitpod.io/#/github.com/shihuili1218/klein)
+# Jepsen 测试
+
+[Run on Gitpod](https://gitpod.io/#/github.com/shihuili1218/klein)
 
 # 里程map
 
