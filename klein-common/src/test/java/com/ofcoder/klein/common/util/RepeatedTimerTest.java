@@ -2,9 +2,12 @@ package com.ofcoder.klein.common.util;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.logging.log4j.ThreadContext;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +45,15 @@ public class RepeatedTimerTest extends TestCase {
         RepeatedTimer timer = new RepeatedTimer("test-timer", 100) {
             @Override
             protected void onTrigger() {
-                LOG.info("==============run==============");
+                Map<String, String> context = ThreadContext.getContext();
+                LOG.info("==============run==============, {}", context.get("zzz"));
                 latch.countDown();
             }
 
             @Override
             protected int adjustTimeout(int timeoutMs) {
+
+                ThreadContext.put("zzz", System.currentTimeMillis() + "");
                 return 1000;
             }
         };

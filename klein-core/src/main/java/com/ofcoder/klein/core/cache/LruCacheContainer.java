@@ -86,7 +86,7 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
     }
 
     @Override
-    public synchronized D put(final String key, final D data, final Long expire) {
+    public synchronized D _put(final String key, final D data, final Long expire) {
         MetaData<D> value = new MetaData<>();
         value.setExpire(expire);
         value.setData(data);
@@ -101,7 +101,7 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
     }
 
     @Override
-    public synchronized D putIfAbsent(final String key, final D data, final Long expire) {
+    public synchronized D _putIfAbsent(final String key, final D data, final Long expire) {
         MetaData<D> value = new MetaData<>();
         value.setExpire(expire);
         value.setData(data);
