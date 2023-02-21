@@ -17,37 +17,32 @@
 package com.ofcoder.klein.core.cache;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * MetaData.
+ * Cache Snap Model.
  *
  * @author 释慧利
  */
-public class MetaData implements Serializable {
-    private long expire = -1;
-    private Object data;
+public class CacheSnap implements Serializable {
+    private Object cache;
+    private Map<String, Set<String>> expiryBuckets;
 
-    public MetaData() {
+    public CacheSnap(final Object cache, final Map<String, Set<String>> expiryBuckets) {
+        this.cache = cache;
+        this.expiryBuckets = expiryBuckets;
     }
 
-    public MetaData(final long expire, final Object data) {
-        this.expire = expire;
-        this.data = data;
+    public CacheSnap() {
     }
 
-    public long getExpire() {
-        return expire;
+    public Object getCache() {
+        return cache;
     }
 
-    public void setExpire(final long expire) {
-        this.expire = expire;
+    public Map<String, Set<String>> getExpiryBuckets() {
+        return expiryBuckets;
     }
 
-    public Object getData() {
-        return data;
-    }
-
-    public void setData(final Object data) {
-        this.data = data;
-    }
 }

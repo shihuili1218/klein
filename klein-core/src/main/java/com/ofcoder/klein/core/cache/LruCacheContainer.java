@@ -16,7 +16,12 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+
 import org.jetbrains.annotations.NotNull;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -24,12 +29,7 @@ import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 
 /**
  * lru cache.
@@ -37,29 +37,29 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheContainer<D> {
-    private final MemoryMap<String, MetaData<D>> memory;
-    private final ConcurrentMap<String, MetaData<D>> file;
+public class LruCacheContainer extends ClearExpiryCacheContainer {
+    private final MemoryMap<String, MetaData> memory;
+    private final ConcurrentMap<String, MetaData> file;
     private final DB db;
 
     public LruCacheContainer(final int size, final String dataPath) {
         memory = new MemoryMap<>(size);
         db = DBMaker.fileDB(dataPath).make();
-        this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData<D>>() {
+        this.file = db.hashMap(dataPath, Serializer.STRING, new Serializer<MetaData>() {
             @Override
-            public void serialize(@NotNull final DataOutput2 out, @NotNull final MetaData<D> value) throws IOException {
+            public void serialize(@NotNull final DataOutput2 out, @NotNull final MetaData value) throws IOException {
                 out.write(Hessian2Util.serialize(value));
             }
 
             @Override
-            public MetaData<D> deserialize(@NotNull final DataInput2 input, final int available) throws IOException {
+            public MetaData deserialize(@NotNull final DataInput2 input, final int available) throws IOException {
                 return Hessian2Util.deserialize(input.internalByteArray());
             }
         }).createOrOpen();
     }
 
-    private MetaData<D> getValueFormMemberOrFile(final String key) {
-        MetaData<D> metaData = null;
+    private MetaData getValueFormMemberOrFile(final String key) {
+        MetaData metaData = null;
         if (memory.containsKey(key)) {
             metaData = memory.get(key);
         }
@@ -72,13 +72,13 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
 
     @Override
     public boolean containsKey(final String key) {
-        MetaData<D> metaData = getValueFormMemberOrFile(key);
+        MetaData metaData = getValueFormMemberOrFile(key);
         return checkExpire(key, metaData);
     }
 
     @Override
-    public D get(final String key) {
-        MetaData<D> metaData = getValueFormMemberOrFile(key);
+    public Object get(final String key) {
+        MetaData metaData = getValueFormMemberOrFile(key);
         if (checkExpire(key, metaData)) {
             return metaData.getData();
         }
@@ -86,12 +86,12 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
     }
 
     @Override
-    public synchronized D _put(final String key, final D data, final Long expire) {
-        MetaData<D> value = new MetaData<>();
+    public synchronized Object _put(final String key, final Object data, final Long expire) {
+        MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
 
-        MetaData<D> metaData = file.put(key, value);
+        MetaData metaData = file.put(key, value);
         memory.put(key, value);
 
         if (checkExpire(key, metaData)) {
@@ -101,12 +101,12 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
     }
 
     @Override
-    public synchronized D _putIfAbsent(final String key, final D data, final Long expire) {
-        MetaData<D> value = new MetaData<>();
+    public synchronized Object _putIfAbsent(final String key, final Object data, final Long expire) {
+        MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
 
-        MetaData<D> metaData = file.putIfAbsent(key, value);
+        MetaData metaData = file.putIfAbsent(key, value);
         if (metaData == null) {
             memory.put(key, value);
             return null;
@@ -127,12 +127,12 @@ public class LruCacheContainer<D extends Serializable> extends ClearExpiryCacheC
     }
 
     @Override
-    public Map<String, MetaData<D>> makeImage() {
+    public Map<String, MetaData> _makeImage() {
         return new HashMap<>(file);
     }
 
     @Override
-    public synchronized void loadImage(final Map<String, MetaData<D>> image) {
+    public synchronized void _loadImage(final Map<String, MetaData> image) {
         clear();
         file.putAll(image);
         memory.putAll(image);

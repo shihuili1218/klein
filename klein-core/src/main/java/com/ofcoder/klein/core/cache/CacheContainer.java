@@ -16,15 +16,12 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import java.io.Serializable;
-import java.util.Map;
-
 /**
  * Klein Cache.
  *
  * @author 释慧利
  */
-public interface CacheContainer<D extends Serializable> {
+public interface CacheContainer {
 
     /**
      * check key is exist.
@@ -40,7 +37,7 @@ public interface CacheContainer<D extends Serializable> {
      * @param key cache key
      * @return cache value
      */
-    D get(String key);
+    Object get(String key);
 
     /**
      * put element to cache and set expire.
@@ -50,7 +47,7 @@ public interface CacheContainer<D extends Serializable> {
      * @param expire expire
      * @return the previous value associated with key, or null
      */
-    D put(String key, D data, Long expire);
+    Object put(String key, Object data, Long expire);
 
     /**
      * put element to cache if present, and set expire.
@@ -60,7 +57,7 @@ public interface CacheContainer<D extends Serializable> {
      * @param expire expire
      * @return the previous value associated with key, or null
      */
-    D putIfAbsent(String key, D data, Long expire);
+    Object putIfAbsent(String key, Object data, Long expire);
 
     /**
      * remove key from cache.
@@ -79,14 +76,14 @@ public interface CacheContainer<D extends Serializable> {
      *
      * @return snapshot.
      */
-    Map<String, MetaData<D>> makeImage();
+    CacheSnap makeImage();
 
     /**
      * load the snapshot to overwrite the data.
      *
      * @param image snapshot
      */
-    void loadImage(Map<String, MetaData<D>> image);
+    void loadImage(CacheSnap image);
 
     /**
      * close.

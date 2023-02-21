@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,19 +27,19 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author 释慧利
  */
-public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCacheContainer<D> {
+public class MemoryCacheContainer extends ClearExpiryCacheContainer {
 
-    private final ConcurrentMap<String, MetaData<D>> memory = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, MetaData> memory = new ConcurrentHashMap<>();
 
     @Override
     public boolean containsKey(final String key) {
-        MetaData<D> result = memory.getOrDefault(key, null);
+        MetaData result = memory.getOrDefault(key, null);
         return checkExpire(key, result);
     }
 
     @Override
-    public D get(final String key) {
-        MetaData<D> result = memory.getOrDefault(key, null);
+    public Object get(final String key) {
+        MetaData result = memory.getOrDefault(key, null);
         if (checkExpire(key, result)) {
             return result.getData();
         }
@@ -48,11 +47,11 @@ public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCac
     }
 
     @Override
-    public D _put(final String key, final D data, final Long expire) {
-        MetaData<D> value = new MetaData<>();
+    public Object _put(final String key, final Object data, final Long expire) {
+        MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
-        MetaData<D> put = memory.put(key, value);
+        MetaData put = memory.put(key, value);
 
         if (checkExpire(key, put)) {
             return put.getData();
@@ -61,11 +60,11 @@ public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCac
     }
 
     @Override
-    public D _putIfAbsent(final String key, final D data, final Long expire) {
-        MetaData<D> value = new MetaData<>();
+    public Object _putIfAbsent(final String key, final Object data, final Long expire) {
+        MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
-        MetaData<D> pre = memory.putIfAbsent(key, value);
+        MetaData pre = memory.putIfAbsent(key, value);
 
         if (checkExpire(key, pre)) {
             return pre.getData();
@@ -84,12 +83,12 @@ public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCac
     }
 
     @Override
-    public Map<String, MetaData<D>> makeImage() {
+    public Map<String, MetaData> _makeImage() {
         return new HashMap<>(memory);
     }
 
     @Override
-    public void loadImage(final Map<String, MetaData<D>> image) {
+    public void _loadImage(final Map<String, MetaData> image) {
         memory.clear();
         memory.putAll(image);
     }

@@ -16,12 +16,12 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.ThreadContext;
 
 import com.ofcoder.klein.common.util.TrueTime;
@@ -32,7 +32,7 @@ import com.ofcoder.klein.common.util.timer.RepeatedTimer;
  *
  * @author 释慧利
  */
-public abstract class ClearExpiryCacheContainer<D extends Serializable> implements CacheContainer<D> {
+public abstract class ClearExpiryCacheContainer implements CacheContainer {
 
     private final Map<String, Set<String>> expiryBuckets = new ConcurrentHashMap<>();
     private final RepeatedTimer clearTask;
@@ -46,7 +46,7 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
             @Override
             protected void onTrigger() {
                 String bucket = ThreadContext.get(BUCKET_KEY);
-                if (!expiryBuckets.containsKey(bucket)) {
+                if (StringUtils.isEmpty(bucket) || !expiryBuckets.containsKey(bucket)) {
                     return;
                 }
                 Set<String> removed = expiryBuckets.remove(bucket);
@@ -65,24 +65,24 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
     }
 
     @Override
-    public D put(final String key, final D data, final Long expire) {
-        D d = _put(key, data, expire);
+    public Object put(final String key, final Object data, final Long expire) {
+        Object d = _put(key, data, expire);
         waitClear(expire, key);
         return d;
     }
 
-    protected abstract D _put(String key, D data, Long expire);
+    protected abstract Object _put(String key, Object data, Long expire);
 
     @Override
-    public D putIfAbsent(final String key, final D data, final Long expire) {
-        D d = _putIfAbsent(key, data, expire);
+    public Object putIfAbsent(final String key, final Object data, final Long expire) {
+        Object d = _putIfAbsent(key, data, expire);
         if (d == null) {
             waitClear(expire, key);
         }
         return d;
     }
 
-    protected abstract D _putIfAbsent(String key, D data, Long expire);
+    protected abstract Object _putIfAbsent(String key, Object data, Long expire);
 
     private long roundToNextBucket(final long time) {
         return (time / expirationInterval + 1) * expirationInterval;
@@ -103,6 +103,23 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
         expiryBuckets.get(bucket).add(cache);
     }
 
+    @Override
+    public CacheSnap makeImage() {
+        return new CacheSnap(_makeImage(), expiryBuckets);
+    }
+
+    protected abstract Map<String, MetaData> _makeImage();
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void loadImage(final CacheSnap image) {
+        expiryBuckets.clear();
+        expiryBuckets.putAll(image.getExpiryBuckets());
+        _loadImage((Map<String, MetaData>) image.getCache());
+    }
+
+    protected abstract void _loadImage(Map<String, MetaData> snap);
+
     /**
      * check whether the data has expired.
      *
@@ -110,7 +127,7 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
      * @param metaData check data
      * @return whether expired
      */
-    protected boolean checkExpire(final String key, final MetaData<D> metaData) {
+    protected boolean checkExpire(final String key, final MetaData metaData) {
         if (metaData == null) {
             return false;
         }
@@ -125,4 +142,8 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
         }
     }
 
+    @Override
+    public void close() {
+        clearTask.stop();
+    }
 }
