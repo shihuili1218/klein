@@ -8,6 +8,8 @@
     <artifactId>klein</artifactId>
     <packaging>pom</packaging>
     <version>0.0.1</version>
+    <description>Klein is a Paxos based distributed collection tool library</description>
+    <url>https://klein-doc.gitbook.io/</url>
 
     <name>${project.groupId}:${project.artifactId}</name>
 
@@ -38,6 +40,12 @@
         <system>GitHub Issues</system>
         <url>https://github.com/shihuili1218/klein/issues</url>
     </issueManagement>
+
+    <developers>
+        <developer>
+            <url>https://github.com/shihuili1218</url>
+        </developer>
+    </developers>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
