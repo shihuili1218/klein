@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.facade.quorum;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import com.ofcoder.klein.common.OnlyForTest;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -30,8 +31,8 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class SingleQuorum implements Quorum {
     private final Set<Endpoint> allMembers;
-    private final Set<Endpoint> grantedMembers = Collections.synchronizedSet(new HashSet<>());
-    private final Set<Endpoint> failedMembers = Collections.synchronizedSet(new HashSet<>());
+    private final Set<Endpoint> grantedMembers = new CopyOnWriteArraySet<>();
+    private final Set<Endpoint> failedMembers = new CopyOnWriteArraySet<>();
     private final int successThreshold;
     private final int failureThreshold;
 

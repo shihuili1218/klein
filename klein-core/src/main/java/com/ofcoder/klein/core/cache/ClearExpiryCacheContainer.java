@@ -20,6 +20,9 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+
+import org.apache.logging.log4j.ThreadContext;
 
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
@@ -29,37 +32,73 @@ import com.ofcoder.klein.common.util.timer.RepeatedTimer;
  */
 public abstract class ClearExpiryCacheContainer<D extends Serializable> implements CacheContainer<D> {
 
-    private static final Map<Long, Set<String>> EXPIRY_BUCKETS = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> expiryBuckets = new ConcurrentHashMap<>();
     private final RepeatedTimer clearTask;
     public final int expirationInterval = 1000;
 
     public ClearExpiryCacheContainer() {
         clearTask = new RepeatedTimer("clear-expiry-cache", expirationInterval) {
+            private static final String BUCKET_KEY = "clear";
+            private static final int TASK_OFFSET = 5;
+
             @Override
             protected void onTrigger() {
-
+                String bucket = ThreadContext.get(BUCKET_KEY);
+                if (!expiryBuckets.containsKey(bucket)) {
+                    return;
+                }
+                Set<String> removed = expiryBuckets.remove(bucket);
+                removed.forEach(i -> get(i));
             }
 
             @Override
             protected int adjustTimeout(int timeoutMs) {
-                return (int) (roundToNextInterval(TrueTime.currentTimeMillis()) - TrueTime.currentTimeMillis() + 10);
+                long now = TrueTime.currentTimeMillis();
+                long bucket = roundToNextBucket(now);
+                ThreadContext.put(BUCKET_KEY, String.valueOf(bucket));
+                return (int) (bucket - now + TASK_OFFSET);
             }
         };
         clearTask.start();
     }
 
     @Override
-    public D put(String key, D data, Long expire) {
-        return null;
+    public D put(final String key, final D data, final Long expire) {
+        D d = _put(key, data, expire);
+        waitClear(expire, key);
+        return d;
     }
+
+    protected abstract D _put(String key, D data, Long expire);
 
     @Override
-    public D putIfAbsent(String key, D data, Long expire) {
-        return null;
+    public D putIfAbsent(final String key, final D data, final Long expire) {
+        D d = _putIfAbsent(key, data, expire);
+        if (d == null) {
+            waitClear(expire, key);
+        }
+        return d;
     }
 
-    private long roundToNextInterval(long time) {
+    protected abstract D _putIfAbsent(String key, D data, Long expire);
+
+    private long roundToNextBucket(final long time) {
         return (time / expirationInterval + 1) * expirationInterval;
+    }
+
+    private void waitClear(final Long expire, final String cache) {
+        if (expire == Message.TTL_PERPETUITY) {
+            return;
+        }
+        String bucket = String.valueOf(roundToNextBucket(expire));
+        if (!expiryBuckets.containsKey(bucket)) {
+            synchronized (expiryBuckets) {
+                if (!expiryBuckets.containsKey(bucket)) {
+                    expiryBuckets.put(bucket, new CopyOnWriteArraySet<>());
+                }
+            }
+        }
+        expiryBuckets.get(bucket).add(cache);
     }
 
     /**

@@ -48,7 +48,7 @@ public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCac
     }
 
     @Override
-    public D put(final String key, final D data, final Long expire) {
+    public D _put(final String key, final D data, final Long expire) {
         MetaData<D> value = new MetaData<>();
         value.setExpire(expire);
         value.setData(data);
@@ -61,7 +61,7 @@ public class MemoryCacheContainer<D extends Serializable> extends ClearExpiryCac
     }
 
     @Override
-    public D putIfAbsent(final String key, final D data, final Long expire) {
+    public D _putIfAbsent(final String key, final D data, final Long expire) {
         MetaData<D> value = new MetaData<>();
         value.setExpire(expire);
         value.setData(data);
