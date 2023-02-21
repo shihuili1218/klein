@@ -28,13 +28,15 @@ import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 
 /**
+ * clear expire cache.
+ *
  * @author 释慧利
  */
 public abstract class ClearExpiryCacheContainer<D extends Serializable> implements CacheContainer<D> {
 
     private final Map<String, Set<String>> expiryBuckets = new ConcurrentHashMap<>();
     private final RepeatedTimer clearTask;
-    public final int expirationInterval = 1000;
+    private final int expirationInterval = 1000;
 
     public ClearExpiryCacheContainer() {
         clearTask = new RepeatedTimer("clear-expiry-cache", expirationInterval) {
@@ -52,7 +54,7 @@ public abstract class ClearExpiryCacheContainer<D extends Serializable> implemen
             }
 
             @Override
-            protected int adjustTimeout(int timeoutMs) {
+            protected int adjustTimeout(final int timeoutMs) {
                 long now = TrueTime.currentTimeMillis();
                 long bucket = roundToNextBucket(now);
                 ThreadContext.put(BUCKET_KEY, String.valueOf(bucket));
