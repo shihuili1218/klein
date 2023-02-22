@@ -1,6 +1,6 @@
   n%%N%%:
     << : *default-node
-    container_name: jepsen-n%%N%%
+    container_name: n%%N%%
     hostname: n%%N%%
     environment:
         KLEIN_ID: %%N%%
