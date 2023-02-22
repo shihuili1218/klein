@@ -44,9 +44,11 @@
     <developers>
         <developer>
             <url>https://github.com/githubli97</url>
+            <name>lihang</name>
         </developer>
         <developer>
             <url>https://github.com/shihuili1218</url>
+            <name>shihuili</name>
         </developer>
     </developers>
 
@@ -416,7 +418,7 @@
                         <configuration>
                             <serverId>ossrh</serverId>
                             <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
                         </configuration>
                     </plugin>
 

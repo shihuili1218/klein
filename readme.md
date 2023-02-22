@@ -7,13 +7,17 @@
     <strong>Open source：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
 </p>
 <p align="center">
-    <a href="https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://badges.gitter.im/klein-gitter/community.svg"  alt=""/></a>
+   <a href="https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://badges.gitter.im/klein-gitter/community.svg"  alt=""/></a>
     &nbsp;
     <a href="https://www.codacy.com/gh/shihuili1218/klein/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=shihuili1218/klein&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/764fda630fd845949ae492a1f6469173" alt="" /></a>
     &nbsp;
     <a href="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml"><img src="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml/badge.svg" alt="" /></a>
-    &nbsp;
+</p>
+
+<p align="center">
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
+    &nbsp;
+    <a href="https://search.maven.org/search?q=g:com.ofcoder.klein%20AND%20klein"><img src="https://img.shields.io/maven-central/v/com.ofcoder.klein/klein.svg?label=maven%20central" alt="" /></a>
 </p>
 
 # Introduce
@@ -35,17 +39,10 @@ If you are interested in distributed message queue, distributed List, distribute
 <dependency>
     <groupId>com.ofcoder.klein.core</groupId>
     <artifactId>klein-core</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>{last-version}</version>
 </dependency>
 ```
-```xml
-<repositories>
-    <repository>
-        <id>ossrh</id>
-        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-    </repository>
-</repositories>
-```
+
 ### startup
 ```
 Klein instance = Klein.startup();
