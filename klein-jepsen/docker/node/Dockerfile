@@ -48,6 +48,7 @@ RUN apt-get -y -q update && apt-get install -qy openjdk-8-jdk
 RUN apt-get -y -q update && apt-get install -qy build-essential bzip2 curl dnsutils faketime iproute2 iptables iputils-ping libzip4 logrotate man man-db net-tools ntpdate psmisc python3 rsyslog sudo tar unzip vim wget ca-certificates
 #    && apt-get update && apt-get install -yq software-properties-common && apt-get update && add-apt-repository ppa:openjdk-r/ppa && apt-get -y -q update && apt-get install -qy openjdk-8-jdk
 
+RUN echo "root:123456" | chpasswd
 
 EXPOSE 22
 EXPOSE 1218
