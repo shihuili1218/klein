@@ -137,7 +137,7 @@ public class MasterImpl implements Master {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        electTimer = new RepeatedTimer("elect-master", calculateElectionMasterInterval()) {
+        electTimer = new RepeatedTimer("elect-master", 1000) {
             @Override
             protected void onTrigger() {
                 election();
@@ -346,7 +346,7 @@ public class MasterImpl implements Master {
                         public void negotiationDone(final boolean result, final boolean changed) {
                             LOG.info("electing master, negotiationDone: {}", result);
                             if (result && !changed) {
-                                updateMasterState(ElectState.BOOSTING);
+                                newMaster();
                             } else {
                                 latch.countDown();
                             }
@@ -372,6 +372,7 @@ public class MasterImpl implements Master {
 
     private void newMaster() {
         LOG.info("start new master.");
+        updateMasterState(ElectState.BOOSTING);
 
         PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
@@ -411,9 +412,6 @@ public class MasterImpl implements Master {
                             quorum.grant(it);
                             if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                                 ThreadExecutor.execute(MasterImpl.this::_boosting);
-
-                                updateMasterState(ElectState.DOMINANT);
-                                restartHeartbeat();
                             }
                         } else {
                             quorum.refuse(it);
@@ -562,6 +560,7 @@ public class MasterImpl implements Master {
 
     @Override
     public NewMasterRes onReceiveNewMaster(final NewMasterReq request, final boolean isSelf) {
+        // todo 要更改追随的master，不然落后的成员没法应用选举master的instance
         return NewMasterRes.Builder.aNewMasterRes()
                 .checkpoint(self.getLastCheckpoint())
                 .curInstanceId(self.getCurInstanceId())
@@ -588,7 +587,13 @@ public class MasterImpl implements Master {
     @Override
     public void onChangeMaster(final String newMaster) {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
-            newMaster();
+            if (!sendHeartbeat(true)) {
+                LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
+                return;
+            }
+
+            updateMasterState(ElectState.DOMINANT);
+            restartHeartbeat();
         } else {
             updateMasterState(ElectState.FOLLOWING);
             restartElect();
