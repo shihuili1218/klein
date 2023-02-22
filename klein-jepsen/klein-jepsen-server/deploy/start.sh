@@ -10,3 +10,5 @@ nohup java -Xmx512m -Xms512m  \
   $@ >> klein.log 2>&1 &
 
 echo "Done!"
+
+tailf klein.log
