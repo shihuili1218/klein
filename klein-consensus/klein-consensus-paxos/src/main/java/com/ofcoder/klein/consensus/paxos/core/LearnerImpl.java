@@ -289,15 +289,16 @@ public class LearnerImpl implements Learner {
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long exceptConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", task.priority, lastAppliedId, lastCheckpoint);
+        final long instanceId = task.priority;
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
 
-        if (task.priority <= lastApplyId) {
+        if (instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
         }
-        if (task.priority > exceptConfirmId) {
+        if (instanceId > exceptConfirmId) {
             // boost.
-            for (long i = exceptConfirmId; i < task.priority; i++) {
+            for (long i = exceptConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     applyQueue.offer(new Task(i, TaskEnum.APPLY, fakeCallback));
@@ -313,14 +314,14 @@ public class LearnerImpl implements Learner {
         }
         // else: instanceId == exceptConfirmId, do apply.
 
-        Instance<Proposal> localInstance = logManager.getInstance(task.priority);
+        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
 
         Map<Proposal, Object> applyResult = new HashMap<>();
         for (Proposal data : localInstance.getGrantedValue()) {
             Object result = this.doApply(localInstance.getInstanceId(), data);
             applyResult.put(data, result);
         }
-        updateAppliedId(task.priority);
+        updateAppliedId(instanceId);
 
         task.callback.onApply(applyResult);
     }
@@ -355,6 +356,7 @@ public class LearnerImpl implements Learner {
         boolean lr = false;
 
         if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+            LOG.info("try boost instance: {}", instanceId);
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             RoleAccessor.getProposer().tryBoost(
                     new Holder<Long>() {
