@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM ubuntu:latest
 MAINTAINER jake@apache.org
 
 ENV LEIN_ROOT true
@@ -7,7 +7,7 @@ ENV LEIN_ROOT true
 # Jepsen dependencies
 #
 RUN apt-get -y -q update && \
-    apt-get install -qy openjdk-17-jdk \
+    apt-get install -qy openjdk-8-jdk \
     libjna-java \
     vim \
     emacs \
