@@ -28,6 +28,8 @@ import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 import com.ofcoder.klein.rpc.grpc.GrpcClient;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,20 +44,16 @@ import java.util.Map;
 public class JepsenClient {
 
     static final Logger LOG = LoggerFactory.getLogger(KleinServer.class);
-    private static final Map<String, String> ROUTER = ImmutableMap.of(
-            "n1", "1:172.22.0.102:1218",
-            "n2", "2:172.22.0.103:1218",
-            "n3", "3:172.22.0.104:1218",
-            "n4", "4:172.22.0.106:1218",
-            "n5", "5:172.22.0.113:1218"
-    );
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
     private final Endpoint endpoint;
     private final GrpcClient client;
 
     public JepsenClient(final String node) {
-        endpoint = RpcUtil.parseEndpoint(ROUTER.get(node));
+        String id = StringUtils.remove(node, "n");
+
+        endpoint = new Endpoint(id, node, 1218);
         LOG.info("node: {}", endpoint);
         KleinProp kleinProp = KleinProp.loadIfPresent();
 

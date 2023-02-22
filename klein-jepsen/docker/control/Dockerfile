@@ -7,7 +7,7 @@ ENV LEIN_ROOT true
 # Jepsen dependencies
 #
 RUN apt-get -y -q update && \
-    apt-get install -qy openjdk-8-jdk \
+    apt-get install -qy openjdk-17-jdk \
     libjna-java \
     vim \
     emacs \
@@ -20,7 +20,7 @@ RUN apt-get -y -q update && \
     gnuplot \
     graphviz \
     dos2unix \
-    maven \
+    maven
 
 RUN wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
     mv lein /usr/bin && \
