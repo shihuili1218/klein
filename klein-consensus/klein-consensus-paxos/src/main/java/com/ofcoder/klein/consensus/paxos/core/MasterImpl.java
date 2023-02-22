@@ -323,10 +323,11 @@ public class MasterImpl implements Master {
     private void election() {
         LOG.debug("timer state, elect: {}, heartbeat: {}", electTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
-        updateMasterState(ElectState.ELECTING);
         if (!electing.compareAndSet(false, true)) {
             return;
         }
+
+        updateMasterState(ElectState.ELECTING);
 
         try {
             LOG.info("start electing master.");
@@ -372,7 +373,6 @@ public class MasterImpl implements Master {
 
     private void newMaster() {
         LOG.info("start new master.");
-        updateMasterState(ElectState.BOOSTING);
 
         PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
@@ -425,6 +425,8 @@ public class MasterImpl implements Master {
     }
 
     private void _boosting() {
+        updateMasterState(ElectState.BOOSTING);
+
         LOG.info("boosting instance.");
         long miniInstanceId = RoleAccessor.getLearner().getLastAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
@@ -560,7 +562,9 @@ public class MasterImpl implements Master {
 
     @Override
     public NewMasterRes onReceiveNewMaster(final NewMasterReq request, final boolean isSelf) {
-        // todo 要更改追随的master，不然落后的成员没法应用选举master的instance
+        if (memberConfig.getMaster() == null || !StringUtils.equals(request.getNodeId(), memberConfig.getMaster().getId())) {
+            memberConfig.changeMaster(request.getNodeId());
+        }
         return NewMasterRes.Builder.aNewMasterRes()
                 .checkpoint(self.getLastCheckpoint())
                 .curInstanceId(self.getCurInstanceId())

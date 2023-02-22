@@ -34,6 +34,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class PaxosMemberConfiguration extends MemberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
     private volatile Endpoint master;
+    private final Object masterLock = new Object();
 
     public Endpoint getMaster() {
         return this.master;
@@ -45,11 +46,12 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @param nodeId new master id
      * @return change result
      */
-    protected boolean changeMaster(final String nodeId) {
+    public boolean changeMaster(final String nodeId) {
         if (isValid(nodeId)) {
-            this.master = getEndpointById(nodeId);
-            this.version.incrementAndGet();
-
+            synchronized (masterLock) {
+                this.master = getEndpointById(nodeId);
+                this.version.incrementAndGet();
+            }
             RoleAccessor.getMaster().onChangeMaster(nodeId);
             LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
             return true;
@@ -69,11 +71,13 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @param snap snapshot
      */
     protected void loadSnap(final PaxosMemberConfiguration snap) {
-        this.master = null;
-        if (snap.master != null) {
-            this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
+        synchronized (masterLock) {
+            this.master = null;
+            if (snap.master != null) {
+                this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
+            }
+            this.version = new AtomicInteger(snap.version.get());
         }
-        this.version = new AtomicInteger(snap.version.get());
         this.effectMembers.clear();
         this.effectMembers.putAll(snap.effectMembers);
         this.lastMembers.clear();
@@ -89,10 +93,12 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
         target.effectMembers.putAll(effectMembers);
         target.lastMembers.putAll(lastMembers);
-        if (master != null) {
-            target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
+        synchronized (masterLock) {
+            if (master != null) {
+                target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
+            }
+            target.version = new AtomicInteger(version.get());
         }
-        target.version = new AtomicInteger(version.get());
         return target;
     }
 
