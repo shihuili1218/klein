@@ -12,9 +12,14 @@
     <a href="https://www.codacy.com/gh/shihuili1218/klein/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=shihuili1218/klein&amp;utm_campaign=Badge_Grade"><img src="https://app.codacy.com/project/badge/Grade/764fda630fd845949ae492a1f6469173" alt="" /></a>
     &nbsp;
     <a href="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml"><img src="https://github.com/shihuili1218/klein/actions/workflows/mvn_test.yml/badge.svg" alt="" /></a>
-    &nbsp;
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
 </p>
+
+<p align="center">
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt=""/></a>
+    &nbsp;
+    <a href="https://search.maven.org/search?q=g:com.ofcoder.klein%20AND%20klein"><img src="https://img.shields.io/maven-central/v/com.ofcoder.klein/klein.svg?label=maven%20central" alt="" /></a>
+</p>
+
 
 # 介绍
 ![](logo.svg)
@@ -35,17 +40,10 @@ Klein是一个基于Paxos的分布式集合工具库，包括分布式Cache、�
 <dependency>
     <groupId>com.ofcoder.klein.core</groupId>
     <artifactId>klein-core</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>{last-version}</version>
 </dependency>
 ```
-```xml
-<repositories>
-    <repository>
-        <id>ossrh</id>
-        <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-    </repository>
-</repositories>
-```
+
 ### 启动
 ```
 Klein instance = Klein.startup();
