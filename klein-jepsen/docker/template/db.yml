@@ -4,6 +4,6 @@
     hostname: n%%N%%
     environment:
         KLEIN_ID: %%N%%
-        KLEIN_PORT: 8080
+        KLEIN_PORT: 1218
         KLEIN_IP: n%%N%%
         KLEIN_MEMBERS: %%MEMBER%%

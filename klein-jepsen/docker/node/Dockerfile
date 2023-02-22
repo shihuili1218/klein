@@ -19,9 +19,9 @@ RUN apt-get -qy update && \
         pwgen
 
 ENV KLEIN_ID="1" \
-    KLEIN_PORT="8080" \
+    KLEIN_PORT="1218" \
     KLEIN_IP="127.0.0.1" \
-    KLEIN_MEMBERS="1:127.0.0.1:8080" \
+    KLEIN_MEMBERS="1:127.0.0.1:1218" \
     TIME_ZONE="Asia/Shanghai"
 
 # When run, boot-debian-base will call this script, which does final
@@ -50,5 +50,5 @@ RUN apt-get -y -q update && apt-get install -qy build-essential bzip2 curl dnsut
 
 
 EXPOSE 22
-EXPOSE 8080
+EXPOSE 1218
 CMD ["/usr/local/preinit/03-setup-jepsen"]

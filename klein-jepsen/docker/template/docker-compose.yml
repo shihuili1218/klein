@@ -40,7 +40,7 @@ services:
     privileged: true
     ports:
       - "22"
-      - "8080"
+      - "1218"
     networks:
       - jepsen
     volumes:

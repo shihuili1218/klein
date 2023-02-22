@@ -14,7 +14,7 @@ DBS=""
 member=""
 
 for ((n=1;n<=NODE_COUNT;n++)); do
-  member+=${n}:n${n}:8080\;
+  member+=${n}:n${n}:1218\;
 done;
 
 # For each node
