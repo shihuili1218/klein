@@ -35,9 +35,16 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
     private volatile Endpoint master;
     private final Object masterLock = new Object();
+    private volatile Endpoint candidate;
 
     public Endpoint getMaster() {
-        return this.master;
+        return this.candidate != null ? this.candidate : this.master;
+    }
+
+    public void seenCandidate(final String nodeId) {
+        if (isValid(nodeId)) {
+            this.candidate = getEndpointById(nodeId);
+        }
     }
 
     /**
@@ -52,6 +59,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
                 this.master = getEndpointById(nodeId);
                 this.version.incrementAndGet();
             }
+            this.candidate = null;
             RoleAccessor.getMaster().onChangeMaster(nodeId);
             LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
             return true;
