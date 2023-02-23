@@ -4,3 +4,9 @@
     hostname: n%%N%%
     volumes:
         - ./node/n%%N%%/server.properties:/klein/config/server.properties:ro
+        - ./node/n%%N%%/server.properties:/config/server.properties:ro
+    environment:
+        KLEIN_ID: %%N%%
+        KLEIN_PORT: 1218
+        KLEIN_IP: n%%N%%
+        KLEIN_MEMBERS: %%MEMBER%%
