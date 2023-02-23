@@ -41,6 +41,11 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         return this.candidate != null ? this.candidate : this.master;
     }
 
+    /**
+     * cache a candidate.
+     *
+     * @param nodeId candidate
+     */
     public void seenCandidate(final String nodeId) {
         if (isValid(nodeId)) {
             this.candidate = getEndpointById(nodeId);
