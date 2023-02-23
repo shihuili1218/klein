@@ -2,8 +2,5 @@
     << : *default-node
     container_name: n%%N%%
     hostname: n%%N%%
-    environment:
-        KLEIN_ID: %%N%%
-        KLEIN_PORT: 1218
-        KLEIN_IP: n%%N%%
-        KLEIN_MEMBERS: %%MEMBER%%
+    volumes:
+        - ./node/n%%N%%/server.properties:/klein/config/server.properties:ro

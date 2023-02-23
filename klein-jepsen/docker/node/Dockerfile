@@ -41,7 +41,7 @@ ENV DEBBASE_SSH enabled
 
 RUN chmod +x /klein/start.sh \
     && chmod +x /klein/stop.sh \
-    && mkdir /klein/config && touch /klein/config/server.properties
+    && mkdir /klein/config
 
 # Install Jepsen deps
 RUN apt-get -y -q update && apt-get install -qy openjdk-8-jdk
