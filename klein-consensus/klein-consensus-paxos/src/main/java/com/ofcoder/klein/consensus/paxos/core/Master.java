@@ -105,6 +105,11 @@ public interface Master extends Lifecycle<ConsensusProp> {
         ELECTING(-1),
         FOLLOWING(0),
         BOOSTING(1),
+        /**
+         * deprecated.
+         *
+         * @deprecated use BOOSTING.
+         */
         @Deprecated
         DOMINANT(2);
         public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
