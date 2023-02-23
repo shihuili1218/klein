@@ -54,9 +54,9 @@ public interface Master extends Lifecycle<ConsensusProp> {
     boolean changeMember(byte op, Set<Endpoint> target);
 
     /**
-     * Election master.
+     * Elect master right now.
      */
-    void electingMaster();
+    void electMasterNow();
 
     /**
      * Processing heartbeat message.
@@ -105,6 +105,7 @@ public interface Master extends Lifecycle<ConsensusProp> {
         ELECTING(-1),
         FOLLOWING(0),
         BOOSTING(1),
+        @Deprecated
         DOMINANT(2);
         public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
         public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);

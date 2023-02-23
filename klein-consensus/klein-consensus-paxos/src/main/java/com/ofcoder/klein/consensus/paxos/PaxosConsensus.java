@@ -102,7 +102,7 @@ public class PaxosConsensus implements Consensus {
         SMRegistry.getSms().forEach(this::loadSM);
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
         if (!this.prop.isJoinCluster()) {
-            RoleAccessor.getMaster().electingMaster();
+            RoleAccessor.getMaster().electMasterNow();
             preheating();
         } else {
             joinCluster(0);
