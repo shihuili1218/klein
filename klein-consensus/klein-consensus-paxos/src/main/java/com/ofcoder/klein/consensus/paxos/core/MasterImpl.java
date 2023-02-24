@@ -161,7 +161,7 @@ public class MasterImpl implements Master {
             @Override
             protected void onTrigger() {
                 if (!sendHeartbeat(false)) {
-                    restartWaitHb();
+                    restartElect();
                 }
             }
         };
@@ -329,7 +329,6 @@ public class MasterImpl implements Master {
     }
 
     private void election() {
-        LOG.debug("timer state, elect: {}, heartbeat: {}", waitHeartbeatTimer.isRunning(), sendHeartbeatTimer.isRunning());
 
         if (!electing.compareAndSet(false, true)) {
             return;
@@ -355,22 +354,17 @@ public class MasterImpl implements Master {
                         public void negotiationDone(final boolean result, final boolean changed) {
                             LOG.info("electing master, negotiationDone: {}", result);
                             if (result && !changed) {
-                                newMaster();
+                                newMaster(latch);
                             } else {
                                 latch.countDown();
                             }
                         }
 
-                        @Override
-                        public void applyDone(final Proposal p, final Object r) {
-                            LOG.info("electing master, applyDone: {}", r);
-                            latch.countDown();
-                        }
                     })));
 
             try {
                 boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-                // do nothing for await's result, stop this timer in {@link #onChangeMaster}
+                // do nothing for await's result, stop this timer in {@link #handleNewMasterRes}
             } catch (InterruptedException e) {
                 LOG.debug(e.getMessage());
             }
@@ -379,7 +373,7 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void newMaster() {
+    private void newMaster(final CountDownLatch latch) {
         LOG.info("start new master.");
 
         PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
@@ -393,7 +387,7 @@ public class MasterImpl implements Master {
 
         // for self
         NewMasterRes masterRes = onReceiveNewMaster(req, true);
-        handleNewMasterRes(self.getSelf(), masterRes, quorum, next);
+        handleNewMasterRes(self.getSelf(), masterRes, quorum, next, latch);
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
@@ -402,30 +396,31 @@ public class MasterImpl implements Master {
                     public void error(final Throwable err) {
                         quorum.refuse(it);
                         if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
-                            restartWaitHb();
+                            latch.countDown();
                         }
                     }
 
                     @Override
                     public void complete(final NewMasterRes result) {
-                        handleNewMasterRes(it, result, quorum, next);
+                        handleNewMasterRes(it, result, quorum, next, latch);
                     }
                 }, 50L));
     }
 
-    private void handleNewMasterRes(final Endpoint it, final NewMasterRes result, final Quorum quorum, final AtomicBoolean next) {
+    private void handleNewMasterRes(final Endpoint it, final NewMasterRes result, final Quorum quorum, final AtomicBoolean next, final CountDownLatch latch) {
         self.updateCurInstanceId(result.getCurInstanceId());
 
         if (result.isGranted()) {
             quorum.grant(it);
             if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                 ThreadExecutor.execute(MasterImpl.this::_boosting);
-                restartSendHb();
+                restartSendHbNow();
+                latch.countDown();
             }
         } else {
             quorum.refuse(it);
             if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
-                restartWaitHb();
+                latch.countDown();
             }
         }
     }
@@ -557,10 +552,10 @@ public class MasterImpl implements Master {
             if (!isSelf) {
                 restartWaitHb();
             }
-            LOG.info("receive heartbeat from node-{}, result: true.", request.getNodeId());
+            LOG.debug("receive heartbeat from node-{}, result: true.", request.getNodeId());
             return true;
         } else {
-            LOG.info("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
+            LOG.debug("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
                     memberConfig, request.getMemberConfigurationVersion());
             return false;
         }
@@ -590,30 +585,25 @@ public class MasterImpl implements Master {
         }
     }
 
-    private void stopAllTimer() {
-        sendHeartbeatTimer.stop();
-        waitHeartbeatTimer.stop();
-    }
-
     private void restartWaitHb() {
         sendHeartbeatTimer.stop();
         waitHeartbeatTimer.stop();
         electTimer.stop();
-        waitHeartbeatTimer.restart();
+        waitHeartbeatTimer.restart(false);
     }
 
-    private void restartSendHb() {
+    private void restartSendHbNow() {
         waitHeartbeatTimer.stop();
         sendHeartbeatTimer.stop();
         electTimer.stop();
-        sendHeartbeatTimer.restart();
+        sendHeartbeatTimer.restart(true);
     }
 
     private void restartElect() {
         waitHeartbeatTimer.stop();
         sendHeartbeatTimer.stop();
         electTimer.stop();
-        electTimer.restart();
+        electTimer.restart(false);
     }
 
     @Override
@@ -621,11 +611,11 @@ public class MasterImpl implements Master {
         if (StringUtils.equals(newMaster, self.getSelf().getId())) {
             if (!sendHeartbeat(true)) {
                 LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
-                return;
+//                return;
             }
 
-            updateMasterState(ElectState.BOOSTING);
-            restartSendHb();
+//            updateMasterState(ElectState.BOOSTING);
+//            restartSendHb();
         } else {
             updateMasterState(ElectState.FOLLOWING);
             restartWaitHb();

@@ -40,7 +40,9 @@ public final class QuorumFactory {
      */
     public static Quorum createWriteQuorum(final MemberConfiguration memberConfiguration) {
         Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
-        LOG.debug("create write quorum, nwr: {}", nwr.getClass());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("create write quorum, nwr: {}", nwr.getClass());
+        }
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
             return new SingleQuorum(memberConfiguration.getEffectMembers(),
                     nwr.w(memberConfiguration.getEffectMembers().size()));
