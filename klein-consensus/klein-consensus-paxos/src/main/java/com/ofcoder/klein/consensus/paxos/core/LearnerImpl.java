@@ -558,6 +558,9 @@ public class LearnerImpl implements Learner {
         handleConfirmRequest(req, new TaskCallback() {
             @Override
             public void onApply(final Map<Proposal, Object> result) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("instance[{}] applied, result: {}", instanceId, result);
+                }
                 dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
             }
         });
@@ -639,24 +642,38 @@ public class LearnerImpl implements Learner {
         }
 
         Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
-        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-            return res.result(Sync.SINGLE).instance(instance).build();
-        } else {
-            LOG.error("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
+
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     self.getLastCheckpoint(), self.getCurInstanceId());
             if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+                LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
+
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
+                CountDownLatch latch = new CountDownLatch(1);
 
-                LOG.info("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
                 RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
                     @Override
                     protected Long create() {
                         return request.getInstanceId();
                     }
-                }, defaultValue.stream().map(it -> new ProposalWithDone(it, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
+                }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> latch.countDown())).collect(Collectors.toList()));
+
+                try {
+                    boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                    // do nothing for await's result
+                } catch (InterruptedException e) {
+                    LOG.debug(e.getMessage());
+                }
+
+                instance = logManager.getInstance(request.getInstanceId());
             }
-            return res.result(Sync.NO_SUPPORT).build();
+        }
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            return res.result(Sync.NO_SUPPORT).instance(instance).build();
+        } else {
+            return res.result(Sync.SINGLE).instance(instance).build();
         }
     }
 

@@ -171,9 +171,10 @@ public abstract class RepeatedTimer {
      * Restart the timer.
      * It will be started if it's stopped, and it will be restarted if it's running.
      *
+     * @param rightNow if true, execute immediately the first time
      * @author Qing Wang (kingchin1218@gmail.com)
      */
-    public void restart() {
+    public void restart(final boolean rightNow) {
         this.lock.lock();
         try {
             if (this.destroyed) {
@@ -181,13 +182,21 @@ public abstract class RepeatedTimer {
             }
             this.stopped = false;
             this.running = true;
-            schedule();
+            if (rightNow) {
+                schedule(10);
+            } else {
+                schedule();
+            }
         } finally {
             this.lock.unlock();
         }
     }
 
     private void schedule() {
+        schedule(adjustTimeout(this.timeoutMs));
+    }
+
+    private void schedule(final long delay) {
         if (this.timeout != null) {
             this.timeout.cancel();
         }
@@ -198,7 +207,7 @@ public abstract class RepeatedTimer {
                 LOG.error("Run timer task failed, taskName={}.", RepeatedTimer.this.name, t);
             }
         };
-        this.timeout = this.timer.newTimeout(timerTask, adjustTimeout(this.timeoutMs), TimeUnit.MILLISECONDS);
+        this.timeout = this.timer.newTimeout(timerTask, delay, TimeUnit.MILLISECONDS);
     }
 
     /**
