@@ -5,13 +5,13 @@
     <parent>
         <artifactId>klein-jepsen</artifactId>
         <groupId>com.ofcoder.klein.jepsen</groupId>
-        <version>0.0.1</version>
+        <version>0.0.2</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ofcoder.klein.jepsen.server</groupId>
     <artifactId>klein-jepsen-server</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
     <packaging>jar</packaging>
 
     <properties>
