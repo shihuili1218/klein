@@ -78,7 +78,10 @@ public class JepsenClient {
 
         boolean o = client.sendRequestSync(endpoint, param, 1000);
         LOG.info("call klein-server, op: put, key: {}, val: {}, result: {}", key, value, o);
-        return o;
+        if (!o) {
+            throw new IllegalArgumentException("wirte: " + value + ", not self");
+        }
+        return true;
     }
 
 
