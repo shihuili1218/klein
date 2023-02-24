@@ -6,6 +6,8 @@ ENV LEIN_ROOT true
 #
 # Jepsen dependencies
 #
+RUN apt-get -y -q update
+
 RUN apt-get remove openjdk* -y
 
 RUN apt-get -y -q update \
