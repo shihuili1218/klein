@@ -72,8 +72,8 @@ public class Proposal implements Serializable {
 
     @Override
     public String toString() {
-        return "Proposal{" +
-                "group='" + group + '\''
+        return "Proposal{"
+                + "group='" + group + '\''
                 + ", data=" + data
                 + '}';
     }

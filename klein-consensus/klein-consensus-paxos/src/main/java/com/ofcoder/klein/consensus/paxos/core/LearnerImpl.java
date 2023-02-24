@@ -392,13 +392,8 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
-        List<LearnCallback> callbacks = learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
+        learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
-        if (callbacks != null) {
-            // Limit only one thread to execute learn
-            return;
-        }
-        // else callbacks = null, do learn
 
         Instance<Proposal> instance = logManager.getInstance(instanceId);
         if (instance != null && instance.getState() == Instance.State.CONFIRMED) {

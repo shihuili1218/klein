@@ -6,8 +6,9 @@ ENV LEIN_ROOT true
 #
 # Jepsen dependencies
 #
+RUN apt-get remove openjdk* -y
+
 RUN apt-get -y -q update \
-    && apt-get remove openjdk* -y \
     && apt-get install -qy openjdk-8-jdk \
     libjna-java \
     vim \
