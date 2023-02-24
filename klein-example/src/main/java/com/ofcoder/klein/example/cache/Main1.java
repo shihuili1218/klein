@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -57,6 +58,13 @@ public class Main1 {
 
         LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
         LOG.info("----------get hello4: " + instance1.getCache().get("hello4"));
+
+        for (int i = 0; i < 50; i++) {
+            int finalI = i;
+            ThreadExecutor.execute(() -> LOG.info("----------" + finalI + "----------get hello3: " + instance1.getCache().get("hello3")));
+        }
+        Thread.sleep(10000L);
+
         LOG.info("----------exist hello3: " + instance1.getCache().exist("hello3"));
         LOG.info("----------exist hello4: " + instance1.getCache().exist("hello4"));
         LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));

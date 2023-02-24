@@ -50,11 +50,11 @@
   (reify
    db/DB
    (setup! [_ test node]
-           (start! node)
+;           (start! node)
            (Thread/sleep 10000))
 
    (teardown! [_ test node]
-              (stop! node)
+;              (stop! node)
               (Thread/sleep 5000))))
 
 ;client
