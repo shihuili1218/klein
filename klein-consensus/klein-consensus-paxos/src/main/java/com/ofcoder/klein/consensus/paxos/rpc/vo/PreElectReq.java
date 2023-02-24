@@ -16,72 +16,27 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
-import java.util.List;
-
-import com.ofcoder.klein.consensus.paxos.Proposal;
-
 /**
- * Accept Msg Data.
+ * pre elect req.
  *
- * @author far.liu
+ * @author 释慧利
  */
-public class AcceptReq extends BaseReq {
-    private long instanceId;
-    private List<Proposal> data;
-    private String checksum;
-
-    public long getInstanceId() {
-        return instanceId;
-    }
-
-    public List<Proposal> getData() {
-        return data;
-    }
-
-    public String getChecksum() {
-        return checksum;
-    }
-
+public class PreElectReq extends BaseReq {
     public static final class Builder {
-        private long instanceId;
-        private List<Proposal> data;
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
-        private String checksum;
 
         private Builder() {
         }
 
         /**
-         * anAcceptReq.
+         * aPreElectReq.
          *
          * @return Builder
          */
-        public static Builder anAcceptReq() {
+        public static Builder aPreElectReq() {
             return new Builder();
-        }
-
-        /**
-         * instanceId.
-         *
-         * @param instanceId instanceId
-         * @return Builder
-         */
-        public Builder instanceId(final long instanceId) {
-            this.instanceId = instanceId;
-            return this;
-        }
-
-        /**
-         * data.
-         *
-         * @param data data
-         * @return Builder
-         */
-        public Builder data(final List<Proposal> data) {
-            this.data = data;
-            return this;
         }
 
         /**
@@ -118,30 +73,16 @@ public class AcceptReq extends BaseReq {
         }
 
         /**
-         * checksum.
-         *
-         * @param checksum checksum
-         * @return Builder
-         */
-        public Builder checksum(final String checksum) {
-            this.checksum = checksum;
-            return this;
-        }
-
-        /**
          * build.
          *
-         * @return AcceptReq
+         * @return PreElectReq
          */
-        public AcceptReq build() {
-            AcceptReq acceptReq = new AcceptReq();
-            acceptReq.setNodeId(nodeId);
-            acceptReq.setProposalNo(proposalNo);
-            acceptReq.setMemberConfigurationVersion(memberConfigurationVersion);
-            acceptReq.instanceId = this.instanceId;
-            acceptReq.data = this.data;
-            acceptReq.checksum = this.checksum;
-            return acceptReq;
+        public PreElectReq build() {
+            PreElectReq preElectReq = new PreElectReq();
+            preElectReq.setNodeId(nodeId);
+            preElectReq.setProposalNo(proposalNo);
+            preElectReq.setMemberConfigurationVersion(memberConfigurationVersion);
+            return preElectReq;
         }
     }
 }

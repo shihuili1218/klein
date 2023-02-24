@@ -25,6 +25,15 @@ import java.io.Serializable;
  */
 public class BaseReq implements Serializable {
     private String key;
+    private String seq;
+
+    public String getSeq() {
+        return seq;
+    }
+
+    public void setSeq(final String seq) {
+        this.seq = seq;
+    }
 
     public String getKey() {
         return key;

@@ -16,22 +16,13 @@ RUN apt-get -qy update && \
     apt-get -qy install \
         dos2unix \
         openssh-server \
+        less \
         pwgen
-
-ENV KLEIN_ID="1" \
-    KLEIN_PORT="1218" \
-    KLEIN_IP="127.0.0.1" \
-    KLEIN_MEMBERS="1:127.0.0.1:1218" \
-    TIME_ZONE="Asia/Shanghai"
 
 # When run, boot-debian-base will call this script, which does final
 # per-db-node setup stuff.
 ADD setup-jepsen.sh /usr/local/preinit/03-setup-jepsen
 RUN chmod +x /usr/local/preinit/03-setup-jepsen
-
-ADD klein-server.jar /klein/klein-server.jar
-ADD start.sh /klein/start.sh
-ADD stop.sh /klein/stop.sh
 
 # Configure SSHD
 RUN sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/g" /etc/ssh/sshd_config
@@ -39,9 +30,7 @@ RUN sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/g" /etc/ssh
 # Enable SSH server
 ENV DEBBASE_SSH enabled
 
-RUN chmod +x /klein/start.sh \
-    && chmod +x /klein/stop.sh \
-    && mkdir /klein/config
+RUN mkdir -p /klein/config
 
 # Install Jepsen deps
 RUN apt-get -y -q update && apt-get install -qy openjdk-8-jdk

@@ -35,10 +35,11 @@ public final class MemberRegistry {
     /**
      * init member configuration.
      *
+     * @param self self endpoint
      * @param members members
      */
-    public void init(final List<Endpoint> members) {
-        this.memberConfiguration.init(members);
+    public void init(final Endpoint self, final List<Endpoint> members) {
+        this.memberConfiguration.init(self, members);
     }
 
     /**

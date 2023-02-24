@@ -1,7 +1,7 @@
 version: '3.7'
 x-node:
   &default-node
-  build: ./node
+  image: shihuili1218/klein-jepsen-node:latest
   env_file: ./secret/node.env
   secrets:
     - authorized_keys
@@ -35,7 +35,7 @@ services:
     hostname: control
     depends_on:
 %%DEPS%%
-    build: ./control
+    image: shihuili1218/klein-jepsen-control:latest
     env_file: ./secret/control.env
     privileged: true
     ports:
@@ -44,5 +44,7 @@ services:
     networks:
       - jepsen
     volumes:
+      - ./klein-server.jar:/jepsen/klein-server.jar
       - "jepsen-shared:/var/jepsen/shared"
+      - ./klein-jepsen-test:/jepsen/klein
 %%DBS%%

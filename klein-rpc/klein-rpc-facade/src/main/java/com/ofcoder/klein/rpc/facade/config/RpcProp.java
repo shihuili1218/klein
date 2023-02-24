@@ -26,6 +26,7 @@ import com.ofcoder.klein.common.util.SystemPropertyUtil;
 public class RpcProp {
     private int port = SystemPropertyUtil.getInt("klein.port", 1218);
     private int maxInboundMsgSize = SystemPropertyUtil.getInt("klein.rpc.max-inbound-size", 4 * 1024 * 1024);
+    private int requestTimeout = SystemPropertyUtil.getInt("klein.rpc.request-timeout", 200);
 
     /**
      * get port.
@@ -61,5 +62,13 @@ public class RpcProp {
      */
     public void setMaxInboundMsgSize(final int maxInboundMsgSize) {
         this.maxInboundMsgSize = maxInboundMsgSize;
+    }
+
+    public int getRequestTimeout() {
+        return requestTimeout;
+    }
+
+    public void setRequestTimeout(final int requestTimeout) {
+        this.requestTimeout = requestTimeout;
     }
 }

@@ -16,12 +16,15 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
+import java.nio.ByteBuffer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-
-import java.nio.ByteBuffer;
 
 /**
  * cache put request processor.
@@ -29,6 +32,7 @@ import java.nio.ByteBuffer;
  * @author 释慧利
  */
 public class PutProcessor extends AbstractRpcProcessor<PutReq> {
+    private static final Logger LOG = LoggerFactory.getLogger(PutProcessor.class);
     private KleinCache cache;
 
     public PutProcessor(final KleinCache cache) {
@@ -38,11 +42,13 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
     @Override
     public void handleRequest(final PutReq request, final RpcContext context) {
         if (request.getTtl() <= 0) {
-            cache.put(request.getKey(), request.getData());
+            boolean put = cache.put(request.getKey(), request.getData(), true);
+            LOG.info("get operator, seq: {}, result: {}", request.getSeq(), put);
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
         } else {
-            cache.put(request.getKey(), request.getData(), request.getTtl(), request.getUnit());
+            boolean put = cache.put(request.getKey(), request.getData(), request.getTtl(), request.getUnit());
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
         }
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(true)));
     }
 
     @Override

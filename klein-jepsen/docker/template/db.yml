@@ -5,8 +5,7 @@
     volumes:
         - ./node/n%%N%%/server.properties:/klein/config/server.properties:ro
         - ./node/n%%N%%/server.properties:/config/server.properties:ro
-    environment:
-        KLEIN_ID: %%N%%
-        KLEIN_PORT: 1218
-        KLEIN_IP: n%%N%%
-        KLEIN_MEMBERS: %%MEMBER%%
+        - ./klein-server.jar:/klein/klein-server.jar
+        - ./start.sh:/klein/start.sh
+        - ./stop.sh:/klein/stop.sh
+        - "jepsen-shared:/var/jepsen/shared"

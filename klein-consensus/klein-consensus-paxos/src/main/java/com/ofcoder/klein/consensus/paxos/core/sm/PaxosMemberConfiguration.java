@@ -16,14 +16,16 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -32,10 +34,17 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class PaxosMemberConfiguration extends MemberConfiguration {
+    public static final String RESET_MASTER_ID = "BYE";
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
-    private volatile Endpoint master;
-    private final Object masterLock = new Object();
-    private volatile Endpoint candidate;
+    private transient volatile Endpoint master;
+    private transient volatile Endpoint candidate;
+    private final transient List<HealthyListener> listeners = new ArrayList<>();
+    private transient ElectState masterState = ElectState.ELECTING;
+
+    public boolean isSelf() {
+        Endpoint endpoint = getMaster();
+        return endpoint != null && endpoint.equals(self);
+    }
 
     public Endpoint getMaster() {
         return this.candidate != null ? this.candidate : this.master;
@@ -56,26 +65,43 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * change master.
      *
      * @param nodeId new master id
-     * @return change result
      */
-    public boolean changeMaster(final String nodeId) {
-        if (isValid(nodeId)) {
-            synchronized (masterLock) {
-                this.master = getEndpointById(nodeId);
-                this.version.incrementAndGet();
-            }
+    public void changeMaster(final String nodeId) {
+        if (StringUtils.equals(RESET_MASTER_ID, nodeId)) {
+            this.master = null;
             this.candidate = null;
-            RoleAccessor.getMaster().onChangeMaster(nodeId);
+            this.masterState = ElectState.ELECTING;
+            this.listeners.forEach(it -> it.change(this.masterState));
+        } else if (isValid(nodeId)) {
+            this.master = getEndpointById(nodeId);
+            this.candidate = null;
+            this.masterState = isSelf() ? ElectState.BOOSTING : ElectState.FOLLOWING;
+            this.listeners.forEach(it -> it.change(this.masterState));
             LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
-            return true;
-        } else {
-            return false;
         }
     }
 
+    /**
+     * only in BOOSTING state can boost instance.
+     *
+     * @return if true, can boost instance
+     */
+    public boolean allowBoost() {
+        return ElectState.allowBoost(getMasterState());
+    }
+
+    /**
+     * In FOLLOWER/BOOSTING state can propose.
+     *
+     * @return if true, can propose
+     */
+    public boolean allowPropose() {
+        return ElectState.allowPropose(getMasterState());
+    }
+
     @Override
-    public void init(final List<Endpoint> nodes) {
-        super.init(nodes);
+    public void init(final Endpoint self, final List<Endpoint> nodes) {
+        super.init(self, nodes);
     }
 
     /**
@@ -84,13 +110,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @param snap snapshot
      */
     protected void loadSnap(final PaxosMemberConfiguration snap) {
-        synchronized (masterLock) {
-            this.master = null;
-            if (snap.master != null) {
-                this.master = new Endpoint(snap.master.getId(), snap.master.getIp(), snap.master.getPort());
-            }
-            this.version = new AtomicInteger(snap.version.get());
-        }
+        this.version = new AtomicInteger(snap.version.get());
         this.effectMembers.clear();
         this.effectMembers.putAll(snap.effectMembers);
         this.lastMembers.clear();
@@ -106,12 +126,15 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         PaxosMemberConfiguration target = new PaxosMemberConfiguration();
         target.effectMembers.putAll(effectMembers);
         target.lastMembers.putAll(lastMembers);
-        synchronized (masterLock) {
-            if (master != null) {
-                target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
-            }
-            target.version = new AtomicInteger(version.get());
+        target.listeners.addAll(listeners);
+        target.masterState = masterState;
+        if (master != null) {
+            target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
         }
+        if (candidate != null) {
+            target.candidate = new Endpoint(candidate.getId(), candidate.getIp(), candidate.getPort());
+        }
+        target.version = new AtomicInteger(version.get());
         return target;
     }
 
@@ -119,9 +142,66 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public String toString() {
         return "PaxosMemberConfiguration{"
                 + "master=" + master
+                + ", candidate=" + candidate
+                + ", masterState=" + masterState
                 + ", version=" + version
                 + ", effectMembers=" + effectMembers
                 + ", lastMembers=" + lastMembers
-                + '}';
+                + ", self=" + self
+                + "} " + super.toString();
+    }
+
+    /**
+     * Added master health listener.
+     *
+     * @param listener listener
+     */
+    public void addHealthyListener(final HealthyListener listener) {
+        listener.change(getMasterState());
+        listeners.add(listener);
+    }
+
+    /**
+     * get elect state.
+     *
+     * @return elect state
+     */
+    public ElectState getMasterState() {
+        return masterState;
+    }
+
+    public interface HealthyListener {
+
+        /**
+         * on state change.
+         *
+         * @param healthy state
+         */
+        void change(ElectState healthy);
+    }
+
+    public enum ElectState {
+        ELECTING(-1),
+        FOLLOWING(0),
+        BOOSTING(1);
+        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING);
+        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING);
+        private int state;
+
+        ElectState(final int state) {
+            this.state = state;
+        }
+
+        private static boolean allowBoost(final ElectState state) {
+            return BOOSTING_STATE.contains(state);
+        }
+
+        private static boolean allowPropose(final ElectState state) {
+            return PROPOSE_STATE.contains(state);
+        }
+
+        public int getState() {
+            return state;
+        }
     }
 }

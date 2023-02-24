@@ -19,6 +19,8 @@ package com.ofcoder.klein.core.cache;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
+import com.ofcoder.klein.common.OnlyForTest;
+
 /**
  * Klein Cache.
  *
@@ -42,6 +44,18 @@ public interface KleinCache {
      * @return put result
      */
     <D extends Serializable> boolean put(String key, D data);
+
+    /**
+     * only for jepsen test.
+     *
+     * @param key   cache key
+     * @param data  cache value
+     * @param <D>   cache value type
+     * @param apply if ture, wait sm apply before return
+     * @return put result
+     */
+    @OnlyForTest("for jepsen")
+    <D extends Serializable> boolean put(String key, D data, boolean apply);
 
     /**
      * put element to cache and set expire.

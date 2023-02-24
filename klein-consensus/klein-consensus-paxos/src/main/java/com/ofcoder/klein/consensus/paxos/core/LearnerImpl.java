@@ -354,7 +354,7 @@ public class LearnerImpl implements Learner {
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
         boolean lr = false;
 
-        if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+        if (memberConfig.allowBoost()) {
             LOG.info("try boost instance: {}", instanceId);
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             RoleAccessor.getProposer().tryBoost(
@@ -532,7 +532,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(final long instanceId, final List<ProposalWithDone> dons) {
+    public void confirm(final long instanceId, final String checksum, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
@@ -546,41 +546,52 @@ public class LearnerImpl implements Learner {
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
                 .instanceId(instanceId)
+                .checksum(checksum)
                 .build();
 
         // for self
-        handleConfirmRequest(req, new TaskCallback() {
-            @Override
-            public void onApply(final Map<Proposal, Object> result) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("instance[{}] applied, result: {}", instanceId, result);
+        if (handleConfirmRequest(req)) {
+
+            // apply statemachine
+            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, new TaskCallback() {
+                @Override
+                public void onApply(final Map<Proposal, Object> result) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("instance[{}] applied, result: {}", instanceId, result);
+                    }
+                    dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
                 }
-                dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
+            }))) {
+                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+                // do nothing, other threads will boost the instance
             }
-        });
+        } else {
+            dons.forEach(it -> it.getDone().applyDone(null, null));
+        }
 
         // for other members
-        configuration.getMembersWithout(self.getSelf().getId()).forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
-            @Override
-            public void error(final Throwable err) {
-                LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
-                // do nothing
-            }
+        configuration.getMembersWithout(self.getSelf().getId())
+                .forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
+                    @Override
+                    public void error(final Throwable err) {
+                        LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
+                        // do nothing
+                    }
 
-            @Override
-            public void complete(final Serializable result) {
-                // do nothing
-            }
-        }, 1000));
+                    @Override
+                    public void complete(final Serializable result) {
+                        // do nothing
+                    }
+                }));
     }
 
-    private void handleConfirmRequest(final ConfirmReq req, final TaskCallback dons) {
+    private boolean handleConfirmRequest(final ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
         if (req.getInstanceId() <= self.getLastCheckpoint()) {
             // the instance is compressed.
             LOG.info("the instance[{}] is compressed, checkpoint[{}]", req.getInstanceId(), self.getLastCheckpoint());
-            return;
+            return false;
         }
 
         try {
@@ -592,25 +603,27 @@ public class LearnerImpl implements Learner {
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
                 learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
-                return;
+                return false;
             }
 
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
                 LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
-                return;
+                return false;
+            }
+
+            // check sum
+            if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
+                LOG.info("local.checksum: {}, req.checksum: {}", localInstance.getChecksum(), req.getChecksum());
+                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
+                return false;
             }
 
             localInstance.setState(Instance.State.CONFIRMED);
             localInstance.setProposalNo(req.getProposalNo());
             logManager.updateInstance(localInstance);
 
-            // apply statemachine
-            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, dons))) {
-                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
-                // do nothing, other threads will boost the instance
-            }
-
+            return true;
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
             throw e;
@@ -622,8 +635,14 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void handleConfirmRequest(final ConfirmReq req) {
-        handleConfirmRequest(req, fakeCallback);
+    public void handleConfirmRequest(final ConfirmReq req, final boolean isSelf) {
+        if (handleConfirmRequest(req)) {
+            // apply statemachine
+            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, fakeCallback))) {
+                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
+                // do nothing, other threads will boost the instance
+            }
+        }
     }
 
     @Override
@@ -640,7 +659,7 @@ public class LearnerImpl implements Learner {
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     self.getLastCheckpoint(), self.getCurInstanceId());
-            if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+            if (memberConfig.allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())

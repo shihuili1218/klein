@@ -37,6 +37,13 @@ public interface RpcClient extends Lifecycle<RpcProp> {
     Logger LOG = LoggerFactory.getLogger(RpcClient.class);
 
     /**
+     * get rpc timeout.
+     *
+     * @return timeout
+     */
+    int requestTimeout();
+
+    /**
      * create connection.
      *
      * @param endpoint target
@@ -62,6 +69,17 @@ public interface RpcClient extends Lifecycle<RpcProp> {
      * close all connection.
      */
     void closeAll();
+
+    /**
+     * send request for async.
+     *
+     * @param target   target
+     * @param request  invoke data and service info
+     * @param callback invoke callback
+     */
+    default void sendRequestAsync(Endpoint target, Serializable request, InvokeCallback callback) {
+        sendRequestAsync(target, request, callback, requestTimeout());
+    }
 
     /**
      * send request for async.
@@ -120,5 +138,17 @@ public interface RpcClient extends Lifecycle<RpcProp> {
             LOG.warn(e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * send request for sync.
+     *
+     * @param target  target
+     * @param request invoke data and service info
+     * @param <R>     result type
+     * @return invoke result
+     */
+    default <R> R sendRequestSync(Endpoint target, Serializable request) {
+        return sendRequestSync(target, request, requestTimeout());
     }
 }

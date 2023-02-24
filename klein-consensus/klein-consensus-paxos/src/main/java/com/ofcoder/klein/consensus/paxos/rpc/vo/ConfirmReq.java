@@ -27,6 +27,7 @@ public class ConfirmReq implements Serializable {
     private String nodeId;
     private long proposalNo;
     private long instanceId;
+    private String checksum;
 
     public long getProposalNo() {
         return proposalNo;
@@ -52,10 +53,19 @@ public class ConfirmReq implements Serializable {
         this.instanceId = instanceId;
     }
 
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public void setChecksum(final String checksum) {
+        this.checksum = checksum;
+    }
+
     public static final class Builder {
         private String nodeId;
         private long proposalNo;
         private long instanceId;
+        private String checksum;
 
         private Builder() {
         }
@@ -103,6 +113,17 @@ public class ConfirmReq implements Serializable {
         }
 
         /**
+         * checksum.
+         *
+         * @param checksum checksum
+         * @return Builder
+         */
+        public Builder checksum(final String checksum) {
+            this.checksum = checksum;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return ConfirmReq
@@ -112,6 +133,7 @@ public class ConfirmReq implements Serializable {
             confirmReq.setNodeId(nodeId);
             confirmReq.setProposalNo(proposalNo);
             confirmReq.setInstanceId(instanceId);
+            confirmReq.setChecksum(checksum);
             return confirmReq;
         }
     }

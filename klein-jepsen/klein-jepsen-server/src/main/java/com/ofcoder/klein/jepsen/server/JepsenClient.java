@@ -16,8 +16,10 @@
  */
 package com.ofcoder.klein.jepsen.server;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -64,11 +67,13 @@ public class JepsenClient {
      *
      * @param value value
      * @return result
+     * @throws UnsupportedEncodingException checksum exception
      */
-    public boolean put(final Integer value) {
+    public boolean put(final Integer value) throws UnsupportedEncodingException {
         final String key = "def";
         PutReq req = new PutReq();
         req.setData(value);
+        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
         req.setKey(key);
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -76,9 +81,15 @@ public class JepsenClient {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        boolean o = client.sendRequestSync(endpoint, param, 1000);
-        LOG.info("call klein-server, op: put, key: {}, val: {}, result: {}", key, value, o);
-        return o;
+        try {
+            boolean o = client.sendRequestSync(endpoint, param, 3000);
+            if (!o) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+            }
+            return true;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
 
@@ -86,20 +97,28 @@ public class JepsenClient {
      * get.
      *
      * @return result
+     * @throws UnsupportedEncodingException checksum exception
      */
-    public Object get() {
+    public Object get() throws UnsupportedEncodingException {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
+        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        Integer o = client.sendRequestSync(endpoint, param, 1000);
-        LOG.info("get result: {}", o);
-        return o;
+        try {
+            Object o = client.sendRequestSync(endpoint, param, 3000);
+            if (o == null) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + "get: " + key + " on node: " + endpoint.getId() + ", result is null");
+            }
+            return o;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
 }

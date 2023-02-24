@@ -27,5 +27,8 @@ Welcome to Jepsen on Docker
 Please run \`bin/console\` in another terminal to proceed.
 EOF
 
+mvn install:install-file -DgroupId=com.ofcoder.klein.jepsen.server -DartifactId=klein-jepsen-server -Dversion=0.0.1 -Dpackaging=jar -Dfile=/jepsen/klein-server.jar
+
+
 # hack for keep this container running
 tail -f /dev/null
