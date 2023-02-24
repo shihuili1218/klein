@@ -2,10 +2,12 @@
 
 <p align="center">
     <strong>Thanks to JetBrains for the <a target="_blank" href="https://www.jetbrains.com/community/opensource">free license</a>.</strong>
-</p>
-<p align="center">
+    <br/>
     <strong>Open source：</strong> <a target="_blank" href='https://gitee.com/bleemliu/klein'>Gitee</a> | <a target="_blank" href='https://github.com/shihuili1218/klein'>Github</a> | <a target="_blank" href='https://gitcode.net/gege87417376/klein'>CodeChina</a>
+    <br/>
+    <strong>Document：</strong> <a target="_blank" href='https://klein-doc.gitbook.io/zh_cn'>Gitbook</a>
 </p>
+
 <p align="center">
    <a href="https://gitter.im/klein-gitter/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"><img src="https://badges.gitter.im/klein-gitter/community.svg"  alt=""/></a>
     &nbsp;
@@ -63,60 +65,6 @@ KleinProp prop = KleinProp.loadIfPresent();
 # Jepsen Test
 
 [Run on Gitpod](https://gitpod.io/#/github.com/shihuili1218/klein)
-
-# Milepost
-
-## Evolve
-### Paxos
-- [x] Write request, disordered negotiation, sequential confirmation
-- [x] Read request, using negotiation log
-- [x] Batch negotiation
-- [x] Optimize the prepare phase
-- [x] Snapshot
-- [x] To split roles such as Group and proposer, you only need to isolate instance instead of isolating them
-- [x] Master role：
-  - [x] Change of members
-  - [x] The master promotion should have the most complete data (the master should be elected through negotiation with the proposal. If the promotion is successful, then boost did not reach a consensus)
-  - [x] Keep data consistent
-    - [x] Master heartbeat triggers data synchronization
-    - [x] Snapshot synchronization (the heartbeat carries the checkpoint and the learn message returns the checkpoint)
-    - [x] New members join the cluster and actively learn from the master
-  - [ ] ~~Optimize read requests (write requests must be copied to the master)~~
-  - [x] Optimize write requests (write requests can only be executed by the master to avoid livelocks)
-- [ ] Automatic member discovery (research)
-- [x] NWR
-- [ ] Verified by jepsen
-  - [x] Linearly consistent read and write
-  - [ ] Network partition
-  - [ ] Member outage
-
-### Cache
-- [x] Basic functions such as reading, writing, etc
-- [x] Implement LRU with persistence
-- [x] Cache Automatic Expiration (TTL)
-- [x] Clock skew
-
-### Collection
-- [ ] list
-- [ ] map
-
-### To be optimized
-- [ ] LogManager row lock
-- [ ] Monitor negotiation efficiency
-- [ ] Monitoring thread pool indicators (DefaultTimer, ThreadExecutor)
-- [x] ProposalNo全局唯一
-- [x] 状态机持久化（master、lock）
-
-# Design ideas
-[Paxos](klein-consensus/klein-consensus-paxos/readme.md)
-- How to generate ProposalNo?
-- Can parallel negotiation really be supported?
-- Which proposal will reach consensus?
-- Can the Confirm phase (application state transition) really be executed asynchronously?
-- How do I create a snapshot of a running system?
-- Is it necessary to completely isolate the splitting of a group?
-- Optimize the Prepare phase
-- Batch negotiation (queue) to reduce RPC interaction
 
 # Star History
 
