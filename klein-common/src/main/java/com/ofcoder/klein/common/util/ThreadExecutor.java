@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 public class ThreadExecutor {
     private static final Logger LOG = LoggerFactory.getLogger(ThreadExecutor.class);
     // fixme to user custom
-    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(100, cpus() * 5),
+    private static final ExecutorService EXECUTOR = new ThreadPoolExecutor(cpus(), Math.max(200, cpus() * 5),
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(),
             KleinThreadFactory.create("common-thread", true));

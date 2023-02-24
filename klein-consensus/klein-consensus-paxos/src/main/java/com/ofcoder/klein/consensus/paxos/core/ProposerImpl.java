@@ -299,7 +299,25 @@ public class ProposerImpl implements Proposer {
         }
 
         // do prepare
-        forcePrepare(ctxt, callback);
+        forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
+            @Override
+            public void granted(final long grantedProposalNo, final ProposeContext context) {
+                synchronized (skipPrepare) {
+                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                    skipPrepare.notifyAll();
+                }
+                callback.granted(grantedProposalNo, context);
+            }
+
+            @Override
+            public void refused(final ProposeContext context) {
+                synchronized (skipPrepare) {
+                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                    skipPrepare.notifyAll();
+                }
+                callback.refused(context);
+            }
+        });
     }
 
     private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {
@@ -447,21 +465,12 @@ public class ProposerImpl implements Proposer {
         @Override
         public void granted(final long grantedProposalNo, final ProposeContext context) {
             LOG.debug("prepare granted. proposalNo: {}", grantedProposalNo);
-            synchronized (skipPrepare) {
-                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
-                skipPrepare.notifyAll();
-            }
             ThreadExecutor.execute(() -> accept(grantedProposalNo, context, new AcceptCallback()));
         }
 
         @Override
         public void refused(final ProposeContext context) {
             LOG.info("prepare refuse.");
-            synchronized (skipPrepare) {
-                skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                skipPrepare.notifyAll();
-            }
-
             for (ProposalWithDone event : context.getDataWithCallback()) {
                 event.getDone().negotiationDone(false, false);
             }
