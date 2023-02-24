@@ -234,8 +234,7 @@ public class LearnerImpl implements Learner {
     }
 
     private void _replay(final Task task) {
-        Map<Proposal, Object> result = new HashMap<>();
-        task.replayProposals.forEach(it -> result.put(it, doApply(task.priority, it)));
+        Map<Proposal, Object> result = this.doApply(task.priority, task.replayProposals);
         task.callback.onApply(result);
     }
 
@@ -316,40 +315,40 @@ public class LearnerImpl implements Learner {
 
         Instance<Proposal> localInstance = logManager.getInstance(instanceId);
 
-        Map<Proposal, Object> applyResult = new HashMap<>();
-        for (Proposal data : localInstance.getGrantedValue()) {
-            Object result = this.doApply(localInstance.getInstanceId(), data);
-            applyResult.put(data, result);
-        }
+        Map<Proposal, Object> applyResult = this.doApply(localInstance.getInstanceId(), localInstance.getGrantedValue());
         updateAppliedId(instanceId);
 
         task.callback.onApply(applyResult);
     }
 
-    private Object doApply(final long instance, final Proposal data) {
-        LOG.info("doing apply instance[{}]", instance);
-        if (data.getData() instanceof Proposal.Noop) {
-            //do nothing
-            return null;
-        }
+    private Map<Proposal, Object> doApply(final long instance, final List<Proposal> datas) {
+        Map<Proposal, Object> result = new HashMap<>();
 
         if (instance <= self.getLastCheckpoint()) {
             //do nothing
-            return null;
+            return result;
         }
+        LOG.debug("doing apply instance[{}]", instance);
 
-        if (sms.containsKey(data.getGroup())) {
-            SM sm = sms.get(data.getGroup());
-            try {
-                return sm.apply(instance, data.getData());
-            } catch (Exception e) {
-                LOG.warn(String.format("apply instance[%s] to sm, %s", instance, e.getMessage()), e);
-                return null;
+        for (Proposal data : datas) {
+            if (data.getData() instanceof Proposal.Noop) {
+                result.put(data, null);
+                continue;
             }
-        } else {
-            LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
-            return null;
+            if (sms.containsKey(data.getGroup())) {
+                SM sm = sms.get(data.getGroup());
+                try {
+                    result.put(data, sm.apply(instance, data.getData()));
+                } catch (Exception e) {
+                    LOG.error(String.format("apply instance[%s].[%s] to sm, %s", instance, data, e.getMessage()), e);
+                    result.put(data, null);
+                }
+            } else {
+                LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
+                result.put(data, null);
+            }
         }
+        return result;
     }
 
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
