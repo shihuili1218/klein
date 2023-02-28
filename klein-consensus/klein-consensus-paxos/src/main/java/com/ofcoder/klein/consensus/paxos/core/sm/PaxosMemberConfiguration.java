@@ -157,6 +157,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
      * @param listener listener
      */
     public void addHealthyListener(final HealthyListener listener) {
+        listener.change(getMasterState());
         listeners.add(listener);
     }
 

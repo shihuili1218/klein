@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.example.cache;
 
+import java.io.Serializable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,9 +63,18 @@ public class Main1 {
 
         for (int i = 0; i < 50; i++) {
             int finalI = i;
-            ThreadExecutor.execute(() -> LOG.info("----------" + finalI + "----------get hello3: " + instance1.getCache().get("hello3")));
+            ThreadExecutor.execute(() -> {
+                LOG.info("---------{}---------, begin", finalI);
+                Serializable hello3 = null;
+                try {
+                    hello3 = instance1.getCache().get("hello3");
+                    LOG.info("---------{}---------, end {}", finalI, hello3);
+                } catch (Exception e) {
+                    LOG.info("---------{}---------, err {}", finalI, hello3);
+                }
+            });
         }
-        Thread.sleep(10000L);
+        Thread.sleep(5000L);
 
         LOG.info("----------exist hello3: " + instance1.getCache().exist("hello3"));
         LOG.info("----------exist hello4: " + instance1.getCache().exist("hello4"));

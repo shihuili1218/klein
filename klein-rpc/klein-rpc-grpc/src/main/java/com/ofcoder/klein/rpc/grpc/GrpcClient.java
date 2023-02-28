@@ -90,12 +90,16 @@ public class GrpcClient implements RpcClient {
 
     @Override
     public boolean checkConnection(final Endpoint endpoint) {
-        if (!channels.containsKey(endpoint)) {
+        final ManagedChannel ch = getChannel(endpoint, false);
+        if (ch == null) {
             return false;
         }
-        ManagedChannel managedChannel = channels.get(endpoint);
-        // todo check channel alive
-        return true;
+
+        final ConnectivityState st = ch.getState(true);
+        if (st != ConnectivityState.TRANSIENT_FAILURE && st != ConnectivityState.SHUTDOWN) {
+            return true;
+        }
+        return false;
     }
 
     @Override
