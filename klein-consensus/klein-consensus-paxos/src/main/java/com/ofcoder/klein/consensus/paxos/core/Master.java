@@ -86,56 +86,7 @@ public interface Master extends Lifecycle<ConsensusProp> {
      *
      * @param newMaster new master
      */
+    @Deprecated
     void onChangeMaster(String newMaster);
-
-    /**
-     * Added master health listener.
-     *
-     * @param listener listener
-     */
-    void addHealthyListener(HealthyListener listener);
-
-    /**
-     * get elect state.
-     *
-     * @return elect state
-     */
-    ElectState electState();
-
-    interface HealthyListener {
-        void change(ElectState healthy);
-    }
-
-    enum ElectState {
-        ELECTING(-1),
-        FOLLOWING(0),
-        BOOSTING(1),
-        /**
-         * deprecated.
-         *
-         * @deprecated use BOOSTING.
-         */
-        @Deprecated
-        DOMINANT(2);
-        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
-        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
-        private int state;
-
-        ElectState(final int state) {
-            this.state = state;
-        }
-
-        public static boolean allowBoost(final ElectState state) {
-            return BOOSTING_STATE.contains(state);
-        }
-
-        public static boolean allowPropose(final ElectState state) {
-            return PROPOSE_STATE.contains(state);
-        }
-
-        public int getState() {
-            return state;
-        }
-    }
 
 }
