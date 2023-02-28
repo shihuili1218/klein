@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -36,6 +37,8 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     private transient volatile Endpoint master;
     private final transient Object masterLock = new Object();
     private transient volatile Endpoint candidate;
+
+    private
 
     public Endpoint getMaster() {
         return this.candidate != null ? this.candidate : this.master;
@@ -123,5 +126,60 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
                 + ", effectMembers=" + effectMembers
                 + ", lastMembers=" + lastMembers
                 + '}';
+    }
+
+    /**
+     * Added master health listener.
+     *
+     * @param listener listener
+     */
+    public void addHealthyListener(HealthyListener listener) {
+
+    }
+
+    /**
+     * get elect state.
+     *
+     * @return elect state
+     */
+    public ElectState getMasterState() {
+        return null;
+    }
+
+    interface HealthyListener {
+        void change(ElectState healthy);
+    }
+
+
+    enum ElectState {
+        ELECTING(-1),
+        FOLLOWING(0),
+        BOOSTING(1),
+        /**
+         * deprecated.
+         *
+         * @deprecated use BOOSTING.
+         */
+        @Deprecated
+        DOMINANT(2);
+        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
+        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
+        private int state;
+
+        ElectState(final int state) {
+            this.state = state;
+        }
+
+        public static boolean allowBoost(final ElectState state) {
+            return BOOSTING_STATE.contains(state);
+        }
+
+        public static boolean allowPropose(final ElectState state) {
+            return PROPOSE_STATE.contains(state);
+        }
+
+        public int getState() {
+            return state;
+        }
     }
 }
