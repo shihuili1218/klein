@@ -27,5 +27,7 @@ Welcome to Jepsen on Docker
 Please run \`bin/console\` in another terminal to proceed.
 EOF
 
+apt-get remove openjdk* -y && apt-get install -qy openjdk-8-jdk
+
 # hack for keep this container running
 tail -f /dev/null
