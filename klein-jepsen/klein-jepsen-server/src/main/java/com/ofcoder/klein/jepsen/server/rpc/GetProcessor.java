@@ -16,12 +16,14 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+
+import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-
-import java.nio.ByteBuffer;
 
 /**
  * cache get request processor.
@@ -37,7 +39,13 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
 
     @Override
     public void handleRequest(final GetReq request, final RpcContext context) {
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(cache.get(request.getKey()))));
+        try {
+            Serializable javaBean = cache.get(request.getKey());
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(javaBean)));
+        } catch (KleinException e) {
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(null)));
+        }
+
     }
 
     @Override

@@ -17,5 +17,6 @@ chmod 700 /root/.ssh
 cp /run/secrets/authorized_keys /root/.ssh/
 chmod 600 /root/.ssh/authorized_keys
 /etc/init.d/ssh start
-tail -f /dev/null
 sh /klein/start.sh
+
+tail -f /dev/null

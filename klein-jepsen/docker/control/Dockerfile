@@ -8,11 +8,8 @@ ENV LEIN_ROOT true
 #
 RUN apt-get -y -q update
 
-RUN apt-get remove openjdk* -y
-
 RUN apt-get -y -q update \
-    && apt-get install -qy openjdk-8-jdk \
-    libjna-java \
+    && apt-get install -qy libjna-java \
     vim \
     emacs \
     git \
@@ -25,6 +22,10 @@ RUN apt-get -y -q update \
     graphviz \
     dos2unix \
     maven
+
+RUN apt-get remove openjdk* -y
+
+RUN apt-get install -qy openjdk-8-jdk
 
 RUN wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
     mv lein /usr/bin && \

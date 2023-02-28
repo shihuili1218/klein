@@ -100,7 +100,10 @@ public class JepsenClient {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        Integer o = client.sendRequestSync(endpoint, param, 1000);
+        Object o = client.sendRequestSync(endpoint, param, 1000);
+        if (o == null) {
+            throw new IllegalArgumentException("get: " + key + ", result is null");
+        }
         LOG.info("get result: {}", o);
         return o;
     }
