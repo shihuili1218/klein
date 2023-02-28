@@ -21,6 +21,8 @@ import java.io.Serializable;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
+ * pre elect response.
+ *
  * @author 释慧利
  */
 public class PreElectRes implements Serializable {
@@ -36,15 +38,31 @@ public class PreElectRes implements Serializable {
         private Builder() {
         }
 
+        /**
+         * aPreElectRes.
+         *
+         * @return Builder
+         */
         public static Builder aPreElectRes() {
             return new Builder();
         }
 
-        public Builder master(Endpoint master) {
+        /**
+         * master.
+         *
+         * @param master master
+         * @return Builder
+         */
+        public Builder master(final Endpoint master) {
             this.master = master;
             return this;
         }
 
+        /**
+         * build.
+         *
+         * @return PreElectRes
+         */
         public PreElectRes build() {
             PreElectRes preElectRes = new PreElectRes();
             preElectRes.master = this.master;

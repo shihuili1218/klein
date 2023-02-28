@@ -27,6 +27,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
+ * before election master to use, find master in the cluster.
+ *
  * @author 释慧利
  */
 public class PreElectProcessor extends AbstractRpcProcessor<PreElectReq> {

@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +60,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
@@ -88,9 +88,7 @@ public class MasterImpl implements Master {
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
-    private final List<HealthyListener> listeners = new ArrayList<>();
     private LogManager<Proposal> logManager;
-    private ElectState state = ElectState.ELECTING;
     private final AtomicBoolean changing = new AtomicBoolean(false);
     private final Nwr nwr;
 
@@ -138,11 +136,10 @@ public class MasterImpl implements Master {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        waitHeartbeatTimer = new RepeatedTimer("follower-wait-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval() + prop.getPaxosProp().getMasterHeartbeatTimeout()) {
+        waitHeartbeatTimer = new RepeatedTimer("follower-wait-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
-                updateMasterState(ElectState.ELECTING);
-
+                memberConfig.changeMaster(PaxosMemberConfiguration.RESET_MASTER_ID);
                 restartElect();
             }
         };
@@ -159,7 +156,7 @@ public class MasterImpl implements Master {
             }
         };
 
-        sendHeartbeatTimer = new RepeatedTimer("master-send-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
+        sendHeartbeatTimer = new RepeatedTimer("master-send-heartbeat", (int) (prop.getPaxosProp().getMasterHeartbeatInterval() * 0.95)) {
             @Override
             protected void onTrigger() {
                 if (!sendHeartbeat(false)) {
@@ -196,7 +193,7 @@ public class MasterImpl implements Master {
                 .changeOp(op)
                 .changeTarget(target)
                 .build();
-        RedirectRes res = client.sendRequestSync(master, req, prop.getChangeMemberTimeout());
+        RedirectRes res = client.sendRequestSync(master, req, prop.getRoundTimeout() * prop.getRetry());
 
         return res != null && res.isChangeResult();
     }
@@ -327,9 +324,20 @@ public class MasterImpl implements Master {
 
     @Override
     public void lookMaster() {
-        memberConfig.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-
-        });
+        PreElectReq req = PreElectReq.Builder.aPreElectReq()
+                .memberConfigurationVersion(memberConfig.getVersion())
+                .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
+                .build();
+        for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
+            PreElectRes res = client.sendRequestSync(it, req);
+            if (res != null && res.getMaster() != null) {
+                memberConfig.changeMaster(res.getMaster().getId());
+                return;
+            }
+        }
+        // there is no master in the cluster, do elect.
+        restartElect();
     }
 
     @Override
@@ -416,6 +424,7 @@ public class MasterImpl implements Master {
         if (result.isGranted()) {
             quorum.grant(it);
             if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+                memberConfig.changeMaster(self.getSelf().getId());
                 ThreadExecutor.execute(MasterImpl.this::_boosting);
                 restartSendHbNow();
                 latch.countDown();
@@ -429,7 +438,6 @@ public class MasterImpl implements Master {
     }
 
     private void _boosting() {
-        updateMasterState(ElectState.BOOSTING);
 
         LOG.info("boosting instance.");
         long miniInstanceId = RoleAccessor.getLearner().getLastAppliedInstanceId();
@@ -505,33 +513,15 @@ public class MasterImpl implements Master {
                         complete.complete(SingleQuorum.GrantResult.PASS);
                     }
                 }
-            }, prop.getPaxosProp().getMasterHeartbeatTimeout());
+            });
         });
         try {
-            SingleQuorum.GrantResult grantResult = complete.get(prop.getPaxosProp().getMasterHeartbeatTimeout() + 10, TimeUnit.MILLISECONDS);
+            SingleQuorum.GrantResult grantResult = complete.get(client.requestTimeout() + 10, TimeUnit.MILLISECONDS);
             return grantResult == SingleQuorum.GrantResult.PASS;
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             LOG.warn("master send heartbeat occur exception, {}", e.getMessage());
             return false;
         }
-    }
-
-    @Override
-    public void addHealthyListener(final HealthyListener listener) {
-        listeners.add(listener);
-    }
-
-    @Override
-    public ElectState electState() {
-        return state;
-    }
-
-    private void updateMasterState(final ElectState healthy) {
-        if (state == healthy) {
-            return;
-        }
-        state = healthy;
-        listeners.forEach(it -> it.change(healthy));
     }
 
     @Override
@@ -569,7 +559,7 @@ public class MasterImpl implements Master {
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
             memberConfig.seenCandidate(request.getNodeId());
             if (!isSelf) {
-                updateMasterState(ElectState.FOLLOWING);
+                memberConfig.changeMaster(request.getNodeId());
                 restartWaitHb();
             }
             return NewMasterRes.Builder.aNewMasterRes()
@@ -609,19 +599,4 @@ public class MasterImpl implements Master {
         electTimer.restart(false);
     }
 
-    @Override
-    public void onChangeMaster(final String newMaster) {
-        if (StringUtils.equals(newMaster, self.getSelf().getId())) {
-            if (!sendHeartbeat(true)) {
-                LOG.info("this could be an outdated election proposal, newMaster: {}", newMaster);
-//                return;
-            }
-
-//            updateMasterState(ElectState.BOOSTING);
-//            restartSendHb();
-        } else {
-            updateMasterState(ElectState.FOLLOWING);
-            restartWaitHb();
-        }
-    }
 }
