@@ -54,9 +54,14 @@ public interface Master extends Lifecycle<ConsensusProp> {
     boolean changeMember(byte op, Set<Endpoint> target);
 
     /**
-     * Elect master right now.
+     * Look for the master in the cluster for member startup.
      */
-    void electMasterNow();
+    void lookMaster();
+
+    /**
+     * Transfer the Master status to another member.
+     */
+    void transferMaster();
 
     /**
      * Processing heartbeat message.

@@ -152,15 +152,6 @@ public class PaxosNode extends Node {
                 + '}';
     }
 
-    /**
-     * get node id.
-     *
-     * @return node id
-     */
-    public String nodeId() {
-        return self.getId();
-    }
-
     public static final class Builder {
         private long curInstanceId;
         private long curProposalNo;

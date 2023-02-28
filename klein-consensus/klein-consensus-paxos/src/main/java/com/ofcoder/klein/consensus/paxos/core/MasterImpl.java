@@ -97,7 +97,7 @@ public class MasterImpl implements Master {
     public MasterImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
-        nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
+        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
     }
 
     @Override
@@ -141,6 +141,8 @@ public class MasterImpl implements Master {
         waitHeartbeatTimer = new RepeatedTimer("follower-wait-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval() + prop.getPaxosProp().getMasterHeartbeatTimeout()) {
             @Override
             protected void onTrigger() {
+                updateMasterState(ElectState.ELECTING);
+
                 restartElect();
             }
         };
@@ -324,8 +326,15 @@ public class MasterImpl implements Master {
     }
 
     @Override
-    public void electMasterNow() {
-        restartElect();
+    public void lookMaster() {
+        memberConfig.getMembersWithout(self.getSelf().getId()).forEach(it -> {
+
+        });
+    }
+
+    @Override
+    public void transferMaster() {
+
     }
 
     private void election() {
@@ -333,8 +342,6 @@ public class MasterImpl implements Master {
         if (!electing.compareAndSet(false, true)) {
             return;
         }
-
-        updateMasterState(ElectState.ELECTING);
 
         try {
             LOG.info("start electing master.");
@@ -349,17 +356,13 @@ public class MasterImpl implements Master {
                         protected Long create() {
                             return self.incrementInstanceId();
                         }
-                    }, Lists.newArrayList(new ProposalWithDone(proposal, new ProposeDone() {
-                        @Override
-                        public void negotiationDone(final boolean result, final boolean changed) {
-                            LOG.info("electing master, negotiationDone: {}", result);
-                            if (result && !changed) {
-                                newMaster(latch);
-                            } else {
-                                latch.countDown();
-                            }
+                    }, Lists.newArrayList(new ProposalWithDone(proposal, (result, changed) -> {
+                        LOG.info("electing master, negotiationDone: {}", result);
+                        if (result && !changed) {
+                            newMaster(latch);
+                        } else {
+                            latch.countDown();
                         }
-
                     })));
 
             try {

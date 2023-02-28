@@ -63,7 +63,7 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     }
 
     private boolean takeMaster() {
-        RoleAccessor.getMaster().electMasterNow();
+        RoleAccessor.getMaster().transferMaster();
         CountDownLatch latch = new CountDownLatch(1);
         RoleAccessor.getMaster().addHealthyListener(healthy -> {
             if (Master.ElectState.allowBoost(healthy)) {
