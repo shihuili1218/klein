@@ -330,7 +330,9 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .build();
         for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
+            LOG.debug("looking for master, node-{}, connect: {}", it.getId(), client.checkConnection(it));
             PreElectRes res = client.sendRequestSync(it, req);
+            LOG.debug("looking for master, node-{}: {}, connect: {}", it.getId(), res, client.checkConnection(it));
             if (res != null && res.getMaster() != null) {
                 memberConfig.changeMaster(res.getMaster().getId());
                 return;
@@ -415,7 +417,7 @@ public class MasterImpl implements Master {
                     public void complete(final NewMasterRes result) {
                         handleNewMasterRes(it, result, quorum, next, latch);
                     }
-                }, 50L));
+                }));
     }
 
     private void handleNewMasterRes(final Endpoint it, final NewMasterRes result, final Quorum quorum, final AtomicBoolean next, final CountDownLatch latch) {
