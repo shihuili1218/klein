@@ -72,19 +72,4 @@ public interface Consensus extends Cluster, Lifecycle<ConsensusProp> {
     default <E extends Serializable, D extends Serializable> Result<D> read(String group, E data) {
         return propose(group, data, true);
     }
-
-    /**
-     * set consensus listener.
-     *
-     * @param listener LifecycleListener
-     */
-    void setListener(LifecycleListener listener);
-
-    interface LifecycleListener {
-
-        /**
-         * initialized, ready to initiate a proposal.
-         */
-        void prepared();
-    }
 }

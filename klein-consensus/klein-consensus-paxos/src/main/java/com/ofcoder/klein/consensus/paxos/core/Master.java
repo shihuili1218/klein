@@ -16,10 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
@@ -80,13 +78,5 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @return handle result
      */
     NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf);
-
-    /**
-     * This is a callback method of master change.
-     *
-     * @param newMaster new master
-     */
-    @Deprecated
-    void onChangeMaster(String newMaster);
 
 }

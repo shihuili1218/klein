@@ -38,6 +38,7 @@ import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
 import com.ofcoder.klein.spi.Join;
+
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ConnectivityState;
@@ -57,6 +58,11 @@ public class GrpcClient implements RpcClient {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
     private RpcProp prop;
+
+    @Override
+    public int requestTimeout() {
+        return prop.getRequestTimeout();
+    }
 
     @Override
     public void createConnection(final Endpoint endpoint) {

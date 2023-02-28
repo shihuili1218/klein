@@ -354,7 +354,7 @@ public class LearnerImpl implements Learner {
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
         boolean lr = false;
 
-        if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+        if (memberConfig.allowBoost()) {
             LOG.info("try boost instance: {}", instanceId);
             CompletableFuture<Boolean> future = new CompletableFuture<>();
             RoleAccessor.getProposer().tryBoost(
@@ -640,7 +640,7 @@ public class LearnerImpl implements Learner {
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     self.getLastCheckpoint(), self.getCurInstanceId());
-            if (Master.ElectState.allowBoost(RoleAccessor.getMaster().electState())) {
+            if (memberConfig.allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
                 List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())

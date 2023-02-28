@@ -45,6 +45,7 @@ public class MemberConfiguration implements Serializable {
     protected AtomicInteger version = new AtomicInteger(0);
     protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
     protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
+    protected Endpoint self;
     private int changeVersion = 0;
 
     public int getVersion() {
@@ -169,12 +170,14 @@ public class MemberConfiguration implements Serializable {
     /**
      * init configuration.
      *
+     * @param self  self
      * @param nodes all members
      */
-    public void init(final List<Endpoint> nodes) {
+    public void init(final Endpoint self, final List<Endpoint> nodes) {
         if (CollectionUtils.isEmpty(nodes)) {
             return;
         }
+        this.self = self;
         this.effectMembers.putAll(nodes.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.version.incrementAndGet();
     }

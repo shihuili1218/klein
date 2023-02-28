@@ -82,7 +82,6 @@ public class ProposerImpl implements Proposer {
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
-    private boolean allowPropose = false;
 
     public ProposerImpl(final PaxosNode self) {
         this.self = self;
@@ -109,9 +108,8 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.handleEventsWith(eventHandler);
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
-        RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            allowPropose = Master.ElectState.allowPropose(healthy);
-            if (allowPropose) {
+        memberConfig.addHealthyListener(healthy -> {
+            if (memberConfig.allowPropose()) {
                 eventHandler.triggerHandle();
             }
         });
@@ -454,7 +452,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (allowPropose && (this.tasks.size() >= batchSize || endOfBatch)) {
+            if (memberConfig.allowPropose() && (this.tasks.size() >= batchSize || endOfBatch)) {
                 handle();
             }
         }
@@ -512,7 +510,6 @@ public class ProposerImpl implements Proposer {
 
         }
     }
-
 
     /**
      * Prepare State.

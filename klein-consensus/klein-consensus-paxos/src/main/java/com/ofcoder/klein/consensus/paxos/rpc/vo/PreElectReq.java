@@ -17,6 +17,8 @@
 package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 /**
+ * pre elect req.
+ *
  * @author 释慧利
  */
 public class PreElectReq extends BaseReq {
@@ -29,11 +31,11 @@ public class PreElectReq extends BaseReq {
         }
 
         /**
-         * aNewMasterReq.
+         * aPreElectReq.
          *
          * @return Builder
          */
-        public static Builder aNewMasterReq() {
+        public static Builder aPreElectReq() {
             return new Builder();
         }
 
@@ -73,14 +75,14 @@ public class PreElectReq extends BaseReq {
         /**
          * build.
          *
-         * @return NewMasterReq
+         * @return PreElectReq
          */
-        public NewMasterReq build() {
-            NewMasterReq newMasterReq = new NewMasterReq();
-            newMasterReq.setNodeId(nodeId);
-            newMasterReq.setProposalNo(proposalNo);
-            newMasterReq.setMemberConfigurationVersion(memberConfigurationVersion);
-            return newMasterReq;
+        public PreElectReq build() {
+            PreElectReq preElectReq = new PreElectReq();
+            preElectReq.setNodeId(nodeId);
+            preElectReq.setProposalNo(proposalNo);
+            preElectReq.setMemberConfigurationVersion(memberConfigurationVersion);
+            return preElectReq;
         }
     }
 }

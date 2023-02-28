@@ -77,15 +77,6 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void setListener(final LifecycleListener listener) {
-        RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            if (Master.ElectState.allowPropose(healthy)) {
-                listener.prepared();
-            }
-        });
-    }
-
-    @Override
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
@@ -94,7 +85,7 @@ public class PaxosConsensus implements Consensus {
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new DirectProxy(this.prop) : new RedirectProxy(this.prop, this.self);
 
-        MemberRegistry.getInstance().init(this.prop.getMembers());
+        MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 

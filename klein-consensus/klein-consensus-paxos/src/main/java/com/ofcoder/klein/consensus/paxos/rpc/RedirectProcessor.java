@@ -18,8 +18,6 @@ package com.ofcoder.klein.consensus.paxos.rpc;
 
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,18 +62,7 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
 
     private boolean takeMaster() {
         RoleAccessor.getMaster().transferMaster();
-        CountDownLatch latch = new CountDownLatch(1);
-        RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            if (Master.ElectState.allowBoost(healthy)) {
-                latch.countDown();
-            }
-        });
-        try {
-            return latch.await(takeMasterTimeout, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e) {
-            LOG.warn(e.getMessage());
-            return false;
-        }
+        return true;
     }
 
     @Override
