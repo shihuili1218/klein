@@ -33,9 +33,9 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class PaxosMemberConfiguration extends MemberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
-    private volatile Endpoint master;
-    private final Object masterLock = new Object();
-    private volatile Endpoint candidate;
+    private transient volatile Endpoint master;
+    private final transient Object masterLock = new Object();
+    private transient volatile Endpoint candidate;
 
     public Endpoint getMaster() {
         return this.candidate != null ? this.candidate : this.master;

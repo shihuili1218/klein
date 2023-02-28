@@ -9,7 +9,7 @@ ENV LEIN_ROOT true
 RUN apt-get -y -q update
 
 RUN apt-get -y -q update \
-    && apt-get install -qy install -qy openjdk-8-jdk \
+    && apt-get install -qy openjdk-8-jdk \
     libjna-java \
     vim \
     emacs \
