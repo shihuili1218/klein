@@ -45,10 +45,12 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     @Override
     public void handleRequest(final GetReq request, final RpcContext context) {
         try {
+            LOG.info("get operator, begin, seq: {}", request.getSeq());
             Serializable javaBean = cache.get(request.getKey());
-            LOG.info("get operator, seq: {}, result: {}", request.getSeq(), javaBean);
+            LOG.info("get operator, end, seq: {}, result: {}", request.getSeq(), javaBean);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(javaBean)));
         } catch (KleinException e) {
+            LOG.info("get operator, end, seq: {}, result: err", request.getSeq());
             LOG.error(e.getMessage());
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(null)));
         }

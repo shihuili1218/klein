@@ -490,7 +490,12 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do confirm
-                List<ProposalWithDone> dons = context.isDataChange() ? new ArrayList<>() : context.getDataWithCallback();
+                List<ProposalWithDone> dons = new ArrayList<>();
+                if (!context.isDataChange()) {
+                    dons = context.getDataWithCallback();
+                } else {
+                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
+                }
                 RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
             });
 
@@ -502,7 +507,7 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(false, false);
+                event.getDone().negotiationDone(true, false);
             }
 
             ThreadExecutor.execute(() -> {

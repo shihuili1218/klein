@@ -44,19 +44,19 @@ public class DirectProxy implements Proxy {
 
     @Override
     public <D extends Serializable> Result<D> propose(final Proposal proposal, final boolean apply) {
-        int count = apply ? 2 : 1;
 
-        CountDownLatch completed = new CountDownLatch(count);
+        CountDownLatch completed = new CountDownLatch(1);
         Result.Builder<D> builder = Result.Builder.aResult();
         RoleAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
             public void negotiationDone(final boolean result, final boolean changed) {
-                completed.countDown();
                 if (result) {
                     builder.state(!changed ? Result.State.SUCCESS : Result.State.FAILURE);
                 } else {
                     builder.state(Result.State.UNKNOWN);
-                    completed.countDown();
+                    if (!apply) {
+                        completed.countDown();
+                    }
                 }
             }
 

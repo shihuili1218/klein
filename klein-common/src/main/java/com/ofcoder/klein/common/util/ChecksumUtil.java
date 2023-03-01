@@ -25,21 +25,18 @@ import org.apache.commons.lang3.StringUtils;
  *
  * @author 释慧利
  */
-public class SumcheckUtil {
+public class ChecksumUtil {
 
     /**
      * md5.
      *
-     * @param s resource
+     * @param btInput resource
      * @return md5 string
      */
-    public static String md5(final String s) {
-        if (StringUtils.isEmpty(s)) {
-            return null;
-        }
+    public static String md5(final byte[] btInput) {
+
         char[] hexDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
         try {
-            byte[] btInput = s.getBytes("UTF-8");
             MessageDigest mdInst = MessageDigest.getInstance("MD5");
             mdInst.update(btInput);
             byte[] md = mdInst.digest();
