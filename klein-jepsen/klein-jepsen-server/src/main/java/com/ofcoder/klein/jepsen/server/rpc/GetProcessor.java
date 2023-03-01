@@ -46,7 +46,7 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     public void handleRequest(final GetReq request, final RpcContext context) {
         try {
             Serializable javaBean = cache.get(request.getKey());
-            LOG.info("====================={}", javaBean);
+            LOG.info("get operator, seq: {}, result: {}", request.getSeq(), javaBean);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(javaBean)));
         } catch (KleinException e) {
             LOG.error(e.getMessage());
