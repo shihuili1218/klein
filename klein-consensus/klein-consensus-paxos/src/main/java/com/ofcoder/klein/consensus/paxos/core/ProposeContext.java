@@ -44,6 +44,10 @@ public class ProposeContext {
      * The data on which consensus was reached.
      */
     private List<Proposal> consensusData;
+    /**
+     * Checksum for ProposeContext#consensusData.
+     */
+    private String consensusChecksum;
     private boolean dataChange = false;
     /**
      * This is a proposalNo that has executed the prepare phase.
@@ -87,6 +91,14 @@ public class ProposeContext {
 
     public void setConsensusData(final List<Proposal> consensusData) {
         this.consensusData = consensusData;
+    }
+
+    public String getConsensusChecksum() {
+        return consensusChecksum;
+    }
+
+    public void setConsensusChecksum(final String consensusChecksum) {
+        this.consensusChecksum = consensusChecksum;
     }
 
     public boolean isDataChange() {
@@ -139,6 +151,7 @@ public class ProposeContext {
         ProposeContext target = new ProposeContext(this.memberConfiguration, this.instanceIdHolder, this.dataWithCallback);
         target.times = this.times;
         target.consensusData = null;
+        target.consensusChecksum = null;
         target.grantedProposalNo = 0;
         return target;
     }

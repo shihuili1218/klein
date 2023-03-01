@@ -28,6 +28,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 public class AcceptReq extends BaseReq {
     private long instanceId;
     private List<Proposal> data;
+    private String checksum;
 
     public long getInstanceId() {
         return instanceId;
@@ -37,12 +38,17 @@ public class AcceptReq extends BaseReq {
         return data;
     }
 
+    public String getChecksum() {
+        return checksum;
+    }
+
     public static final class Builder {
         private long instanceId;
         private List<Proposal> data;
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
+        private String checksum;
 
         private Builder() {
         }
@@ -112,6 +118,17 @@ public class AcceptReq extends BaseReq {
         }
 
         /**
+         * checksum.
+         *
+         * @param checksum checksum
+         * @return Builder
+         */
+        public Builder checksum(final String checksum) {
+            this.checksum = checksum;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return AcceptReq
@@ -123,6 +140,7 @@ public class AcceptReq extends BaseReq {
             acceptReq.setMemberConfigurationVersion(memberConfigurationVersion);
             acceptReq.instanceId = this.instanceId;
             acceptReq.data = this.data;
+            acceptReq.checksum = this.checksum;
             return acceptReq;
         }
     }
