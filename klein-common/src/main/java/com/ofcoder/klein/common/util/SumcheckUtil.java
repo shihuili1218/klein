@@ -21,11 +21,20 @@ import java.security.MessageDigest;
 import org.apache.commons.lang3.StringUtils;
 
 /**
+ * SumcheckUtil.
+ *
  * @author 释慧利
  */
 public class SumcheckUtil {
-    public static String md5(String s) {
-        if (StringUtils.isEmpty(s)){
+
+    /**
+     * md5.
+     *
+     * @param s resource
+     * @return md5 string
+     */
+    public static String md5(final String s) {
+        if (StringUtils.isEmpty(s)) {
             return null;
         }
         char[] hexDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
