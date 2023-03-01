@@ -31,7 +31,7 @@ public class BaseReq implements Serializable {
         return seq;
     }
 
-    public void setSeq(String seq) {
+    public void setSeq(final String seq) {
         this.seq = seq;
     }
 
