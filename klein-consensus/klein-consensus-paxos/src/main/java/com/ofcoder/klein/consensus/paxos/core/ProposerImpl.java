@@ -22,6 +22,7 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -270,52 +271,53 @@ public class ProposerImpl implements Proposer {
 
         // limit the prepare phase to only one thread.
         long curProposalNo = self.getCurProposalNo();
-        if (skipPrepare.get() == PrepareState.PREPARED
-                && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-            callback.granted(curProposalNo, ctxt);
+        if (skipPrepare.get() == PrepareState.PREPARED) {
+            if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                callback.granted(curProposalNo, ctxt);
+            }
             return;
         }
 
-        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
-        if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
-            synchronized (skipPrepare) {
-                try {
-                    skipPrepare.wait(prepareTimeout);
-                } catch (InterruptedException e) {
-                    throw new ConsensusException(e.getMessage(), e);
-                }
-            }
+        synchronized (skipPrepare) {
+            LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
             curProposalNo = self.getCurProposalNo();
-            if (skipPrepare.get() == PrepareState.PREPARED
-                    && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                callback.granted(curProposalNo, ctxt);
+            if (skipPrepare.get() == PrepareState.PREPARED) {
+                if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                    callback.granted(curProposalNo, ctxt);
+                }
                 return;
-            } else {
-                prepare(ctxt, callback);
-                return;
+            }
+            skipPrepare.set(PrepareState.PREPARING);
+
+            try {
+                // do prepare
+                CountDownLatch latch = new CountDownLatch(1);
+                forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
+                    @Override
+                    public void granted(final long grantedProposalNo, final ProposeContext context) {
+                        latch.countDown();
+                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                        callback.granted(grantedProposalNo, context);
+                    }
+
+                    @Override
+                    public void refused(final ProposeContext context) {
+                        latch.countDown();
+                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                        callback.refused(context);
+                    }
+                });
+
+                boolean await = latch.await(prepareTimeout * prop.getRetry() + 10, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                throw new ConsensusException(e.getMessage(), e);
+            } finally {
+                if (skipPrepare.get() == PrepareState.PREPARING) {
+                    skipPrepare.set(PrepareState.NO_PREPARE);
+                }
             }
         }
 
-        // do prepare
-        forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
-            @Override
-            public void granted(final long grantedProposalNo, final ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
-                    skipPrepare.notifyAll();
-                }
-                callback.granted(grantedProposalNo, context);
-            }
-
-            @Override
-            public void refused(final ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                    skipPrepare.notifyAll();
-                }
-                callback.refused(context);
-            }
-        });
     }
 
     private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {

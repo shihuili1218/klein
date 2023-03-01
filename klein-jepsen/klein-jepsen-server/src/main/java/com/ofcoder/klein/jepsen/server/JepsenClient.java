@@ -79,7 +79,7 @@ public class JepsenClient {
         boolean o = client.sendRequestSync(endpoint, param, 1000);
         LOG.info("call klein-server, op: put, key: {}, val: {}, result: {}", key, value, o);
         if (!o) {
-            throw new IllegalArgumentException("wirte: " + value + ", not self");
+            throw new IllegalArgumentException("wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
         }
         return true;
     }
@@ -102,7 +102,7 @@ public class JepsenClient {
 
         Object o = client.sendRequestSync(endpoint, param, 1000);
         if (o == null) {
-            throw new IllegalArgumentException("get: " + key + ", result is null");
+            throw new IllegalArgumentException("get: " + key + " on node: " + endpoint.getId() + ", result is null");
         }
         LOG.info("get result: {}", o);
         return o;
