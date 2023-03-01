@@ -43,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Holder;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -541,11 +543,13 @@ public class LearnerImpl implements Learner {
         long curProposalNo = self.getCurProposalNo();
 
         PaxosMemberConfiguration configuration = memberConfig.createRef();
+        List<Proposal> proposals = dons.stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
 
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
                 .instanceId(instanceId)
+                .checksum(ChecksumUtil.md5(Hessian2Util.serialize(proposals)))
                 .build();
 
         // for self
@@ -598,6 +602,13 @@ public class LearnerImpl implements Learner {
             if (localInstance.getState() == Instance.State.CONFIRMED) {
                 // the instance is confirmed.
                 LOG.info("the instance[{}] is confirmed", localInstance.getInstanceId());
+                return;
+            }
+
+            // check sum
+            String localSum = ChecksumUtil.md5(Hessian2Util.serialize(localInstance.getGrantedValue()));
+            if (!StringUtils.equals(localSum, req.getChecksum())) {
+                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
                 return;
             }
 

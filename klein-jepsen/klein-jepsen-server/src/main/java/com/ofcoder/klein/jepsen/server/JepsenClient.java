@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.jepsen.server;
 
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -27,7 +28,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.SumcheckUtil;
+import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -67,11 +68,11 @@ public class JepsenClient {
      * @param value value
      * @return result
      */
-    public boolean put(final Integer value) {
+    public boolean put(final Integer value) throws UnsupportedEncodingException {
         final String key = "def";
         PutReq req = new PutReq();
         req.setData(value);
-        req.setSeq(SumcheckUtil.md5(RandomStringUtils.random(32)));
+        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
         req.setKey(key);
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -92,11 +93,11 @@ public class JepsenClient {
      *
      * @return result
      */
-    public Object get() {
+    public Object get() throws UnsupportedEncodingException {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
-        req.setSeq(SumcheckUtil.md5(RandomStringUtils.random(32)));
+        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
