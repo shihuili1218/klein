@@ -43,8 +43,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -534,7 +532,7 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void confirm(final long instanceId, final List<ProposalWithDone> dons) {
+    public void confirm(final long instanceId, final String checksum, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
@@ -543,13 +541,12 @@ public class LearnerImpl implements Learner {
         long curProposalNo = self.getCurProposalNo();
 
         PaxosMemberConfiguration configuration = memberConfig.createRef();
-        List<Proposal> proposals = dons.stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
 
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
                 .nodeId(self.getSelf().getId())
                 .proposalNo(curProposalNo)
                 .instanceId(instanceId)
-                .checksum(ChecksumUtil.md5(Hessian2Util.serialize(proposals)))
+                .checksum(checksum)
                 .build();
 
         // for self
@@ -606,8 +603,7 @@ public class LearnerImpl implements Learner {
             }
 
             // check sum
-            String localSum = ChecksumUtil.md5(Hessian2Util.serialize(localInstance.getGrantedValue()));
-            if (!StringUtils.equals(localSum, req.getChecksum())) {
+            if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
                 learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
                 return;
             }

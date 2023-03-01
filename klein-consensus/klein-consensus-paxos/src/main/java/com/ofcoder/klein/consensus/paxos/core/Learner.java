@@ -116,9 +116,10 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Send confirm message.
      *
      * @param instanceId id of the instance
+     * @param checksum   consensus data checksum
      * @param dons       call ProposeDone#applyDone(java.util.Map) when apply done
      */
-    void confirm(long instanceId, List<ProposalWithDone> dons);
+    void confirm(long instanceId, String checksum, List<ProposalWithDone> dons);
 
     /**
      * Keep the data consistent with master, state is master.

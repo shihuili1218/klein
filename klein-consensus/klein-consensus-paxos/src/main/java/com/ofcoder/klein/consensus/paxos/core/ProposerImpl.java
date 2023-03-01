@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,8 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -171,17 +174,24 @@ public class ProposerImpl implements Proposer {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
-        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId()) && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()));
+
+        // choose valid proposal, and calculate checksum.
+        List<Proposal> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
+        String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
+        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId())
+                && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue())
+                && !StringUtils.equals(preparedInstanceMap.get(ctxt.getInstanceId()).getChecksum(), originalChecksum));
         ctxt.setConsensusData(ctxt.isDataChange() ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
+                : originalProposals);
+        ctxt.setConsensusChecksum(ChecksumUtil.md5(Hessian2Util.serialize(ctxt.getConsensusData())));
 
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
-
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(ctxt.getGrantedProposalNo())
                 .data(ctxt.getConsensusData())
+                .checksum(ctxt.getConsensusChecksum())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
@@ -496,9 +506,8 @@ public class ProposerImpl implements Proposer {
                 } else {
                     context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
                 }
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
             });
-
         }
 
         @Override
