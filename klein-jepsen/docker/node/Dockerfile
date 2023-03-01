@@ -16,6 +16,7 @@ RUN apt-get -qy update && \
     apt-get -qy install \
         dos2unix \
         openssh-server \
+        less \
         pwgen
 
 ENV KLEIN_ID="1" \
