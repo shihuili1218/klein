@@ -148,9 +148,10 @@ public interface Learner extends Lifecycle<ConsensusProp> {
      * Processing confirm message.
      * The confirm message is used to submit an instance.
      *
-     * @param req message
+     * @param req    message
+     * @param isSelf from self
      */
-    void handleConfirmRequest(ConfirmReq req);
+    void handleConfirmRequest(ConfirmReq req, boolean isSelf);
 
     /**
      * Processing learn message.

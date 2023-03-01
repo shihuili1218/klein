@@ -54,7 +54,7 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
                     request.getNodeId());
             return;
         }
-        RoleAccessor.getLearner().handleConfirmRequest(request);
+        RoleAccessor.getLearner().handleConfirmRequest(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(new HashMap<>())));
     }
 
