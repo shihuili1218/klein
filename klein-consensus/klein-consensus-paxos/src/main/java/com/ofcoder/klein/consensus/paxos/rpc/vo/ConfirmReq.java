@@ -57,7 +57,7 @@ public class ConfirmReq implements Serializable {
         return checksum;
     }
 
-    public void setChecksum(String checksum) {
+    public void setChecksum(final String checksum) {
         this.checksum = checksum;
     }
 
