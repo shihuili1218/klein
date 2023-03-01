@@ -67,6 +67,7 @@ public class JepsenClient {
      *
      * @param value value
      * @return result
+     * @throws UnsupportedEncodingException checksum exception
      */
     public boolean put(final Integer value) throws UnsupportedEncodingException {
         final String key = "def";
@@ -92,6 +93,7 @@ public class JepsenClient {
      * get.
      *
      * @return result
+     * @throws UnsupportedEncodingException checksum exception
      */
     public Object get() throws UnsupportedEncodingException {
         final String key = "def";

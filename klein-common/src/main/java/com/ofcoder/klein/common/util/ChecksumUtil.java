@@ -18,8 +18,6 @@ package com.ofcoder.klein.common.util;
 
 import java.security.MessageDigest;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
  * SumcheckUtil.
  *
