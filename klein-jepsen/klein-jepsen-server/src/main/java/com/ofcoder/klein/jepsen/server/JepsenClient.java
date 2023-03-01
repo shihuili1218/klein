@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.SumcheckUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -70,7 +71,7 @@ public class JepsenClient {
         final String key = "def";
         PutReq req = new PutReq();
         req.setData(value);
-        req.setSeq(RandomStringUtils.random(32));
+        req.setSeq(SumcheckUtil.md5(RandomStringUtils.random(32)));
         req.setKey(key);
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -95,7 +96,7 @@ public class JepsenClient {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
-        req.setSeq(RandomStringUtils.random(32));
+        req.setSeq(SumcheckUtil.md5(RandomStringUtils.random(32)));
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
