@@ -81,11 +81,15 @@ public class JepsenClient {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        boolean o = client.sendRequestSync(endpoint, param, 1000);
-        if (!o) {
-            throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+        try {
+            boolean o = client.sendRequestSync(endpoint, param, 3000);
+            if (!o) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+            }
+            return true;
+        } catch (Exception e) {
+            throw e;
         }
-        return true;
     }
 
 
@@ -106,11 +110,15 @@ public class JepsenClient {
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
-        Object o = client.sendRequestSync(endpoint, param, 1000);
-        if (o == null) {
-            throw new IllegalArgumentException("seq: " + req.getSeq() + "get: " + key + " on node: " + endpoint.getId() + ", result is null");
+        try {
+            Object o = client.sendRequestSync(endpoint, param, 3000);
+            if (o == null) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + "get: " + key + " on node: " + endpoint.getId() + ", result is null");
+            }
+            return o;
+        } catch (Exception e) {
+            throw e;
         }
-        return o;
     }
 
 }
