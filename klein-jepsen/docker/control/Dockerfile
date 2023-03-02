@@ -37,12 +37,9 @@ COPY jepsen/jepsen /jepsen/jepsen/
 RUN if [ -f /jepsen/jepsen/project.clj ]; then cd /jepsen/jepsen && lein install; fi
 COPY jepsen /jepsen/
 
-ADD klein-server.jar /jepsen/klein-server.jar
 ADD ./bashrc /root/.bashrc
 ADD ./init.sh /init.sh
 RUN dos2unix /init.sh /root/.bashrc \
     && chmod +x /init.sh \
-    && git clone https://github.com/shihuili1218/klein.git /jepsen/klein \
-    && mvn install:install-file -DgroupId=com.ofcoder.klein.jepsen.server -DartifactId=klein-jepsen-server -Dversion=0.0.1 -Dpackaging=jar -Dfile=/jepsen/klein-server.jar
 
 CMD /init.sh
