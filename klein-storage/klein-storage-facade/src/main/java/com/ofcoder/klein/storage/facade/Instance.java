@@ -29,6 +29,7 @@ public class Instance<D extends Serializable> implements Serializable {
     private long instanceId;
     private long proposalNo;
     private List<D> grantedValue;
+    private String checksum;
     private State state = State.PREPARED;
 
     /**
@@ -85,6 +86,14 @@ public class Instance<D extends Serializable> implements Serializable {
         this.grantedValue = grantedValue;
     }
 
+    public String getChecksum() {
+        return checksum;
+    }
+
+    public void setChecksum(final String checksum) {
+        this.checksum = checksum;
+    }
+
     /**
      * get instance's state.
      *
@@ -111,6 +120,7 @@ public class Instance<D extends Serializable> implements Serializable {
         private long instanceId;
         private long proposalNo;
         private List<B> grantedValue;
+        private String checksum;
         private State state;
 
         private Builder() {
@@ -160,6 +170,17 @@ public class Instance<D extends Serializable> implements Serializable {
         }
 
         /**
+         * checksum.
+         *
+         * @param checksum checksum
+         * @return Builder
+         */
+        public Builder<B> checksum(final String checksum) {
+            this.checksum = checksum;
+            return this;
+        }
+
+        /**
          * state.
          *
          * @param state state
@@ -181,6 +202,7 @@ public class Instance<D extends Serializable> implements Serializable {
             instance.setProposalNo(proposalNo);
             instance.setGrantedValue(grantedValue);
             instance.setState(state);
+            instance.setChecksum(checksum);
             return instance;
         }
 

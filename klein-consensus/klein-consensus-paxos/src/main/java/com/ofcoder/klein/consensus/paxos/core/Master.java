@@ -16,10 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
@@ -54,9 +52,14 @@ public interface Master extends Lifecycle<ConsensusProp> {
     boolean changeMember(byte op, Set<Endpoint> target);
 
     /**
-     * Elect master right now.
+     * Look for the master in the cluster for member startup.
      */
-    void electMasterNow();
+    void lookMaster();
+
+    /**
+     * Transfer the Master status to another member.
+     */
+    void transferMaster();
 
     /**
      * Processing heartbeat message.
@@ -75,62 +78,5 @@ public interface Master extends Lifecycle<ConsensusProp> {
      * @return handle result
      */
     NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf);
-
-    /**
-     * This is a callback method of master change.
-     *
-     * @param newMaster new master
-     */
-    void onChangeMaster(String newMaster);
-
-    /**
-     * Added master health listener.
-     *
-     * @param listener listener
-     */
-    void addHealthyListener(HealthyListener listener);
-
-    /**
-     * get elect state.
-     *
-     * @return elect state
-     */
-    ElectState electState();
-
-    interface HealthyListener {
-        void change(ElectState healthy);
-    }
-
-    enum ElectState {
-        ELECTING(-1),
-        FOLLOWING(0),
-        BOOSTING(1),
-        /**
-         * deprecated.
-         *
-         * @deprecated use BOOSTING.
-         */
-        @Deprecated
-        DOMINANT(2);
-        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING, DOMINANT);
-        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING, DOMINANT);
-        private int state;
-
-        ElectState(final int state) {
-            this.state = state;
-        }
-
-        public static boolean allowBoost(final ElectState state) {
-            return BOOSTING_STATE.contains(state);
-        }
-
-        public static boolean allowPropose(final ElectState state) {
-            return PROPOSE_STATE.contains(state);
-        }
-
-        public int getState() {
-            return state;
-        }
-    }
 
 }

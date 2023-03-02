@@ -17,45 +17,38 @@
 package com.ofcoder.klein.consensus.paxos.rpc;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
- * Confirm Request Processor.
+ * before election master to use, find master in the cluster.
  *
  * @author 释慧利
  */
-public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
-    private static final Logger LOG = LoggerFactory.getLogger(ConfirmProcessor.class);
+public class PreElectProcessor extends AbstractRpcProcessor<PreElectReq> {
+    private PaxosNode self;
 
-    public ConfirmProcessor(final PaxosNode self) {
-        // do nothing.
+    public PreElectProcessor(final PaxosNode self) {
+        this.self = self;
+    }
+
+    @Override
+    public void handleRequest(final PreElectReq request, final RpcContext context) {
+        context.response(
+                ByteBuffer.wrap(Hessian2Util.serialize(PreElectRes.Builder.aPreElectRes().master(
+                        MemberRegistry.getInstance().getMemberConfiguration().getMaster()
+                ).build()))
+        );
     }
 
     @Override
     public String service() {
-        return ConfirmReq.class.getSimpleName();
+        return PreElectReq.class.getSimpleName();
     }
-
-    @Override
-    public void handleRequest(final ConfirmReq request, final RpcContext context) {
-        if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
-            LOG.error("msg type: confirm, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
-                    request.getNodeId());
-            return;
-        }
-        RoleAccessor.getLearner().handleConfirmRequest(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(new HashMap<>())));
-    }
-
 }

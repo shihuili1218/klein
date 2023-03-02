@@ -22,10 +22,12 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,8 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -82,7 +86,6 @@ public class ProposerImpl implements Proposer {
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
     private LogManager<Proposal> logManager;
-    private boolean allowPropose = false;
 
     public ProposerImpl(final PaxosNode self) {
         this.self = self;
@@ -109,9 +112,8 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.handleEventsWith(eventHandler);
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
-        RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            allowPropose = Master.ElectState.allowPropose(healthy);
-            if (allowPropose) {
+        memberConfig.addHealthyListener(healthy -> {
+            if (memberConfig.allowPropose()) {
                 eventHandler.triggerHandle();
             }
         });
@@ -172,17 +174,24 @@ public class ProposerImpl implements Proposer {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
-        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId()) && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()));
+
+        // choose valid proposal, and calculate checksum.
+        List<Proposal> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
+        String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
+        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId())
+                && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue())
+                && !StringUtils.equals(preparedInstanceMap.get(ctxt.getInstanceId()).getChecksum(), originalChecksum));
         ctxt.setConsensusData(ctxt.isDataChange() ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
-                : ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList()));
+                : originalProposals);
+        ctxt.setConsensusChecksum(ChecksumUtil.md5(Hessian2Util.serialize(ctxt.getConsensusData())));
 
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
-
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
                 .nodeId(self.getSelf().getId())
                 .instanceId(ctxt.getInstanceId())
                 .proposalNo(ctxt.getGrantedProposalNo())
                 .data(ctxt.getConsensusData())
+                .checksum(ctxt.getConsensusChecksum())
                 .memberConfigurationVersion(memberConfiguration.getVersion())
                 .build();
 
@@ -272,52 +281,53 @@ public class ProposerImpl implements Proposer {
 
         // limit the prepare phase to only one thread.
         long curProposalNo = self.getCurProposalNo();
-        if (skipPrepare.get() == PrepareState.PREPARED
-                && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-            callback.granted(curProposalNo, ctxt);
+        if (skipPrepare.get() == PrepareState.PREPARED) {
+            if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                callback.granted(curProposalNo, ctxt);
+            }
             return;
         }
 
-        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
-        if (!skipPrepare.compareAndSet(PrepareState.NO_PREPARE, PrepareState.PREPARING)) {
-            synchronized (skipPrepare) {
-                try {
-                    skipPrepare.wait(prepareTimeout);
-                } catch (InterruptedException e) {
-                    throw new ConsensusException(e.getMessage(), e);
-                }
-            }
+        synchronized (skipPrepare) {
+            LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
             curProposalNo = self.getCurProposalNo();
-            if (skipPrepare.get() == PrepareState.PREPARED
-                    && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                callback.granted(curProposalNo, ctxt);
+            if (skipPrepare.get() == PrepareState.PREPARED) {
+                if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
+                    callback.granted(curProposalNo, ctxt);
+                }
                 return;
-            } else {
-                prepare(ctxt, callback);
-                return;
+            }
+            skipPrepare.set(PrepareState.PREPARING);
+
+            try {
+                // do prepare
+                CountDownLatch latch = new CountDownLatch(1);
+                forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
+                    @Override
+                    public void granted(final long grantedProposalNo, final ProposeContext context) {
+                        latch.countDown();
+                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                        callback.granted(grantedProposalNo, context);
+                    }
+
+                    @Override
+                    public void refused(final ProposeContext context) {
+                        latch.countDown();
+                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                        callback.refused(context);
+                    }
+                });
+
+                boolean await = latch.await(prepareTimeout * prop.getRetry() + 10, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                throw new ConsensusException(e.getMessage(), e);
+            } finally {
+                if (skipPrepare.get() == PrepareState.PREPARING) {
+                    skipPrepare.set(PrepareState.NO_PREPARE);
+                }
             }
         }
 
-        // do prepare
-        forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
-            @Override
-            public void granted(final long grantedProposalNo, final ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
-                    skipPrepare.notifyAll();
-                }
-                callback.granted(grantedProposalNo, context);
-            }
-
-            @Override
-            public void refused(final ProposeContext context) {
-                synchronized (skipPrepare) {
-                    skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
-                    skipPrepare.notifyAll();
-                }
-                callback.refused(context);
-            }
-        });
     }
 
     private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {
@@ -454,7 +464,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (allowPropose && (this.tasks.size() >= batchSize || endOfBatch)) {
+            if (memberConfig.allowPropose() && (this.tasks.size() >= batchSize || endOfBatch)) {
                 handle();
             }
         }
@@ -490,10 +500,14 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do confirm
-                List<ProposalWithDone> dons = context.isDataChange() ? new ArrayList<>() : context.getDataWithCallback();
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), dons);
+                List<ProposalWithDone> dons = new ArrayList<>();
+                if (!context.isDataChange()) {
+                    dons = context.getDataWithCallback();
+                } else {
+                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
+                }
+                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
             });
-
         }
 
         @Override
@@ -502,7 +516,7 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(false, false);
+                event.getDone().negotiationDone(true, false);
             }
 
             ThreadExecutor.execute(() -> {
@@ -512,7 +526,6 @@ public class ProposerImpl implements Proposer {
 
         }
     }
-
 
     /**
      * Prepare State.

@@ -18,6 +18,9 @@ package com.ofcoder.klein.jepsen.server.rpc;
 
 import java.nio.ByteBuffer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
@@ -29,6 +32,7 @@ import com.ofcoder.klein.rpc.facade.RpcContext;
  * @author 释慧利
  */
 public class PutProcessor extends AbstractRpcProcessor<PutReq> {
+    private static final Logger LOG = LoggerFactory.getLogger(PutProcessor.class);
     private KleinCache cache;
 
     public PutProcessor(final KleinCache cache) {
@@ -39,6 +43,7 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
     public void handleRequest(final PutReq request, final RpcContext context) {
         if (request.getTtl() <= 0) {
             boolean put = cache.put(request.getKey(), request.getData(), true);
+            LOG.info("get operator, seq: {}, result: {}", request.getSeq(), put);
             context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
         } else {
             boolean put = cache.put(request.getKey(), request.getData(), request.getTtl(), request.getUnit());

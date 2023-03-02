@@ -38,6 +38,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
+import com.ofcoder.klein.consensus.paxos.rpc.PreElectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PushCompleteDataProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
@@ -76,15 +77,6 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void setListener(final LifecycleListener listener) {
-        RoleAccessor.getMaster().addHealthyListener(healthy -> {
-            if (Master.ElectState.allowPropose(healthy)) {
-                listener.prepared();
-            }
-        });
-    }
-
-    @Override
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
@@ -93,7 +85,7 @@ public class PaxosConsensus implements Consensus {
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new DirectProxy(this.prop) : new RedirectProxy(this.prop, this.self);
 
-        MemberRegistry.getInstance().init(this.prop.getMembers());
+        MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 
@@ -102,7 +94,7 @@ public class PaxosConsensus implements Consensus {
         SMRegistry.getSms().forEach(this::loadSM);
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
         if (!this.prop.isJoinCluster()) {
-            RoleAccessor.getMaster().electMasterNow();
+            RoleAccessor.getMaster().lookMaster();
             preheating();
         } else {
             joinCluster(0);
@@ -164,6 +156,8 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
         RpcEngine.registerProcessor(new RedirectProcessor(this.self, this.prop));
         RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
+        RpcEngine.registerProcessor(new PreElectProcessor(this.self));
+
     }
 
     @Override

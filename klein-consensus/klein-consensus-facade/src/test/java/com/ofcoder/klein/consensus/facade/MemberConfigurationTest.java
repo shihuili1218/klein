@@ -16,7 +16,7 @@ public class MemberConfigurationTest extends TestCase {
                 RpcUtil.parseEndpoint("2:127.0.0.1:1219"),
                 RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         assertEquals(configuration.effectMembers.size(), nodes.size());
         nodes.forEach(it -> assertEquals(it, configuration.effectMembers.get(it.getId())));
@@ -29,7 +29,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         nodes.add(RpcUtil.parseEndpoint("4:127.0.0.1:1221"));
         configuration.seenNewConfig(new HashSet<>(nodes));
@@ -47,7 +47,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);
@@ -78,7 +78,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);
@@ -100,7 +100,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);
@@ -122,7 +122,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);
@@ -139,7 +139,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);
@@ -156,7 +156,7 @@ public class MemberConfigurationTest extends TestCase {
         nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
 
         MemberConfiguration configuration = new MemberConfiguration();
-        configuration.init(nodes);
+        configuration.init(null, nodes);
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
         nodes.add(last);

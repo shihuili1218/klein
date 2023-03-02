@@ -131,6 +131,7 @@ public class AcceptorImpl implements Acceptor {
                 localInstance.setState(Instance.State.ACCEPTED);
                 localInstance.setProposalNo(req.getProposalNo());
                 localInstance.setGrantedValue(req.getData());
+                localInstance.setChecksum(req.getChecksum());
                 logManager.updateInstance(localInstance);
 
                 resBuilder.result(true)

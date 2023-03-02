@@ -16,6 +16,7 @@ RUN apt-get -qy update && \
     apt-get -qy install \
         dos2unix \
         openssh-server \
+        less \
         pwgen
 
 # When run, boot-debian-base will call this script, which does final
