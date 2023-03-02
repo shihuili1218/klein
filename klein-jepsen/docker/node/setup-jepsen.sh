@@ -18,5 +18,7 @@ cp /run/secrets/authorized_keys /root/.ssh/
 chmod 600 /root/.ssh/authorized_keys
 /etc/init.d/ssh start
 sh /klein/start.sh
+chmod +x /klein/start.sh \
+    && chmod +x /klein/stop.sh
 
 tail -f /dev/null
