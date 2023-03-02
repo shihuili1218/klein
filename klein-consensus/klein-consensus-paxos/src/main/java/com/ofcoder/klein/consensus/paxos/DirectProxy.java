@@ -54,7 +54,7 @@ public class DirectProxy implements Proxy {
                     builder.state(!changed ? Result.State.SUCCESS : Result.State.FAILURE);
                 } else {
                     builder.state(Result.State.UNKNOWN);
-                    if (!apply) {
+                    if (apply) {
                         completed.countDown();
                     }
                 }
