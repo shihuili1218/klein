@@ -126,10 +126,10 @@ fi
 
 
 ## Build dockerfile
-cp ../klein-jepsen-server/target/klein-jepsen-server-shade.jar node/klein-server.jar
-cp ../klein-jepsen-server/deploy/start.sh node/start.sh
-cp ../klein-jepsen-server/deploy/stop.sh node/stop.sh
-cp ../klein-jepsen-server/target/klein-jepsen-server-shade.jar control/klein-server.jar
+cp ../klein-jepsen-server/target/klein-jepsen-server-shade.jar klein-server.jar
+cp ../klein-jepsen-server/deploy/start.sh start.sh
+cp ../klein-jepsen-server/deploy/stop.sh stop.sh
+cp -r ../klein-jepsen-test .
 bin/build-docker-compose "${NODE_COUNT}"
 # Make sure folders referenced in control Dockerfile exist and don't contain leftover files
 rm -rf ./control/jepsen
