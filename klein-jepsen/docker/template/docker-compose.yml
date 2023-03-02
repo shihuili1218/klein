@@ -45,4 +45,5 @@ services:
       - jepsen
     volumes:
       - "jepsen-shared:/var/jepsen/shared"
+      - ./klein-jepsen-test:/jepsen/klein
 %%DBS%%
