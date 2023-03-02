@@ -8,6 +8,7 @@ echo "Adding hostname to shared volume" >> /var/log/jepsen-setup.log
 #IP=`getent hosts "${HOSTNAME}" | awk '{ print $1 }'`
 #NAME=`dig +short -x "${IP}" | cut -f 1 -d .`
 #echo "${NAME}" >> /var/jepsen/shared/nodes
+mkdir -p /var/jepsen/shared
 echo `hostname` >> /var/jepsen/shared/nodes
 
 # We make sure that root's authorized keys are ready
