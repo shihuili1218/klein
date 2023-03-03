@@ -7,6 +7,6 @@ klein-jepsen/docker/bin/up
 
 docker exec -it jepsen-control bash
 
-cd /jepsen/klein/klein-jepsen/klein-jepsen-test/src/jepsen
+
 
 lein run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456
