@@ -1,0 +1,19 @@
+name: echo hello
+
+on:
+  push:
+    branches: [ test/pr ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Git Repo
+        uses: actions/checkout@v2
+
+      - name: Install Java and Maven
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - run: echo hello
