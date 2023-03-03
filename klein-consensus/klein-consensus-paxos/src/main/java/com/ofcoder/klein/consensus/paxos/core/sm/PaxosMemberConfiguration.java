@@ -37,7 +37,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public static final String RESET_MASTER_ID = "BYE";
     private static final Logger LOG = LoggerFactory.getLogger(PaxosMemberConfiguration.class);
     private transient volatile Endpoint master;
-    private transient volatile Endpoint candidate;
     private final transient List<HealthyListener> listeners = new ArrayList<>();
     private transient ElectState masterState = ElectState.ELECTING;
 
@@ -47,18 +46,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     }
 
     public Endpoint getMaster() {
-        return this.candidate != null ? this.candidate : this.master;
-    }
-
-    /**
-     * cache a candidate.
-     *
-     * @param nodeId candidate
-     */
-    public void seenCandidate(final String nodeId) {
-        if (isValid(nodeId)) {
-            this.candidate = getEndpointById(nodeId);
-        }
+        return this.master;
     }
 
     /**
@@ -69,12 +57,10 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public void changeMaster(final String nodeId) {
         if (StringUtils.equals(RESET_MASTER_ID, nodeId)) {
             this.master = null;
-            this.candidate = null;
             this.masterState = ElectState.ELECTING;
             this.listeners.forEach(it -> it.change(this.masterState));
         } else if (isValid(nodeId)) {
             this.master = getEndpointById(nodeId);
-            this.candidate = null;
             this.masterState = isSelf() ? ElectState.BOOSTING : ElectState.FOLLOWING;
             this.listeners.forEach(it -> it.change(this.masterState));
             LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
@@ -131,9 +117,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         if (master != null) {
             target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
         }
-        if (candidate != null) {
-            target.candidate = new Endpoint(candidate.getId(), candidate.getIp(), candidate.getPort());
-        }
         target.version = new AtomicInteger(version.get());
         return target;
     }
@@ -142,7 +125,6 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public String toString() {
         return "PaxosMemberConfiguration{"
                 + "master=" + master
-                + ", candidate=" + candidate
                 + ", masterState=" + masterState
                 + ", version=" + version
                 + ", effectMembers=" + effectMembers

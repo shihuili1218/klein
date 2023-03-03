@@ -514,7 +514,7 @@ public class ProposerImpl implements Proposer {
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
-                event.getDone().negotiationDone(true, false);
+                event.getDone().negotiationDone(false, false);
             }
 
             ThreadExecutor.execute(() -> {

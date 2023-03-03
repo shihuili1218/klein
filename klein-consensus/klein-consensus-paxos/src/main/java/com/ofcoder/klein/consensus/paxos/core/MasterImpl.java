@@ -559,7 +559,6 @@ public class MasterImpl implements Master {
     @Override
     public NewMasterRes onReceiveNewMaster(final NewMasterReq request, final boolean isSelf) {
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
-            memberConfig.seenCandidate(request.getNodeId());
             if (!isSelf) {
                 memberConfig.changeMaster(request.getNodeId());
                 restartWaitHb();

@@ -28,6 +28,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 
 /**
  * Call Proposer directly to initiate a proposal.
@@ -47,6 +48,7 @@ public class DirectProxy implements Proxy {
 
         CountDownLatch completed = new CountDownLatch(1);
         Result.Builder<D> builder = Result.Builder.aResult();
+        LOG.debug("Direct Propose, write: {}, master: {}", prop.getPaxosProp().isWrite(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
         RoleAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
             public void negotiationDone(final boolean result, final boolean changed) {
