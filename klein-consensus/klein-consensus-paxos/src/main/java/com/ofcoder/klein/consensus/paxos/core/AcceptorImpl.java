@@ -100,7 +100,7 @@ public class AcceptorImpl implements Acceptor {
                 // T2: pre<proposalNo = 2>                                       ---- granted
                 // T2: acc<proposalNo = 2> check result is true                  ---- granted
                 // T1: overwrites the accept request from T2
-                if (!checkAcceptReqValidity(memberConfiguration, selfProposalNo, req)) {
+                if (!checkAcceptReqValidity(memberConfiguration, selfProposalNo, req, isSelf)) {
                     AcceptRes res = AcceptRes.Builder.anAcceptRes()
                             .nodeId(self.getSelf().getId())
                             .result(false)
@@ -188,15 +188,26 @@ public class AcceptorImpl implements Acceptor {
                     req.getMemberConfigurationVersion(), paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
             return false;
         }
+        if (!isSelf) {
+            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            }
+        }
         self.updateCurProposalNo(req.getProposalNo());
         return true;
     }
 
-    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, final BaseReq req) {
+    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, final BaseReq req,
+                                           final boolean isSelf) {
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() < selfProposalNo) {
             return false;
+        }
+        if (!isSelf) {
+            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            }
         }
         self.updateCurProposalNo(req.getProposalNo());
         return true;

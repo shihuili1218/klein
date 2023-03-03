@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -72,7 +71,6 @@ import com.ofcoder.klein.storage.facade.LogManager;
 public class ProposerImpl implements Proposer {
     private static final Logger LOG = LoggerFactory.getLogger(ProposerImpl.class);
     private static final int RUNNING_BUFFER_SIZE = 16384;
-    private final AtomicReference<PrepareState> skipPrepare = new AtomicReference<>(PrepareState.NO_PREPARE);
     private RpcClient client;
     private ConsensusProp prop;
     private final PaxosNode self;
@@ -210,7 +208,7 @@ public class ProposerImpl implements Proposer {
                     if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
-                        skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                         ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
                     }
                 }
@@ -250,7 +248,7 @@ public class ProposerImpl implements Proposer {
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-                skipPrepare.compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                 ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
             }
         }
@@ -281,23 +279,23 @@ public class ProposerImpl implements Proposer {
 
         // limit the prepare phase to only one thread.
         long curProposalNo = self.getCurProposalNo();
-        if (skipPrepare.get() == PrepareState.PREPARED) {
+        if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
             if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 callback.granted(curProposalNo, ctxt);
             }
             return;
         }
 
-        synchronized (skipPrepare) {
-            LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, skipPrepare);
+        synchronized (self.getSkipPrepare()) {
+            LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, self.getSkipPrepare());
             curProposalNo = self.getCurProposalNo();
-            if (skipPrepare.get() == PrepareState.PREPARED) {
+            if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
                 if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
                     callback.granted(curProposalNo, ctxt);
                 }
                 return;
             }
-            skipPrepare.set(PrepareState.PREPARING);
+            self.getSkipPrepare().set(PrepareState.PREPARING);
 
             try {
                 // do prepare
@@ -306,14 +304,14 @@ public class ProposerImpl implements Proposer {
                     @Override
                     public void granted(final long grantedProposalNo, final ProposeContext context) {
                         latch.countDown();
-                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                         callback.granted(grantedProposalNo, context);
                     }
 
                     @Override
                     public void refused(final ProposeContext context) {
                         latch.countDown();
-                        skipPrepare.compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                         callback.refused(context);
                     }
                 });
@@ -322,8 +320,8 @@ public class ProposerImpl implements Proposer {
             } catch (InterruptedException e) {
                 throw new ConsensusException(e.getMessage(), e);
             } finally {
-                if (skipPrepare.get() == PrepareState.PREPARING) {
-                    skipPrepare.set(PrepareState.NO_PREPARE);
+                if (self.getSkipPrepare().get() == PrepareState.PREPARING) {
+                    self.getSkipPrepare().set(PrepareState.NO_PREPARE);
                 }
             }
         }
@@ -446,7 +444,7 @@ public class ProposerImpl implements Proposer {
             }, finalEvents);
 
             long curProposalNo = self.getCurProposalNo();
-            if (ProposerImpl.this.skipPrepare.get() != PrepareState.PREPARED) {
+            if (self.getSkipPrepare().get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
             } else {
                 accept(curProposalNo, ctxt, new AcceptCallback());
