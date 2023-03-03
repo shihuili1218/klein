@@ -3,6 +3,8 @@ name: echo hello
 on:
   pull_request:
     branches: [ test/pr ]
+  push:
+    branches: [ test/pr ]
 
 jobs:
   publish:
