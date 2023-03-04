@@ -20,16 +20,15 @@ fi
 
 # TODO: assert that SSH_PRIVATE_KEY==~/.ssh/id_rsa
 
+apt-get remove openjdk* -y && apt-get install -qy openjdk-8-jdk && apt-get install -qy maven \
+    && mvn install:install-file -DgroupId=com.ofcoder.klein.jepsen.server -DartifactId=klein-jepsen-server -Dversion=0.0.2 -Dpackaging=jar -Dfile=/jepsen/klein-server.jar
+
 cat <<EOF
 Welcome to Jepsen on Docker
 ===========================
 
 Please run \`bin/console\` in another terminal to proceed.
 EOF
-
-apt-get remove openjdk* -y && apt-get install -qy openjdk-8-jdk \
-    && mvn install:install-file -DgroupId=com.ofcoder.klein.jepsen.server -DartifactId=klein-jepsen-server -Dversion=0.0.2 -Dpackaging=jar -Dfile=/jepsen/klein-server.jar
-
 
 # hack for keep this container running
 tail -f /dev/null
