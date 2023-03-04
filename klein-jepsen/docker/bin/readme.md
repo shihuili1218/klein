@@ -1,9 +1,7 @@
 
-docker ps -aq | xargs docker rm && docker rmi jepsen_control  jepsen_n1 jepsen_n2 jepsen_n3 jepsen_n4 jepsen_n5
+docker ps -aq | xargs docker rm && docker rmi shihuili1218/klein-jepsen-control shihuili1218/klein-jepsen-node
 
 klein-jepsen/docker/bin/up
-
-
 
 docker exec -it jepsen-control bash
 

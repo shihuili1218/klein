@@ -16,10 +16,8 @@
  */
 package com.ofcoder.klein.jepsen.server;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +26,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -65,15 +62,15 @@ public class JepsenClient {
     /**
      * put.
      *
+     * @param seq   seq
      * @param value value
      * @return result
-     * @throws UnsupportedEncodingException checksum exception
      */
-    public boolean put(final Integer value) throws UnsupportedEncodingException {
+    public boolean put(final String seq, final Integer value) {
         final String key = "def";
         PutReq req = new PutReq();
         req.setData(value);
-        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
+        req.setSeq(seq);
         req.setKey(key);
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
@@ -82,7 +79,6 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
-            LOG.debug("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
             boolean o = client.sendRequestSync(endpoint, param, 3000);
             if (!o) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
@@ -97,14 +93,14 @@ public class JepsenClient {
     /**
      * get.
      *
+     * @param seq seq
      * @return result
-     * @throws UnsupportedEncodingException checksum exception
      */
-    public Object get() throws UnsupportedEncodingException {
+    public Object get(final String seq) {
         final String key = "def";
         GetReq req = new GetReq();
         req.setKey(key);
-        req.setSeq(ChecksumUtil.md5(RandomStringUtils.random(32).getBytes("UTF-8")));
+        req.setSeq(seq);
 
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
@@ -112,7 +108,6 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
-            LOG.debug("seq: {}, get: {} on node: {}", req.getSeq(), key, endpoint.getId());
             Object o = client.sendRequestSync(endpoint, param, 3000);
             if (o == null) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");
