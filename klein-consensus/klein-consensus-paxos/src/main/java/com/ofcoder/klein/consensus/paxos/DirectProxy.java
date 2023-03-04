@@ -52,6 +52,7 @@ public class DirectProxy implements Proxy {
         RoleAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
             public void negotiationDone(final boolean result, final boolean changed) {
+                LOG.debug("Direct Propose negotiationDone, result: {}, change: {}", result, changed);
                 if (result) {
                     builder.state(!changed ? Result.State.SUCCESS : Result.State.FAILURE);
                 } else {
@@ -65,6 +66,7 @@ public class DirectProxy implements Proxy {
             @Override
             @SuppressWarnings("unchecked")
             public void applyDone(final Proposal p, final Object r) {
+                LOG.debug("Direct Propose applyDone, p: {}, result: {}", p, r);
                 builder.data((D) r);
                 completed.countDown();
             }

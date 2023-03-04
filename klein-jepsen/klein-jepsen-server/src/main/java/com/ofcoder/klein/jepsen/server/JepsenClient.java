@@ -82,6 +82,7 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
+            LOG.debug("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
             boolean o = client.sendRequestSync(endpoint, param, 3000);
             if (!o) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
@@ -111,9 +112,10 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
+            LOG.debug("seq: {}, get: {} on node: {}", req.getSeq(), key, endpoint.getId());
             Object o = client.sendRequestSync(endpoint, param, 3000);
             if (o == null) {
-                throw new IllegalArgumentException("seq: " + req.getSeq() + "get: " + key + " on node: " + endpoint.getId() + ", result is null");
+                throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");
             }
             return o;
         } catch (Exception e) {
