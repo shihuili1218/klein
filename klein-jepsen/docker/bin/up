@@ -38,8 +38,6 @@ COMPOSE=${COMPOSE:-""}
 RUN_AS_DAEMON=0
 POSITIONAL=()
 
-mvn clean install -DskipTests=true
-
 while [[ $# -gt 0 ]]
 do
     key="$1"
