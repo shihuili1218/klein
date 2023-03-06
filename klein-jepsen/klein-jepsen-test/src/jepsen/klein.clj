@@ -1,4 +1,4 @@
-(ns jepsen.kelin
+(ns jepsen.klein
     (:import [com.ofcoder.klein.jepsen.server JepsenClient])
     (:require [clojure.tools.cli :refer [parse-opts]])
     (:require [clojure.tools.logging :refer :all]
