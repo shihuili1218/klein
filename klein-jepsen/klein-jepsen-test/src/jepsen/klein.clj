@@ -74,19 +74,12 @@
 (defn- write
   "write a key/value to klein server"
   [client value]
-  (def sq (rand-str 32))
-  (info "write, seq: " sq)
-  (def r (-> client :conn (.put sq value)))
-  (info "write, seq: " sq r))
+  (-> client :conn (.put value)))
 
 (defn- read
   "read value by key from klein server"
   [client]
-  (def sq (rand-str 32))
-  (info "read, seq: " sq)
-  (def r (-> client :conn (.get sq)))
-  (info "read, seq: " sq r)
-  (doto r))
+  (doto (-> client :conn (.get))))
 
 (defrecord Client [conn]
   client/Client
