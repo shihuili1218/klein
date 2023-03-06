@@ -1,4 +1,4 @@
-(ns jepsen.kelin
+(ns jepsen.klein
     (:import [com.ofcoder.klein.jepsen.server JepsenClient])
     (:require [clojure.tools.cli :refer [parse-opts]])
     (:require [clojure.tools.logging :refer :all]
@@ -33,6 +33,7 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-start))
+    (Thread/sleep 10000)
     (catch Exception e
       (info "Start node occur exception " (.getMessage e)))))
 
@@ -41,6 +42,8 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-stop))
+    (Thread/sleep 5000)
+    (c/exec :rm :-rf "/data")
     (catch Exception e
       (info "Stop node occur exception " (.getMessage e)))))
 
@@ -51,19 +54,19 @@
    db/DB
    (setup! [_ test node]
            ;           (start! node)
-           (Thread/sleep 10000))
+           )
 
    (teardown! [_ test node]
               ;              (stop! node)
-              (Thread/sleep 5000))))
+              )))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
 (defn w [_ _] {:type :invoke, :f :write, :value (rand-int 1000)})
 (defn rand-str [n]
   (clojure.string/join
-    (repeatedly n
-                #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
+   (repeatedly n
+               #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
 
 (defn- create-client0 [test]
   (doto
@@ -74,16 +77,12 @@
 (defn- write
   "write a key/value to klein server"
   [client value]
-  (def sq (rand-str 32))
-  (def r (-> client :conn (.put sq value)))
-  (info "write, seq: " sq r))
+  (-> client :conn (.put value)))
 
 (defn- read
   "read value by key from klein server"
   [client]
-  (def sq (rand-str 32))
-  (def r (-> client :conn (.get sq)))
-  (info "read, seq: " sq r))
+  (doto (-> client :conn (.get))))
 
 (defrecord Client [conn]
   client/Client
