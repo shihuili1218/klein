@@ -43,10 +43,10 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
     public void handleRequest(final PutReq request, final RpcContext context) {
         if (request.getTtl() <= 0) {
             try {
-                boolean put = cache.put(request.getKey(), request.getData(), true);
                 LOG.info("put operator, begin, seq: {}", request.getSeq());
+                boolean put = cache.put(request.getKey(), request.getData(), true);
+                LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
-                LOG.info("put operator, end, seq: {}", request.getSeq());
             } catch (Exception e) {
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(null)));
                 LOG.info("put operator, err, seq: {}, result: err", request.getSeq());

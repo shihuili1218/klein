@@ -86,11 +86,13 @@ public class JepsenClient {
             boolean o = client.sendRequestSync(endpoint, param, 3000);
             LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), o);
             if (!o) {
-                throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+                throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
             }
             return true;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", result: err");
         }
     }
 
@@ -120,8 +122,10 @@ public class JepsenClient {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");
             }
             return o;
-        } catch (Exception e) {
+        }  catch (IllegalArgumentException e) {
             throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result: err");
         }
     }
 
