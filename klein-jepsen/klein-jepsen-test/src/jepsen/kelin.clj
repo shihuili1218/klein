@@ -31,18 +31,18 @@
 (defn start! [node]
   (info "Start" node)
   (try
-    (c/cd (clojure.string/join "/" [klein-path ""])
-          (c/exec :sh klein-start))
-    (catch Exception e
-      (info "Start node occur exception " (.getMessage e)))))
+   (c/cd (clojure.string/join "/" [klein-path ""])
+         (c/exec :sh klein-start))
+   (catch Exception e
+          (info "Start node occur exception " (.getMessage e)))))
 
 (defn stop! [node]
   (info "Stop" node)
   (try
-    (c/cd (clojure.string/join "/" [klein-path ""])
-          (c/exec :sh klein-stop))
-    (catch Exception e
-      (info "Stop node occur exception " (.getMessage e)))))
+   (c/cd (clojure.string/join "/" [klein-path ""])
+         (c/exec :sh klein-stop))
+   (catch Exception e
+          (info "Stop node occur exception " (.getMessage e)))))
 
 (defn db
   "klein DB for a particular version."
@@ -62,8 +62,8 @@
 (defn w [_ _] {:type :invoke, :f :write, :value (rand-int 1000)})
 (defn rand-str [n]
   (clojure.string/join
-    (repeatedly n
-                #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
+   (repeatedly n
+               #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
 
 (defn- create-client0 [test]
   (doto
@@ -75,6 +75,7 @@
   "write a key/value to klein server"
   [client value]
   (def sq (rand-str 32))
+  (info "write, seq: " sq)
   (def r (-> client :conn (.put sq value)))
   (info "write, seq: " sq r))
 
@@ -82,8 +83,10 @@
   "read value by key from klein server"
   [client]
   (def sq (rand-str 32))
+  (info "read, seq: " sq)
   (def r (-> client :conn (.get sq)))
-  (info "read, seq: " sq r))
+  (info "read, seq: " sq r)
+  (doto r))
 
 (defrecord Client [conn]
   client/Client
@@ -93,17 +96,17 @@
   (setup! [this test])
   (invoke! [this test op]
     (try
-      (case (:f op)
-            :read  (assoc op :type :ok, :value (read this))
-            :write (do
-                     (write this (:value op))
-                     (assoc op :type :ok)))
-      (catch Exception e
-        (let [^String msg (.getMessage e)]
-          (cond
-           (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
-           :else
-           (assoc op :type :fail :error (.getMessage e)))))))
+     (case (:f op)
+           :read  (assoc op :type :ok, :value (read this))
+           :write (do
+                   (write this (:value op))
+                   (assoc op :type :ok)))
+     (catch Exception e
+            (let [^String msg (.getMessage e)]
+              (cond
+               (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
+               :else
+               (assoc op :type :fail :error (.getMessage e)))))))
 
   (teardown! [this test])
 

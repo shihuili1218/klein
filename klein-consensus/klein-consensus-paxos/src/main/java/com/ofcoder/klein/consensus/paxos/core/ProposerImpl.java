@@ -209,7 +209,7 @@ public class ProposerImpl implements Proposer {
                             && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
                         self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                        ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
+                        ThreadExecutor.execute(() -> prepare(ctxt.createUntappedRef(), new PrepareCallback()));
                     }
                 }
 
@@ -249,7 +249,7 @@ public class ProposerImpl implements Proposer {
             if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
                 self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
-                ThreadExecutor.execute(() -> prepare(ctxt, new PrepareCallback()));
+                ThreadExecutor.execute(() -> prepare(ctxt.createUntappedRef(), new PrepareCallback()));
             }
         }
     }
@@ -279,6 +279,8 @@ public class ProposerImpl implements Proposer {
 
         // limit the prepare phase to only one thread.
         long curProposalNo = self.getCurProposalNo();
+        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, self.getSkipPrepare());
+
         if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
             if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 callback.granted(curProposalNo, ctxt);
@@ -287,7 +289,6 @@ public class ProposerImpl implements Proposer {
         }
 
         synchronized (self.getSkipPrepare()) {
-            LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, self.getSkipPrepare());
             curProposalNo = self.getCurProposalNo();
             if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
                 if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
