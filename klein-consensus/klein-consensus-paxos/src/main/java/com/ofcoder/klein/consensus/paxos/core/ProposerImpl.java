@@ -329,20 +329,19 @@ public class ProposerImpl implements Proposer {
 
     }
 
-    private void forcePrepare(final ProposeContext context, final PhaseCallback.PreparePhaseCallback callback) {
+    private void forcePrepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
-        if (context.getTimesAndIncrement() >= this.prop.getRetry()) {
-            callback.refused(context);
+        if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
+            callback.refused(ctxt);
             return;
         }
 
         preparedInstanceMap.clear();
 
-        final ProposeContext ctxt = context.createUntappedRef();
         final long proposalNo = self.generateNextProposalNo();
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
 
-        LOG.info("start prepare phase, the {} retry, proposalNo: {}", context.getTimes(), proposalNo);
+        LOG.info("start prepare phase, the {} retry, proposalNo: {}", ctxt.getTimes(), proposalNo);
 
         PrepareReq req = PrepareReq.Builder.aPrepareReq()
                 .nodeId(self.getSelf().getId())
@@ -363,7 +362,7 @@ public class ProposerImpl implements Proposer {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        ThreadExecutor.execute(() -> forcePrepare(ctxt, callback));
+                        ThreadExecutor.execute(() -> forcePrepare(ctxt.createUntappedRef(), callback));
                     }
                 }
 
@@ -408,7 +407,7 @@ public class ProposerImpl implements Proposer {
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                ThreadExecutor.execute(() -> forcePrepare(ctxt, callback));
+                ThreadExecutor.execute(() -> forcePrepare(ctxt.createUntappedRef(), callback));
             }
 
             // todo ??????
