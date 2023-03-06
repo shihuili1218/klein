@@ -151,7 +151,7 @@ public class MasterImpl implements Master {
             }
 
             @Override
-            protected int adjustTimeout(final int timeoutMs) {
+            protected long adjustTimeout(final long timeoutMs) {
                 return calculateElectionMasterInterval();
             }
         };

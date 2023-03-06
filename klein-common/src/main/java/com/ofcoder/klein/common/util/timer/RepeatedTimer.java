@@ -44,14 +44,14 @@ public abstract class RepeatedTimer {
     private volatile boolean running;
     private volatile boolean destroyed;
     private volatile boolean invoking;
-    private volatile int timeoutMs;
+    private volatile long timeoutMs;
     private final String name;
 
-    public RepeatedTimer(final String name, final int timeoutMs) {
+    public RepeatedTimer(final String name, final long timeoutMs) {
         this(name, timeoutMs, new HashedWheelTimer(KleinThreadFactory.create(name, true), 1, TimeUnit.MILLISECONDS, 512));
     }
 
-    public RepeatedTimer(final String name, final int timeoutMs, final Timer timer) {
+    public RepeatedTimer(final String name, final long timeoutMs, final Timer timer) {
         super();
         this.name = name;
         this.timeoutMs = timeoutMs;
@@ -73,7 +73,7 @@ public abstract class RepeatedTimer {
      *
      * @return timeout
      */
-    public int getTimeoutMs() {
+    public long getTimeoutMs() {
         return this.timeoutMs;
     }
 
@@ -88,7 +88,7 @@ public abstract class RepeatedTimer {
      * @param timeoutMs timeout millis
      * @return timeout millis
      */
-    protected int adjustTimeout(final int timeoutMs) {
+    protected long adjustTimeout(final long timeoutMs) {
         this.timeoutMs = timeoutMs;
         return timeoutMs;
     }
@@ -215,7 +215,7 @@ public abstract class RepeatedTimer {
      *
      * @param timeoutMs timeout millis
      */
-    public void reset(final int timeoutMs) {
+    public void reset(final long timeoutMs) {
         this.lock.lock();
         this.timeoutMs = timeoutMs;
         try {

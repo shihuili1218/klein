@@ -54,11 +54,11 @@ public abstract class ClearExpiryCacheContainer implements CacheContainer {
             }
 
             @Override
-            protected int adjustTimeout(final int timeoutMs) {
+            protected long adjustTimeout(final long timeoutMs) {
                 long now = TrueTime.currentTimeMillis();
                 long bucket = roundToNextBucket(now);
                 ThreadContext.put(BUCKET_KEY, String.valueOf(bucket));
-                return (int) (bucket - now + TASK_OFFSET);
+                return bucket - now + TASK_OFFSET;
             }
         };
         clearTask.start();

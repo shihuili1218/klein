@@ -51,10 +51,10 @@ public class RepeatedTimerTest extends TestCase {
             }
 
             @Override
-            protected int adjustTimeout(int timeoutMs) {
+            protected long adjustTimeout(long timeoutMs) {
 
                 ThreadContext.put("zzz", System.currentTimeMillis() + "");
-                return 1000;
+                return 1000L;
             }
         };
         timer.start();

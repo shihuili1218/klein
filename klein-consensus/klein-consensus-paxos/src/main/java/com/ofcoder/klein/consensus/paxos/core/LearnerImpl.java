@@ -34,6 +34,7 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.ofcoder.klein.consensus.paxos.handler.SnapshotHandler;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -71,10 +72,9 @@ import com.ofcoder.klein.storage.facade.Snap;
  *
  * @author 释慧利
  */
-public class LearnerImpl implements Learner {
+public class LearnerImpl extends SnapshotHandler {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerImpl.class);
     private RpcClient client;
-    private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
@@ -88,12 +88,13 @@ public class LearnerImpl implements Learner {
     };
 
     public LearnerImpl(final PaxosNode self) {
-        this.self = self;
+        super(self, TimeUnit.MINUTES);
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override
     public void init(final ConsensusProp op) {
+        super.init(op);
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
@@ -127,6 +128,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void shutdown() {
+        super.shutdown();
         generateSnap();
         sms.values().forEach(SM::close);
     }

@@ -61,6 +61,10 @@ public class ConsensusProp {
      * calculate quorum.
      */
     private String nwr = SystemPropertyUtil.get("klein.consensus.nwr", "majority");
+    /**
+     * snapshot.
+     */
+    private String snapshot = SystemPropertyUtil.get("klein.snapshot", "1 10000;5 10;30 1");
     private PaxosProp paxosProp = new PaxosProp();
 
     private List<Endpoint> parseMember(final String members) {
@@ -139,5 +143,13 @@ public class ConsensusProp {
 
     public void setNwr(final String nwr) {
         this.nwr = nwr;
+    }
+
+    public String getSnapshot() {
+        return snapshot;
+    }
+
+    public void setSnapshot(final String snapshot) {
+        this.snapshot = snapshot;
     }
 }
