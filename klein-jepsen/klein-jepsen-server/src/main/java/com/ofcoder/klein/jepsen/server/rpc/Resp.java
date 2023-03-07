@@ -30,7 +30,7 @@ public class Resp implements Serializable {
     public Resp() {
     }
 
-    public Resp(boolean s, Object v) {
+    public Resp(final boolean s, final Object v) {
         this.s = s;
         this.v = v;
     }
@@ -39,7 +39,7 @@ public class Resp implements Serializable {
         return s;
     }
 
-    public void setS(boolean s) {
+    public void setS(final boolean s) {
         this.s = s;
     }
 
@@ -47,7 +47,7 @@ public class Resp implements Serializable {
         return v;
     }
 
-    public void setV(Object v) {
+    public void setV(final Object v) {
         this.v = v;
     }
 
