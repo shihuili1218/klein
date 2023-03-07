@@ -48,7 +48,8 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
                 LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
             } catch (Exception e) {
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(null)));
+                LOG.error(e.getMessage());
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(false)));
                 LOG.info("put operator, err, seq: {}, result: err", request.getSeq());
             }
         } else {
