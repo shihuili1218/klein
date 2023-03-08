@@ -17,8 +17,10 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.ofcoder.klein.consensus.facade.Node;
+import com.ofcoder.klein.consensus.paxos.core.ProposerImpl;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
@@ -28,6 +30,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class PaxosNode extends Node {
+    private final transient AtomicReference<ProposerImpl.PrepareState> skipPrepare = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
     private long curInstanceId = 0;
     private final Object instanceIdLock = new Object();
     private long curProposalNo = 0;
@@ -35,6 +38,10 @@ public class PaxosNode extends Node {
     private long lastCheckpoint = 0;
     private final Object checkpointLock = new Object();
     private Endpoint self;
+
+    public AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
+        return skipPrepare;
+    }
 
     /**
      * nextProposalNo = N * J + I.

@@ -629,7 +629,6 @@ public class LearnerImpl implements Learner {
             throw e;
         } finally {
             self.updateCurInstanceId(req.getInstanceId());
-            self.updateCurProposalNo(req.getProposalNo());
             logManager.getLock().writeLock().unlock();
         }
     }

@@ -27,7 +27,7 @@ public class PaxosProp {
     private int masterHeartbeatInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.heartbeat-interval", 5000);
     private int masterElectMinInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-min-interval", 150 * SystemPropertyUtil.getInt("klein.id", 1));
     private int masterElectMaxInterval = SystemPropertyUtil.getInt("klein.consensus.paxos.master.elect-max-interval", masterElectMinInterval + 300);
-    private boolean write = SystemPropertyUtil.getBoolean("klein.consensus.paxos.write", true);
+    private boolean write = SystemPropertyUtil.getBoolean("klein.consensus.paxos.write", false);
 
     public int getMasterHeartbeatInterval() {
         return masterHeartbeatInterval;

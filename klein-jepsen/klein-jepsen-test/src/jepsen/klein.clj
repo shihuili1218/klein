@@ -1,22 +1,22 @@
-(ns jepsen.kelin
-  (:import [com.ofcoder.klein.jepsen.server JepsenClient])
-  (:require [clojure.tools.cli :refer [parse-opts]])
-  (:require [clojure.tools.logging :refer :all]
-            [clojure.string :as cstr]
-            [jepsen.checker.timeline :as timeline]
-            [jepsen
-             [nemesis :as nemesis]
-             [checker :as checker]
-             [independent :as independent]
-             [cli :as cli]
-             [client :as client]
-             [control :as c]
-             [db :as db]
-             [generator :as gen]
-             [tests :as tests]]
-            [knossos.model :as model]
-            [jepsen.control.util :as cu]
-            [jepsen.os :as os]))
+(ns jepsen.klein
+    (:import [com.ofcoder.klein.jepsen.server JepsenClient])
+    (:require [clojure.tools.cli :refer [parse-opts]])
+    (:require [clojure.tools.logging :refer :all]
+              [clojure.string :as cstr]
+              [jepsen.checker.timeline :as timeline]
+              [jepsen
+               [nemesis :as nemesis]
+               [checker :as checker]
+               [independent :as independent]
+               [cli :as cli]
+               [client :as client]
+               [control :as c]
+               [db :as db]
+               [generator :as gen]
+               [tests :as tests]]
+              [knossos.model :as model]
+              [jepsen.control.util :as cu]
+              [jepsen.os :as os]))
 
 (def fn-opts [[nil "--testfn TEST" "Test function name."]])
 
@@ -33,6 +33,7 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-start))
+    (Thread/sleep 10000)
     (catch Exception e
       (info "Start node occur exception " (.getMessage e)))))
 
@@ -41,6 +42,8 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-stop))
+    (Thread/sleep 5000)
+    (c/exec :rm :-rf "/data")
     (catch Exception e
       (info "Stop node occur exception " (.getMessage e)))))
 
@@ -50,16 +53,20 @@
   (reify
    db/DB
    (setup! [_ test node]
-;           (start! node)
-           (Thread/sleep 10000))
+           ;           (start! node)
+           )
 
    (teardown! [_ test node]
-;              (stop! node)
-              (Thread/sleep 5000))))
+              ;              (stop! node)
+              )))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
-(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 150)})
+(defn w [_ _] {:type :invoke, :f :write, :value (rand-int 1000)})
+(defn rand-str [n]
+  (clojure.string/join
+   (repeatedly n
+               #(rand-nth "abcdefghijklmnopqrstuvwxyz0123456789"))))
 
 (defn- create-client0 [test]
   (doto
@@ -70,7 +77,7 @@
 (defn- write
   "write a key/value to klein server"
   [client value]
-  (info "write result: " (-> client :conn (.put value))))
+  (-> client :conn (.put value)))
 
 (defn- read
   "read value by key from klein server"
@@ -86,16 +93,16 @@
   (invoke! [this test op]
     (try
       (case (:f op)
-        :read  (assoc op :type :ok, :value (read this))
-        :write (do
-                 (write this (:value op))
-                 (assoc op :type :ok)))
+            :read  (assoc op :type :ok, :value (read this))
+            :write (do
+                     (write this (:value op))
+                     (assoc op :type :ok)))
       (catch Exception e
         (let [^String msg (.getMessage e)]
           (cond
-            (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
-            :else
-            (assoc op :type :fail :error (.getMessage e)))))))
+           (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
+           :else
+           (assoc op :type :fail :error (.getMessage e)))))))
 
   (teardown! [this test])
 
@@ -152,9 +159,9 @@
           :os        os/noop
           :db        (db "0.0.1")
           :client    (Client. nil)
-          :ssh    {:dummy? true}
+          :ssh       {:dummy? true}
           :model     (model/register 0)
-;          :nemesis   (nemesis/partition-random-halves)
+          ;          :nemesis   (nemesis/partition-random-halves)
           :checker   (checker/compose
                       {:perf     (checker/perf)
                        :timeline (timeline/html)

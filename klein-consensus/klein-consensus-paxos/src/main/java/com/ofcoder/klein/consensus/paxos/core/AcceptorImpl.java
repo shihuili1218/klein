@@ -49,6 +49,7 @@ public class AcceptorImpl implements Acceptor {
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
+    private final Object negLock = new Object();
 
     public AcceptorImpl(final PaxosNode self) {
         this.self = self;
@@ -67,109 +68,111 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public AcceptRes handleAcceptRequest(final AcceptReq req, final boolean isSelf) {
-        LOG.info("processing the accept message from node-{}, instanceId: {}, data.size: {}", req.getNodeId(), req.getInstanceId(), req.getData().size());
+        LOG.info("processing the accept message from node-{}, instanceId: {}, proposalNO: {}, checksum: {}", req.getNodeId(), req.getInstanceId(), req.getProposalNo(), req.getChecksum());
 
-        try {
-            logManager.getLock().writeLock().lock();
+        final long selfProposalNo = self.getCurProposalNo();
+        final long selfInstanceId = self.getCurInstanceId();
+        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-            final long selfProposalNo = self.getCurProposalNo();
-            final long selfInstanceId = self.getCurInstanceId();
-            final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
-
-            // check proposals include change member
-            for (Proposal datum : req.getData()) {
-                if (datum.getData() instanceof ChangeMemberOp) {
-                    ChangeMemberOp data = (ChangeMemberOp) datum.getData();
-                    memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
-                }
-            }
-
-            if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RoleAccessor.getLearner().getLastAppliedInstanceId()) {
-                return AcceptRes.Builder.anAcceptRes()
-                        .nodeId(self.getSelf().getId())
-                        .result(false)
-                        .instanceState(Instance.State.CONFIRMED)
-                        .curInstanceId(selfInstanceId)
-                        .curProposalNo(selfProposalNo).build();
-            }
-
-            Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
-            if (localInstance == null) {
-                localInstance = Instance.Builder.<Proposal>anInstance()
-                        .instanceId(req.getInstanceId())
-                        .proposalNo(req.getProposalNo())
-                        .state(Instance.State.PREPARED)
-                        .build();
-            }
-
-            // This check logic must be in the synchronized block to avoid the following situations
-            // T1: acc<proposalNo = 1> check result of true                  ---- wait
-            // T2: pre<proposalNo = 2>                                       ---- granted
-            // T2: acc<proposalNo = 2> check result is true                  ---- granted
-            // T1: overwrites the accept request from T2
-            if (!checkAcceptReqValidity(memberConfiguration, selfProposalNo, req)) {
-                AcceptRes res = AcceptRes.Builder.anAcceptRes()
-                        .nodeId(self.getSelf().getId())
-                        .result(false)
-                        .curProposalNo(selfProposalNo)
-                        .curInstanceId(selfInstanceId)
-                        .instanceState(localInstance.getState())
-                        .build();
-                logManager.updateInstance(localInstance);
-                return res;
-            }
-
-            AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
+        if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RoleAccessor.getLearner().getLastAppliedInstanceId()) {
+            return AcceptRes.Builder.anAcceptRes()
                     .nodeId(self.getSelf().getId())
+                    .result(false)
+                    .instanceState(Instance.State.CONFIRMED)
                     .curInstanceId(selfInstanceId)
-                    .curProposalNo(selfProposalNo);
+                    .curProposalNo(selfProposalNo).build();
+        }
+        synchronized (negLock) {
+            try {
+                logManager.getLock().writeLock().lock();
 
-            if (localInstance.getState() == Instance.State.CONFIRMED) {
-                resBuilder.result(false)
-                        .instanceState(localInstance.getState());
-            } else {
-                localInstance.setState(Instance.State.ACCEPTED);
-                localInstance.setProposalNo(req.getProposalNo());
-                localInstance.setGrantedValue(req.getData());
-                localInstance.setChecksum(req.getChecksum());
-                logManager.updateInstance(localInstance);
+                Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
+                if (localInstance == null) {
+                    localInstance = Instance.Builder.<Proposal>anInstance()
+                            .instanceId(req.getInstanceId())
+                            .proposalNo(req.getProposalNo())
+                            .state(Instance.State.PREPARED)
+                            .build();
+                }
 
-                resBuilder.result(true)
-                        .instanceState(localInstance.getState());
+                // This check logic must be in the synchronized block to avoid the following situations
+                // T1: acc<proposalNo = 1> check result of true                  ---- wait
+                // T2: pre<proposalNo = 2>                                       ---- granted
+                // T2: acc<proposalNo = 2> check result is true                  ---- granted
+                // T1: overwrites the accept request from T2
+                if (!checkAcceptReqValidity(memberConfiguration, selfProposalNo, req, isSelf)) {
+                    AcceptRes res = AcceptRes.Builder.anAcceptRes()
+                            .nodeId(self.getSelf().getId())
+                            .result(false)
+                            .curProposalNo(selfProposalNo)
+                            .curInstanceId(selfInstanceId)
+                            .instanceState(localInstance.getState())
+                            .build();
+                    logManager.updateInstance(localInstance);
+                    return res;
+                }
+
+                // check proposals include change member
+                for (Proposal datum : req.getData()) {
+                    if (datum.getData() instanceof ChangeMemberOp) {
+                        ChangeMemberOp data = (ChangeMemberOp) datum.getData();
+                        memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
+                    }
+                }
+
+                AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
+                        .nodeId(self.getSelf().getId())
+                        .curInstanceId(selfInstanceId)
+                        .curProposalNo(selfProposalNo);
+
+                if (localInstance.getState() == Instance.State.CONFIRMED) {
+                    resBuilder.result(false)
+                            .instanceState(localInstance.getState());
+                } else {
+                    localInstance.setState(Instance.State.ACCEPTED);
+                    localInstance.setProposalNo(req.getProposalNo());
+                    localInstance.setGrantedValue(req.getData());
+                    localInstance.setChecksum(req.getChecksum());
+                    logManager.updateInstance(localInstance);
+
+                    resBuilder.result(true)
+                            .instanceState(localInstance.getState());
+                }
+                return resBuilder.build();
+            } finally {
+                self.updateCurInstanceId(req.getInstanceId());
+
+                logManager.getLock().writeLock().unlock();
             }
-            return resBuilder.build();
-        } finally {
-            self.updateCurProposalNo(req.getProposalNo());
-            self.updateCurInstanceId(req.getInstanceId());
-
-            logManager.getLock().writeLock().unlock();
         }
     }
 
     @Override
     public PrepareRes handlePrepareRequest(final PrepareReq req, final boolean isSelf) {
         LOG.info("processing the prepare message from node-{}, isSelf: {}", req.getNodeId(), isSelf);
-        final long curProposalNo = self.getCurProposalNo();
-        final long curInstanceId = self.getCurInstanceId();
-        long lastCheckpoint = self.getLastCheckpoint();
-        final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
+        synchronized (negLock) {
+            final long curProposalNo = self.getCurProposalNo();
+            final long curInstanceId = self.getCurInstanceId();
+            long lastCheckpoint = self.getLastCheckpoint();
+            final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-        PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
-                .nodeId(self.getSelf().getId())
-                .curProposalNo(curProposalNo)
-                .curInstanceId(curInstanceId)
-                .nodeState(NodeState.Builder.aNodeState()
-                        .nodeId(self.getSelf().getId())
-                        .maxInstanceId(curInstanceId)
-                        .lastCheckpoint(lastCheckpoint)
-                        .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
-                        .build());
+            PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
+                    .nodeId(self.getSelf().getId())
+                    .curProposalNo(curProposalNo)
+                    .curInstanceId(curInstanceId)
+                    .nodeState(NodeState.Builder.aNodeState()
+                            .nodeId(self.getSelf().getId())
+                            .maxInstanceId(curInstanceId)
+                            .lastCheckpoint(lastCheckpoint)
+                            .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
+                            .build());
 
-        if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
-            return res.result(false).instances(new ArrayList<>()).build();
-        } else {
-            List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
-            return res.result(true).instances(instances).build();
+            if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
+                return res.result(false).instances(new ArrayList<>()).build();
+            } else {
+                List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+                return res.result(true).instances(instances).build();
+            }
         }
     }
 
@@ -185,16 +188,28 @@ public class AcceptorImpl implements Acceptor {
                     req.getMemberConfigurationVersion(), paxosMemberConfiguration.getVersion(), req.getProposalNo(), selfProposalNo, checkProposalNo);
             return false;
         }
+        if (!isSelf) {
+            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            }
+        }
         self.updateCurProposalNo(req.getProposalNo());
         return true;
     }
 
-    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, final BaseReq req) {
+    private boolean checkAcceptReqValidity(final PaxosMemberConfiguration paxosMemberConfiguration, final long selfProposalNo, final BaseReq req,
+                                           final boolean isSelf) {
         if (!paxosMemberConfiguration.isValid(req.getNodeId())
                 || req.getMemberConfigurationVersion() < paxosMemberConfiguration.getVersion()
                 || req.getProposalNo() < selfProposalNo) {
             return false;
         }
+        if (!isSelf) {
+            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            }
+        }
+        self.updateCurProposalNo(req.getProposalNo());
         return true;
     }
 

@@ -31,6 +31,7 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
+import com.ofcoder.klein.jepsen.server.rpc.Resp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
@@ -82,13 +83,17 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
+            LOG.info("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
             boolean o = client.sendRequestSync(endpoint, param, 3000);
+            LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), o);
             if (!o) {
-                throw new IllegalArgumentException("seq: " + req.getSeq() + "wirte: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+                throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
             }
             return true;
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", result: err");
         }
     }
 
@@ -111,13 +116,17 @@ public class JepsenClient {
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
 
         try {
-            Object o = client.sendRequestSync(endpoint, param, 3000);
-            if (o == null) {
-                throw new IllegalArgumentException("seq: " + req.getSeq() + "get: " + key + " on node: " + endpoint.getId() + ", result is null");
+            LOG.info("seq: {}, get: {} on node: {}", req.getSeq(), key, endpoint.getId());
+            Resp resp = client.sendRequestSync(endpoint, param, 3000);
+            LOG.info("seq: {}, get: {} on node: {}, result: {}", req.getSeq(), key, endpoint.getId(), resp);
+            if (resp == null || !resp.isS()) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");
             }
-            return o;
-        } catch (Exception e) {
+            return resp.getV();
+        } catch (IllegalArgumentException e) {
             throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result: err");
         }
     }
 

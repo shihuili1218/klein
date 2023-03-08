@@ -1,6 +1,9 @@
-secret/*
-!.gitkeep
 ./docker-compose.yml
-./node/start.sh
-./node/stop.sh
-./docker-compose.yml
+./klein-jepsen-test/
+./node/n1/
+./node/n2/
+./node/n3/
+./node/n4/
+./node/n5/
+./start.sh
+./stop.sh

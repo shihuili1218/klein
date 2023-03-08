@@ -48,11 +48,11 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
             LOG.info("get operator, begin, seq: {}", request.getSeq());
             Serializable javaBean = cache.get(request.getKey());
             LOG.info("get operator, end, seq: {}, result: {}", request.getSeq(), javaBean);
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(javaBean)));
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Resp(true, javaBean))));
         } catch (KleinException e) {
-            LOG.info("get operator, end, seq: {}, result: err", request.getSeq());
             LOG.error(e.getMessage());
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(null)));
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Resp(false, null))));
+            LOG.info("get operator, end, seq: {}, result: err", request.getSeq());
         }
 
     }
