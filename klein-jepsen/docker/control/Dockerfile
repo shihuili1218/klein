@@ -1,4 +1,4 @@
-FROM maven:3.6-openjdk-8
+FROM ubuntu:latest
 MAINTAINER jake@apache.org
 
 ENV LEIN_ROOT true
@@ -7,7 +7,8 @@ ENV LEIN_ROOT true
 # Jepsen dependencies
 #
 RUN apt-get -y -q update \
-    && apt-get install -qy libjna-java \
+    && apt-get install -qy  openjdk-11-jdk-headless \
+    libjna-java \
     vim \
     emacs \
     git \
@@ -18,7 +19,8 @@ RUN apt-get -y -q update \
     wget \
     gnuplot \
     graphviz \
-    dos2unix
+    dos2unix \
+    maven
 
 # RUN apt-get remove openjdk* -y && apt-get install -qy openjdk-8-jdk
 

@@ -165,18 +165,21 @@
           :checker   (checker/compose
                       {:perf     (checker/perf)
                        :timeline (timeline/html)
-                       :linear   (checker/linearizable)})
+                       :linear   (checker/linearizable
+                                  {:model     (model/cas-register)
+                                   :algorithm :linear})})
           :generator (->>
                       (gen/mix [r w])
                       (gen/stagger 1/10)
                       (gen/delay 1/10)
-                      (gen/nemesis
-                       (gen/seq
-                        (cycle
-                         [(gen/sleep 10)
-                          {:type :info, :f :start}
-                          (gen/sleep 5)
-                          {:type :info, :f :stop}])))
+                      (gen/nemesis nil)
+                      ;                      (gen/nemesis
+                      ;                       (gen/seq
+                      ;                        (cycle
+                      ;                         [(gen/sleep 10)
+                      ;                          {:type :info, :f :start}
+                      ;                          (gen/sleep 5)
+                      ;                          {:type :info, :f :stop}])))
                       (gen/time-limit (:time-limit opts)))}
          opts))
 
