@@ -1,26 +1,27 @@
 package com.ofcoder.klein.storage.file;
 
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
 import com.ofcoder.klein.storage.facade.exception.LockException;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public class FileLogManagerTest {
-    LogManager join;
+    private static final Logger LOG = LoggerFactory.getLogger(FileLogManagerTest.class);
+    FileLogManager join;
 
     @Before
     public void setUp() {
-        join = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin("file");
+        join = (FileLogManager) ExtensionLoader.getExtensionLoader(LogManager.class).getJoin("file");
         join.init(new StorageProp());
     }
 
@@ -96,7 +97,18 @@ public class FileLogManagerTest {
     }
 
     @Test
-    public void testLoadMetaData(){
+    public void testLoadMetaData() {
+        MetaDataDTO dataDTO = new MetaDataDTO();
+        dataDTO.setId(1);
+        dataDTO.setName("klein");
+        MetaDataDTO first = (MetaDataDTO) join.loadMetaData(dataDTO);
+        Assert.assertEquals(first.getZz(), dataDTO.getZz());
+        join.saveMetaData();
 
+        MetaDataDTO second = (MetaDataDTO) join.loadMetaData(dataDTO);
+        Assert.assertNotEquals(second, dataDTO);
+        Assert.assertEquals(second.getZz(), dataDTO.getZz());
+        Assert.assertTrue(second.getZz().equals(dataDTO.getZz()));
+        System.out.println(second.getZz());
     }
 }

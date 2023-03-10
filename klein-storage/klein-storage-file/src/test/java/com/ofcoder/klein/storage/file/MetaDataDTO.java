@@ -24,6 +24,7 @@ import com.ofcoder.klein.storage.facade.LogManager;
 public class MetaDataDTO implements LogManager.MetaData {
     private int id;
     private String name;
+    private final transient String zz = "zz";
 
     public int getId() {
         return id;
@@ -40,4 +41,9 @@ public class MetaDataDTO implements LogManager.MetaData {
     public void setName(String name) {
         this.name = name;
     }
+
+    public String getZz() {
+        return zz;
+    }
+
 }

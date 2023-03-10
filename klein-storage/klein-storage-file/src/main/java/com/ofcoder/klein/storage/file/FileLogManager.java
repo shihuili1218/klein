@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.storage.file;
 
+import com.ofcoder.klein.common.OnlyForTest;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.StreamUtil;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
@@ -141,7 +142,8 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         }
     }
 
-    private void saveMetaData() {
+    @OnlyForTest
+    protected void saveMetaData() {
         FileOutputStream mateOut = null;
         try {
             mateOut = new FileOutputStream(metaPath);
