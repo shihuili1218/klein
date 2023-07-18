@@ -194,7 +194,7 @@ public class ProposerImpl implements Proposer {
                 .build();
 
         // for self
-        AcceptRes res = RoleAccessor.getAcceptor().handleAcceptRequest(req, true);
+        AcceptRes res = RuntimeAccessor.getAcceptor().handleAcceptRequest(req, true);
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
@@ -208,7 +208,7 @@ public class ProposerImpl implements Proposer {
                     if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getAcceptNexted().compareAndSet(false, true)) {
 
-                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                        RuntimeAccessor.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                         ThreadExecutor.execute(() -> prepare(ctxt.createUntappedRef(), new PrepareCallback()));
                     }
                 }
@@ -248,7 +248,7 @@ public class ProposerImpl implements Proposer {
             // do prepare phase
             if (ctxt.getAcceptQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-                self.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
+                RuntimeAccessor.getSkipPrepare().compareAndSet(PrepareState.PREPARED, PrepareState.NO_PREPARE);
                 ThreadExecutor.execute(() -> prepare(ctxt.createUntappedRef(), new PrepareCallback()));
             }
         }
@@ -279,24 +279,24 @@ public class ProposerImpl implements Proposer {
 
         // limit the prepare phase to only one thread.
         long curProposalNo = self.getCurProposalNo();
-        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, self.getSkipPrepare());
+        LOG.debug("limit prepare. curProposalNo: {}, skipPrepare: {}", curProposalNo, RuntimeAccessor.getSkipPrepare());
 
-        if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
+        if (RuntimeAccessor.getSkipPrepare().get() == PrepareState.PREPARED) {
             if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
                 callback.granted(curProposalNo, ctxt);
             }
             return;
         }
 
-        synchronized (self.getSkipPrepare()) {
+        synchronized (RuntimeAccessor.getSkipPrepare()) {
             curProposalNo = self.getCurProposalNo();
-            if (self.getSkipPrepare().get() == PrepareState.PREPARED) {
+            if (RuntimeAccessor.getSkipPrepare().get() == PrepareState.PREPARED) {
                 if (ctxt.getPrepareNexted().compareAndSet(false, true)) {
                     callback.granted(curProposalNo, ctxt);
                 }
                 return;
             }
-            self.getSkipPrepare().set(PrepareState.PREPARING);
+            RuntimeAccessor.getSkipPrepare().set(PrepareState.PREPARING);
 
             try {
                 // do prepare
@@ -305,14 +305,14 @@ public class ProposerImpl implements Proposer {
                     @Override
                     public void granted(final long grantedProposalNo, final ProposeContext context) {
                         latch.countDown();
-                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
+                        RuntimeAccessor.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.PREPARED);
                         callback.granted(grantedProposalNo, context);
                     }
 
                     @Override
                     public void refused(final ProposeContext context) {
                         latch.countDown();
-                        self.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
+                        RuntimeAccessor.getSkipPrepare().compareAndSet(PrepareState.PREPARING, PrepareState.NO_PREPARE);
                         callback.refused(context);
                     }
                 });
@@ -321,8 +321,8 @@ public class ProposerImpl implements Proposer {
             } catch (InterruptedException e) {
                 throw new ConsensusException(e.getMessage(), e);
             } finally {
-                if (self.getSkipPrepare().get() == PrepareState.PREPARING) {
-                    self.getSkipPrepare().set(PrepareState.NO_PREPARE);
+                if (RuntimeAccessor.getSkipPrepare().get() == PrepareState.PREPARING) {
+                    RuntimeAccessor.getSkipPrepare().set(PrepareState.NO_PREPARE);
                 }
             }
         }
@@ -350,7 +350,7 @@ public class ProposerImpl implements Proposer {
                 .build();
 
         // for self
-        PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(req, true);
+        PrepareRes prepareRes = RuntimeAccessor.getAcceptor().handlePrepareRequest(req, true);
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
 
         // for other members
@@ -411,7 +411,7 @@ public class ProposerImpl implements Proposer {
             }
 
             // todo ??????
-            RoleAccessor.getLearner().pullSameData(result.getNodeState());
+            RuntimeAccessor.getLearner().pullSameData(result.getNodeState());
         }
     }
 
@@ -444,7 +444,7 @@ public class ProposerImpl implements Proposer {
             }, finalEvents);
 
             long curProposalNo = self.getCurProposalNo();
-            if (self.getSkipPrepare().get() != PrepareState.PREPARED) {
+            if (RuntimeAccessor.getSkipPrepare().get() != PrepareState.PREPARED) {
                 prepare(ctxt, new PrepareCallback());
             } else {
                 accept(curProposalNo, ctxt, new AcceptCallback());
@@ -504,7 +504,7 @@ public class ProposerImpl implements Proposer {
                 } else {
                     context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
                 }
-                RoleAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
+                RuntimeAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
             });
         }
 
@@ -519,7 +519,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do learn
-                RoleAccessor.getLearner().learn(context.getInstanceId(), it);
+                RuntimeAccessor.getLearner().learn(context.getInstanceId(), it);
             });
 
         }

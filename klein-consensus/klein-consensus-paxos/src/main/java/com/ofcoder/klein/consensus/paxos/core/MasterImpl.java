@@ -179,7 +179,7 @@ public class MasterImpl implements Master {
     public boolean changeMember(final byte op, final Set<Endpoint> target) {
         LOG.info("change member, op: {}, target: {}", op, target);
 
-        if (RoleAccessor.getMaster().isSelf()) {
+        if (RuntimeAccessor.getMaster().isSelf()) {
             return _changeMember(op, target);
         }
 
@@ -236,7 +236,7 @@ public class MasterImpl implements Master {
             req.setVersion(version);
             CompletableFuture<Boolean> latch = new CompletableFuture<>();
 
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+            RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
                 @Override
                 protected Long create() {
                     return self.incrementInstanceId();
@@ -275,7 +275,7 @@ public class MasterImpl implements Master {
             throw new ChangeMemberException("push complete data to new quorum failure.");
         }
 
-        Map<String, Snap> snaps = RoleAccessor.getLearner().generateSnap();
+        Map<String, Snap> snaps = RuntimeAccessor.getLearner().generateSnap();
         List<Instance<Proposal>> instanceConfirmed = logManager.getInstanceConfirmed();
         PushCompleteDataReq completeDataReq = PushCompleteDataReq.Builder.aPushCompleteDataReq()
                 .snaps(snaps)
@@ -360,7 +360,7 @@ public class MasterImpl implements Master {
 
             CountDownLatch latch = new CountDownLatch(1);
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
-            RoleAccessor.getProposer().tryBoost(
+            RuntimeAccessor.getProposer().tryBoost(
                     new Holder<Long>() {
                         @Override
                         protected Long create() {
@@ -442,7 +442,7 @@ public class MasterImpl implements Master {
     private void _boosting() {
 
         LOG.info("boosting instance.");
-        long miniInstanceId = RoleAccessor.getLearner().getLastAppliedInstanceId();
+        long miniInstanceId = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
         long maxInstanceId = self.getCurInstanceId();
         for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
             Instance<Proposal> instance = logManager.getInstance(miniInstanceId);
@@ -452,7 +452,7 @@ public class MasterImpl implements Master {
             List<Proposal> grantedValue = instance != null && CollectionUtils.isNotEmpty(instance.getGrantedValue())
                     ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
             long finalMiniInstanceId = miniInstanceId;
-            RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+            RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
                 @Override
                 protected Long create() {
                     return finalMiniInstanceId;
@@ -481,7 +481,7 @@ public class MasterImpl implements Master {
                         .nodeId(self.getSelf().getId())
                         .maxInstanceId(curInstanceId)
                         .lastCheckpoint(lastCheckpoint)
-                        .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
+                        .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                         .build())
                 .timestampMs(TrueTime.currentTimeMillis())
                 .probe(probe)
@@ -537,7 +537,7 @@ public class MasterImpl implements Master {
             if (!request.isProbe() && !isSelf) {
                 // check and update instance
                 ThreadExecutor.execute(() -> {
-                    RoleAccessor.getLearner().pullSameData(nodeState);
+                    RuntimeAccessor.getLearner().pullSameData(nodeState);
                 });
             }
 
@@ -566,14 +566,14 @@ public class MasterImpl implements Master {
             return NewMasterRes.Builder.aNewMasterRes()
                     .checkpoint(self.getLastCheckpoint())
                     .curInstanceId(self.getCurInstanceId())
-                    .lastAppliedId(RoleAccessor.getLearner().getLastAppliedInstanceId())
+                    .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                     .granted(true)
                     .build();
         } else {
             return NewMasterRes.Builder.aNewMasterRes()
                     .checkpoint(self.getLastCheckpoint())
                     .curInstanceId(self.getCurInstanceId())
-                    .lastAppliedId(RoleAccessor.getLearner().getLastAppliedInstanceId())
+                    .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                     .granted(false)
                     .build();
         }

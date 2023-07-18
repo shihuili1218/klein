@@ -25,7 +25,7 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -51,7 +51,7 @@ public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushComplete
         LOG.info("receive push complete data");
         PushCompleteDataRes res = new PushCompleteDataRes();
 
-        RoleAccessor.getLearner().loadSnap(request.getSnaps());
+        RuntimeAccessor.getLearner().loadSnap(request.getSnaps());
 
         logManager.getLock().writeLock().lock();
         try {

@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
@@ -55,7 +55,7 @@ public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
                     request.getNodeId());
             return;
         }
-        PrepareRes prepareRes = RoleAccessor.getAcceptor().handlePrepareRequest(request, false);
+        PrepareRes prepareRes = RuntimeAccessor.getAcceptor().handlePrepareRequest(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(prepareRes)));
     }
 
