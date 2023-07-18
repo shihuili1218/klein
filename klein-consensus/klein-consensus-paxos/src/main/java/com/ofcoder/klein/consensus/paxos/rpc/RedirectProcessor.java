@@ -30,7 +30,7 @@ import com.ofcoder.klein.consensus.paxos.DirectProxy;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proxy;
 import com.ofcoder.klein.consensus.paxos.core.Master;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
@@ -61,7 +61,7 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     }
 
     private boolean takeMaster() {
-        RoleAccessor.getMaster().transferMaster();
+        RuntimeAccessor.getMaster().transferMaster();
         return true;
     }
 
@@ -77,7 +77,7 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
                     context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(false).build())));
                     return;
                 }
-                boolean result = RoleAccessor.getMaster().changeMember(request.getChangeOp(), request.getChangeTarget());
+                boolean result = RuntimeAccessor.getMaster().changeMember(request.getChangeOp(), request.getChangeTarget());
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(result).build())));
                 break;
             case RedirectReq.TRANSACTION_REQUEST:

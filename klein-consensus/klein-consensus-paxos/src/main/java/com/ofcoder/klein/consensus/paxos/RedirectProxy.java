@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
@@ -53,7 +53,7 @@ public class RedirectProxy implements Proxy {
 
     @Override
     public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
-        if (RoleAccessor.getMaster().isSelf()) {
+        if (RuntimeAccessor.getMaster().isSelf()) {
             return this.directProxy.propose(data, apply);
         }
 

@@ -357,7 +357,7 @@ public class LearnerImpl implements Learner {
         if (memberConfig.allowBoost()) {
             LOG.info("try boost instance: {}", instanceId);
             CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RoleAccessor.getProposer().tryBoost(
+            RuntimeAccessor.getProposer().tryBoost(
                     new Holder<Long>() {
                         @Override
                         protected Long create() {
@@ -491,7 +491,7 @@ public class LearnerImpl implements Learner {
             pullSameData(state);
         } else {
             for (long i = localApplied + 1; i <= targetApplied; i++) {
-                RoleAccessor.getLearner().learn(i, target);
+                RuntimeAccessor.getLearner().learn(i, target);
             }
         }
     }
@@ -665,7 +665,7 @@ public class LearnerImpl implements Learner {
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
                 CountDownLatch latch = new CountDownLatch(1);
 
-                RoleAccessor.getProposer().tryBoost(new Holder<Long>() {
+                RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
                     @Override
                     protected Long create() {
                         return request.getInstanceId();

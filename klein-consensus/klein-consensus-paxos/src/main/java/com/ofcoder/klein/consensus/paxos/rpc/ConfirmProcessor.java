@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -54,7 +54,7 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
                     request.getNodeId());
             return;
         }
-        RoleAccessor.getLearner().handleConfirmRequest(request, false);
+        RuntimeAccessor.getLearner().handleConfirmRequest(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(new HashMap<>())));
     }
 

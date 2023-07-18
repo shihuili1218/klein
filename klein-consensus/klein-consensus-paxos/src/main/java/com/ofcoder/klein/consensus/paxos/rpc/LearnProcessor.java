@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -54,7 +54,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
                     request.getNodeId());
             return;
         }
-        LearnRes res = RoleAccessor.getLearner().handleLearnRequest(request);
+        LearnRes res = RuntimeAccessor.getLearner().handleLearnRequest(request);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 

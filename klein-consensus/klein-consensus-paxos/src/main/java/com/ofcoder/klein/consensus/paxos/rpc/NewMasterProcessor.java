@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
@@ -39,7 +39,7 @@ public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
 
     @Override
     public void handleRequest(final NewMasterReq request, final RpcContext context) {
-        NewMasterRes newMasterRes = RoleAccessor.getMaster().onReceiveNewMaster(request, false);
+        NewMasterRes newMasterRes = RuntimeAccessor.getMaster().onReceiveNewMaster(request, false);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(newMasterRes)));
     }
 

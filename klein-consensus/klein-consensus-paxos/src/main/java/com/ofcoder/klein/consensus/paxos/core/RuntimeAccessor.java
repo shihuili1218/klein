@@ -19,22 +19,26 @@ package com.ofcoder.klein.consensus.paxos.core;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
- * Role Accessor.
+ * Runtime Accessor.
  *
  * @author 释慧利
  */
-public class RoleAccessor {
-
+public class RuntimeAccessor {
+    private static AtomicReference<ProposerImpl.PrepareState> skipPrepare = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
     private static Proposer proposer;
     private static Acceptor acceptor;
     private static Learner learner;
     private static Master master;
 
+    public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
+        return skipPrepare;
+    }
     public static Proposer getProposer() {
         return proposer;
     }
-
     public static Acceptor getAcceptor() {
         return acceptor;
     }

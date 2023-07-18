@@ -30,7 +30,7 @@ import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.Master;
-import com.ofcoder.klein.consensus.paxos.core.RoleAccessor;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
@@ -73,7 +73,7 @@ public class PaxosConsensus implements Consensus {
     }
 
     private void loadSM(final String group, final SM sm) {
-        RoleAccessor.getLearner().loadSM(group, sm);
+        RuntimeAccessor.getLearner().loadSM(group, sm);
     }
 
     @Override
@@ -89,12 +89,12 @@ public class PaxosConsensus implements Consensus {
         registerProcessor();
         MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
 
-        RoleAccessor.create(this.prop, this.self);
+        RuntimeAccessor.create(this.prop, this.self);
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
         SMRegistry.getSms().forEach(this::loadSM);
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
         if (!this.prop.isJoinCluster()) {
-            RoleAccessor.getMaster().lookMaster();
+            RuntimeAccessor.getMaster().lookMaster();
             preheating();
         } else {
             joinCluster(0);
@@ -162,17 +162,17 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public void shutdown() {
-        if (RoleAccessor.getProposer() != null) {
-            RoleAccessor.getProposer().shutdown();
+        if (RuntimeAccessor.getProposer() != null) {
+            RuntimeAccessor.getProposer().shutdown();
         }
-        if (RoleAccessor.getMaster() != null) {
-            RoleAccessor.getMaster().shutdown();
+        if (RuntimeAccessor.getMaster() != null) {
+            RuntimeAccessor.getMaster().shutdown();
         }
-        if (RoleAccessor.getAcceptor() != null) {
-            RoleAccessor.getAcceptor().shutdown();
+        if (RuntimeAccessor.getAcceptor() != null) {
+            RuntimeAccessor.getAcceptor().shutdown();
         }
-        if (RoleAccessor.getLearner() != null) {
-            RoleAccessor.getLearner().shutdown();
+        if (RuntimeAccessor.getLearner() != null) {
+            RuntimeAccessor.getLearner().shutdown();
         }
     }
 
@@ -186,7 +186,7 @@ public class PaxosConsensus implements Consensus {
         if (getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(Master.ADD, Sets.newHashSet(endpoint));
+        RuntimeAccessor.getMaster().changeMember(Master.ADD, Sets.newHashSet(endpoint));
     }
 
     @Override
@@ -194,7 +194,7 @@ public class PaxosConsensus implements Consensus {
         if (!getMemberConfig().isValid(endpoint.getId())) {
             return;
         }
-        RoleAccessor.getMaster().changeMember(Master.REMOVE, Sets.newHashSet(endpoint));
+        RuntimeAccessor.getMaster().changeMember(Master.REMOVE, Sets.newHashSet(endpoint));
     }
 
 }

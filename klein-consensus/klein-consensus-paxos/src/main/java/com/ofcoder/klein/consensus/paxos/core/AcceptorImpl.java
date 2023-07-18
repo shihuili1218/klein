@@ -74,7 +74,7 @@ public class AcceptorImpl implements Acceptor {
         final long selfInstanceId = self.getCurInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
-        if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RoleAccessor.getLearner().getLastAppliedInstanceId()) {
+        if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RuntimeAccessor.getLearner().getLastAppliedInstanceId()) {
             return AcceptRes.Builder.anAcceptRes()
                     .nodeId(self.getSelf().getId())
                     .result(false)
@@ -164,7 +164,7 @@ public class AcceptorImpl implements Acceptor {
                             .nodeId(self.getSelf().getId())
                             .maxInstanceId(curInstanceId)
                             .lastCheckpoint(lastCheckpoint)
-                            .lastAppliedInstanceId(RoleAccessor.getLearner().getLastAppliedInstanceId())
+                            .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                             .build());
 
             if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
@@ -189,8 +189,8 @@ public class AcceptorImpl implements Acceptor {
             return false;
         }
         if (!isSelf) {
-            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
-                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            if (RuntimeAccessor.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                RuntimeAccessor.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
             }
         }
         self.updateCurProposalNo(req.getProposalNo());
@@ -205,8 +205,8 @@ public class AcceptorImpl implements Acceptor {
             return false;
         }
         if (!isSelf) {
-            if (self.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
-                self.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
+            if (RuntimeAccessor.getSkipPrepare().get() == ProposerImpl.PrepareState.PREPARED) {
+                RuntimeAccessor.getSkipPrepare().compareAndSet(ProposerImpl.PrepareState.PREPARED, ProposerImpl.PrepareState.NO_PREPARE);
             }
         }
         self.updateCurProposalNo(req.getProposalNo());
