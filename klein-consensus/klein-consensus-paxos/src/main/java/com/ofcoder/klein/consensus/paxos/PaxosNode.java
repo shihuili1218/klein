@@ -16,13 +16,11 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.ofcoder.klein.consensus.facade.Node;
-import com.ofcoder.klein.consensus.paxos.core.ProposerImpl;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+
+import java.util.Objects;
 
 /**
  * paxos node info.

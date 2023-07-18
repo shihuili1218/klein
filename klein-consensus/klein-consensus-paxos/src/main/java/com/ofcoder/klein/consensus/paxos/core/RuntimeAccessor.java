@@ -36,9 +36,11 @@ public class RuntimeAccessor {
     public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
         return skipPrepare;
     }
+
     public static Proposer getProposer() {
         return proposer;
     }
+
     public static Acceptor getAcceptor() {
         return acceptor;
     }
