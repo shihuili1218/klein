@@ -1,0 +1,11 @@
+  n%%N%%:
+    << : *default-node
+    container_name: n%%N%%
+    hostname: n%%N%%
+    volumes:
+        - ./node/n%%N%%/server.properties:/klein/config/server.properties:ro
+        - ./node/n%%N%%/server.properties:/config/server.properties:ro
+        - ./klein-server.jar:/klein/klein-server.jar
+        - ./start.sh:/klein/start.sh
+        - ./stop.sh:/klein/stop.sh
+        - "jepsen-shared:/var/jepsen/shared"

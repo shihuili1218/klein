@@ -1,0 +1,50 @@
+version: '3.7'
+x-node:
+  &default-node
+  image: shihuili1218/klein-jepsen-node:latest
+  env_file: ./secret/node.env
+  secrets:
+    - authorized_keys
+  tty: true
+  tmpfs:
+    - /run:size=100M
+    - /run/lock:size=100M
+  volumes:
+    - "jepsen-shared:/var/jepsen/shared"
+  networks:
+    - jepsen
+  privileged: true
+  cap_add:
+    - ALL
+  ports:
+    - ${JEPSEN_PORT:-22}
+
+volumes:
+  jepsen-shared:
+
+secrets:
+  authorized_keys:
+    file: ./secret/authorized_keys
+
+networks:
+  jepsen:
+
+services:
+  control:
+    container_name: jepsen-control
+    hostname: control
+    depends_on:
+%%DEPS%%
+    image: shihuili1218/klein-jepsen-control:latest
+    env_file: ./secret/control.env
+    privileged: true
+    ports:
+      - "22"
+      - "1218"
+    networks:
+      - jepsen
+    volumes:
+      - ./klein-server.jar:/jepsen/klein-server.jar
+      - "jepsen-shared:/var/jepsen/shared"
+      - ./klein-jepsen-test:/jepsen/klein
+%%DBS%%

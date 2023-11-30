@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>klein-consensus</artifactId>
+        <groupId>com.ofcoder.klein.consensus</groupId>
+        <version>0.0.2</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ofcoder.klein.consensus.facade</groupId>
+    <artifactId>klein-consensus-facade</artifactId>
+    <version>0.0.2</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.ofcoder.klein.rpc.facade</groupId>
+            <artifactId>klein-rpc-facade</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.storage.api</groupId>
+            <artifactId>klein-storage-facade</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

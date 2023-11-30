@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>klein</artifactId>
+        <groupId>com.ofcoder.klein</groupId>
+        <version>0.0.2</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.ofcoder.klein.storage</groupId>
+    <artifactId>klein-storage</artifactId>
+    <packaging>pom</packaging>
+    <version>0.0.2</version>
+
+    <modules>
+        <module>klein-storage-facade</module>
+        <module>klein-storage-h2</module>
+        <module>klein-storage-file</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ofcoder.klein.spi</groupId>
+            <artifactId>klein-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.common</groupId>
+            <artifactId>klein-common</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
