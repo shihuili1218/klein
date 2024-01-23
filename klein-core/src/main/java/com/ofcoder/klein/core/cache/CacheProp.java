@@ -63,4 +63,17 @@ public class CacheProp {
     public void setDataPath(final String dataPath) {
         this.dataPath = dataPath;
     }
+
+    /**
+     * loadIfPresent.
+     *
+     * @return CacheProp
+     */
+    public static CacheProp loadIfPresent() {
+        return CacheProp.Holder.INSTANCE;
+    }
+
+    private static class Holder {
+        private static final CacheProp INSTANCE = new CacheProp();
+    }
 }

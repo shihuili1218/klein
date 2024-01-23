@@ -34,8 +34,7 @@ public final class StorageEngine {
      * @param prop property
      */
     public static void startup(final String type, final StorageProp prop) {
-        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoinWithGlobal(type);
-        logManager.init(prop);
+        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).register(type, prop);
     }
 
     /**

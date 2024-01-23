@@ -16,15 +16,14 @@
  */
 package com.ofcoder.klein;
 
-import java.io.FileInputStream;
-import java.util.Properties;
-
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.core.cache.CacheProp;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
+
+import java.io.FileInputStream;
+import java.util.Properties;
 
 /**
  * Klein Prop.
@@ -32,40 +31,12 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author 释慧利
  */
 public class KleinProp {
-    private String id = SystemPropertyUtil.get("klein.id", "1");
-    private int port = SystemPropertyUtil.getInt("klein.port", 1218);
-    private String ip = SystemPropertyUtil.get("klein.ip", "127.0.0.1");
     private String storage = SystemPropertyUtil.get("klein.storage", "file");
     private String consensus = SystemPropertyUtil.get("klein.consensus", "paxos");
     private String rpc = SystemPropertyUtil.get("klein.rpc", "grpc");
     private ConsensusProp consensusProp = new ConsensusProp();
     private StorageProp storageProp = new StorageProp();
     private RpcProp rpcProp = new RpcProp();
-    private CacheProp cacheProp = new CacheProp();
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(final String id) {
-        this.id = id;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(final int port) {
-        this.port = port;
-    }
-
-    public String getIp() {
-        return ip;
-    }
-
-    public void setIp(final String ip) {
-        this.ip = ip;
-    }
 
     public String getStorage() {
         return storage;
@@ -113,14 +84,6 @@ public class KleinProp {
 
     public void setRpcProp(final RpcProp rpcProp) {
         this.rpcProp = rpcProp;
-    }
-
-    public CacheProp getCacheProp() {
-        return cacheProp;
-    }
-
-    public void setCacheProp(final CacheProp cacheProp) {
-        this.cacheProp = cacheProp;
     }
 
     /**

@@ -19,6 +19,7 @@ package com.ofcoder.klein.jepsen.server;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.ExistsProcessor;
@@ -47,7 +48,7 @@ public class KleinServer {
 
         final Klein instance = Klein.startup();
         instance.awaitInit();
-        KleinCache cache = instance.getCache();
+        KleinCache cache = KleinFactory.getInstance().createCache("klein");
 
         RpcEngine.registerProcessor(new ExistsProcessor(cache));
         RpcEngine.registerProcessor(new GetProcessor(cache));

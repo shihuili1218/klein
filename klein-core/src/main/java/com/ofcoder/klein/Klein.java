@@ -16,27 +16,20 @@
  */
 package com.ofcoder.klein;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
-import com.ofcoder.klein.core.cache.CacheSM;
-import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.core.cache.KleinCacheImpl;
-import com.ofcoder.klein.core.lock.KleinLock;
-import com.ofcoder.klein.core.lock.KleinLockImpl;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.StorageEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Klein starter.
@@ -46,8 +39,6 @@ import com.ofcoder.klein.storage.facade.StorageEngine;
 public final class Klein {
     private static final Logger LOG = LoggerFactory.getLogger(Klein.class);
     private static volatile AtomicBoolean started = new AtomicBoolean(false);
-    private KleinCache cache;
-    private KleinLock lock;
     private ShutdownHook shutdownHook;
 
     private Klein() {
@@ -96,11 +87,7 @@ public final class Klein {
 
         RpcEngine.startup(prop.getRpc(), prop.getRpcProp());
         StorageEngine.startup(prop.getStorage(), prop.getStorageProp());
-        SMRegistry.register(CacheSM.GROUP, new CacheSM(prop.getCacheProp()));
         ConsensusEngine.startup(prop.getConsensus(), prop.getConsensusProp());
-
-        kl.cache = new KleinCacheImpl();
-        kl.lock = new KleinLockImpl();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("*** shutting down Klein since JVM is shutting down");
@@ -113,14 +100,6 @@ public final class Klein {
             LOG.info("*** Klein shut down");
         }));
         return kl;
-    }
-
-    public KleinCache getCache() {
-        return cache;
-    }
-
-    public KleinLock getLock() {
-        return lock;
     }
 
     public MemberConfiguration getClusterInfo() {

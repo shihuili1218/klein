@@ -18,7 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.Set;
 
-import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
@@ -30,7 +30,7 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  *
  * @author 释慧利
  */
-public interface Master extends Lifecycle<ConsensusProp> {
+public interface Master extends Role<ConsensusProp> {
     byte ADD = 0;
     byte REMOVE = 1;
 

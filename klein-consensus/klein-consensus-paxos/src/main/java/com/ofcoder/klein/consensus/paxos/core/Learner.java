@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
@@ -38,7 +38,7 @@ import com.ofcoder.klein.storage.facade.Snap;
  *
  * @author 释慧利
  */
-public interface Learner extends Lifecycle<ConsensusProp> {
+public interface Learner extends Role<ConsensusProp> {
 
     /**
      * generate and save snapshot.

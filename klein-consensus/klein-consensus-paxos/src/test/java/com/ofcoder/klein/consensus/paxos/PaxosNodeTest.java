@@ -17,11 +17,11 @@ public class PaxosNodeTest extends TestCase {
         ExtensionLoader.getExtensionLoader(Nwr.class).getJoin("majority");
         MemberRegistry.getInstance().init(
                 null,
-                Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218), new Endpoint("2", "127.0.0.1", 1219), new Endpoint("3", "127.0.0.1", 1220))
+                Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218, false), new Endpoint("2", "127.0.0.1", 1219, false), new Endpoint("3", "127.0.0.1", 1220, false))
         );
         PaxosNode node = PaxosNode.Builder.aPaxosNode()
                 .curProposalNo(0)
-                .self(new Endpoint("3", "127.0.0.1", 1220))
+                .self(new Endpoint("3", "127.0.0.1", 1220, false))
                 .build();
 
         long pno = node.generateNextProposalNo();

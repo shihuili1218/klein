@@ -22,9 +22,7 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.common.Lifecycle;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.spi.SPI;
 
 /**
@@ -33,7 +31,7 @@ import com.ofcoder.klein.spi.SPI;
  * @author 释慧利
  */
 @SPI
-public interface RpcClient extends Lifecycle<RpcProp> {
+public interface RpcClient {
     Logger LOG = LoggerFactory.getLogger(RpcClient.class);
 
     /**
@@ -151,4 +149,9 @@ public interface RpcClient extends Lifecycle<RpcProp> {
     default <R> R sendRequestSync(Endpoint target, Serializable request) {
         return sendRequestSync(target, request, requestTimeout());
     }
+
+    /**
+     * Bean shutdown.
+     */
+    void shutdown();
 }

@@ -25,14 +25,18 @@ import java.util.Objects;
  * @author 释慧利
  */
 public class Endpoint implements Serializable {
+    // not in equals(hashCode)
     private String id;
     private String ip;
     private int port;
+    // not in equals(hashCode)
+    private boolean outsider;
 
-    public Endpoint(final String id, final String ip, final int port) {
+    public Endpoint(final String id, final String ip, final int port, final boolean outsider) {
         this.id = id;
         this.ip = ip;
         this.port = port;
+        this.outsider = outsider;
     }
 
     /**
@@ -89,6 +93,24 @@ public class Endpoint implements Serializable {
         this.port = port;
     }
 
+    /**
+     * is outsider.
+     *
+     * @return is outsider
+     */
+    public boolean isOutsider() {
+        return outsider;
+    }
+
+    /**
+     * set outsider.
+     *
+     * @param outsider outsider
+     */
+    public void setOutsider(final boolean outsider) {
+        this.outsider = outsider;
+    }
+
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -98,16 +120,16 @@ public class Endpoint implements Serializable {
             return false;
         }
         Endpoint endpoint = (Endpoint) o;
-        return port == endpoint.port && Objects.equals(id, endpoint.id) && Objects.equals(ip, endpoint.ip);
+        return port == endpoint.port && Objects.equals(ip, endpoint.ip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, ip, port);
+        return Objects.hash(ip, port);
     }
 
     @Override
     public String toString() {
-        return "id: " + id + ", endpoint: " + ip + ":" + port;
+        return id + ":" + ip + ":" + port + ":" + outsider;
     }
 }

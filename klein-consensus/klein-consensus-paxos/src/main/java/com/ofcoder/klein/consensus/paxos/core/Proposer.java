@@ -19,7 +19,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 import java.util.List;
 
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
@@ -29,7 +29,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
  *
  * @author 释慧利
  */
-public interface Proposer extends Lifecycle<ConsensusProp> {
+public interface Proposer extends Role<ConsensusProp> {
     /**
      * Propose proposal.
      *

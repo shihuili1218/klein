@@ -16,12 +16,16 @@
  */
 package com.ofcoder.klein.consensus.facade.quorum;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
@@ -44,11 +48,14 @@ public final class QuorumFactory {
             LOG.debug("create write quorum, nwr: {}", nwr.getClass());
         }
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
-            return new SingleQuorum(memberConfiguration.getEffectMembers(),
-                    nwr.w(memberConfiguration.getEffectMembers().size()));
+            Set<Endpoint> participants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+            return new SingleQuorum(participants, nwr.w(participants.size()));
         } else {
-            return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers(),
-                    nwr.w(memberConfiguration.getEffectMembers().size()), nwr.w(memberConfiguration.getLastMembers().size()));
+            Set<Endpoint> effectParticipants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+            Set<Endpoint> lastParticipants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+
+            return new JoinConsensusQuorum(effectParticipants, lastParticipants,
+                    nwr.w(effectParticipants.size()), nwr.w(lastParticipants.size()));
         }
     }
 
@@ -63,11 +70,14 @@ public final class QuorumFactory {
         LOG.debug("create read quorum, nwr: {}", nwr.getClass());
 
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
-            return new SingleQuorum(memberConfiguration.getEffectMembers(),
-                    nwr.r(memberConfiguration.getEffectMembers().size()));
+            Set<Endpoint> participants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+            return new SingleQuorum(participants, nwr.r(participants.size()));
         } else {
-            return new JoinConsensusQuorum(memberConfiguration.getEffectMembers(), memberConfiguration.getLastMembers(),
-                    nwr.r(memberConfiguration.getEffectMembers().size()), nwr.r(memberConfiguration.getLastMembers().size()));
+            Set<Endpoint> effectParticipants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+            Set<Endpoint> lastParticipants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
+
+            return new JoinConsensusQuorum(effectParticipants, lastParticipants,
+                    nwr.r(effectParticipants.size()), nwr.r(lastParticipants.size()));
         }
     }
 }

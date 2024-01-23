@@ -58,8 +58,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
     private MetaData metadata;
 
-    @Override
-    public void init(final StorageProp op) {
+    public FileLogManager(final StorageProp op) {
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();

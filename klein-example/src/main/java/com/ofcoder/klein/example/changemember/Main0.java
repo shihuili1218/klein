@@ -46,8 +46,8 @@ public class Main0 {
 
         prop2.getConsensusProp().setMembers(
                 Lists.newArrayList(
-                        new Endpoint("2", "127.0.0.1", 1219),
-                        new Endpoint("3", "127.0.0.1", 1220)
+                        new Endpoint("2", "127.0.0.1", 1219, false),
+                        new Endpoint("3", "127.0.0.1", 1220, false)
                 )
         );
 

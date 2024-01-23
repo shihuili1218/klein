@@ -48,7 +48,7 @@ public class RpcUtil {
     /**
      * parse endpoint by <code>s</code>.
      *
-     * @param s e.g. 127.0.0.1:1218
+     * @param s e.g. 127.0.0.1:1218 or 1:127.0.0.1:1218:true
      * @return endpoint
      */
     public static Endpoint parseEndpoint(final String s) {
@@ -59,14 +59,15 @@ public class RpcUtil {
         if (tmps.length == 2) {
             try {
                 final int port = Integer.parseInt(tmps[1]);
-                return new Endpoint(null, tmps[0], port);
+                return new Endpoint(null, tmps[0], port, false);
             } catch (final Exception e) {
                 throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
             }
-        } else if (tmps.length == 3) {
+        } else if (tmps.length == 4) {
             try {
                 final int port = Integer.parseInt(tmps[2]);
-                return new Endpoint(tmps[0], tmps[1], port);
+                final boolean outsider = Boolean.parseBoolean(tmps[3]);
+                return new Endpoint(tmps[0], tmps[1], port, outsider);
             } catch (final Exception e) {
                 throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
             }

@@ -115,7 +115,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
         target.listeners.addAll(listeners);
         target.masterState = masterState;
         if (master != null) {
-            target.master = new Endpoint(master.getId(), master.getIp(), master.getPort());
+            target.master = new Endpoint(master.getId(), master.getIp(), master.getPort(), master.isOutsider());
         }
         target.version = new AtomicInteger(version.get());
         return target;
