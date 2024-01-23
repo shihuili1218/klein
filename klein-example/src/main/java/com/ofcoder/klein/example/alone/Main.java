@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.single;
+package com.ofcoder.klein.example.alone;
 
 import java.util.concurrent.TimeUnit;
 
@@ -37,6 +37,7 @@ public class Main {
 
         Klein instance = Klein.startup();
         instance.awaitInit();
+
         instance.getCache().put("hello", "klein");
         LOG.info(instance.getCache().get("hello") + "");
         instance.getCache().put("hello", "test", 1L, TimeUnit.SECONDS);
