@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import com.ofcoder.klein.common.Lifecycle;
-import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.spi.SPI;
 
 /**
@@ -26,7 +24,7 @@ import com.ofcoder.klein.spi.SPI;
  * @author far.liu
  */
 @SPI
-public interface RpcServer extends Lifecycle<RpcProp> {
+public interface RpcServer {
 
     /**
      * Register user processor.
@@ -34,4 +32,9 @@ public interface RpcServer extends Lifecycle<RpcProp> {
      * @param processor the user processor which has a interest
      */
     void registerProcessor(RpcProcessor processor);
+
+    /**
+     * Bean shutdown.
+     */
+    void shutdown();
 }

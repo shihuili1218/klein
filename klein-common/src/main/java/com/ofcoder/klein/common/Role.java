@@ -21,7 +21,7 @@ package com.ofcoder.klein.common;
  *
  * @author 释慧利
  */
-public interface Lifecycle<O> {
+public interface Role<O> {
 
     /**
      * Bean init.

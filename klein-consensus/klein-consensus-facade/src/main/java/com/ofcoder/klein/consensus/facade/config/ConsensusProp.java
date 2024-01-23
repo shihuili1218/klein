@@ -34,14 +34,16 @@ public class ConsensusProp {
     private Endpoint self = new Endpoint(
             SystemPropertyUtil.get("klein.id", "1"),
             SystemPropertyUtil.get("klein.ip", "127.0.0.1"),
-            SystemPropertyUtil.getInt("klein.port", 1218)
+            SystemPropertyUtil.getInt("klein.port", 1218),
+            SystemPropertyUtil.getBoolean("klein.outsider", false)
     );
     /**
      * all member, include self.
      */
-    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218"));
+    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218:false"));
     /**
-     * join cluster, this member is not in the cluster, and will automatically join the cluster at startup.
+     * new node joining the cluster.
+     * this member is not in the cluster, and will automatically join the cluster at startup.
      */
     private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
     /**

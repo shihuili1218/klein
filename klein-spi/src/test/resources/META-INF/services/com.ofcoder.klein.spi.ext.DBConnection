@@ -1,1 +1,2 @@
 mysql=com.ofcoder.klein.spi.ext.MysqlConnection
+args=com.ofcoder.klein.spi.ext.ArgsConnection

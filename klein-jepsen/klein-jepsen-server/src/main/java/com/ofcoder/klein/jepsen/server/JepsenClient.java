@@ -54,12 +54,11 @@ public class JepsenClient {
     public JepsenClient(final String node) {
         String id = StringUtils.remove(node, "n");
 
-        endpoint = new Endpoint(id, node, 1218);
+        endpoint = new Endpoint(id, node, 1218, false);
         LOG.info("node: {}", endpoint);
         KleinProp kleinProp = KleinProp.loadIfPresent();
 
-        client = new GrpcClient();
-        client.init(kleinProp.getRpcProp());
+        client = new GrpcClient(kleinProp.getRpcProp());
         client.createConnection(endpoint);
     }
 

@@ -14,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.example.single;
+package com.ofcoder.klein.example.alone;
 
-import java.util.concurrent.TimeUnit;
-
+import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.KleinFactory;
+import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.core.cache.KleinCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinProp;
+import java.util.concurrent.TimeUnit;
 
 /**
  * single node.
@@ -37,14 +38,19 @@ public class Main {
 
         Klein instance = Klein.startup();
         instance.awaitInit();
-        instance.getCache().put("hello", "klein");
-        LOG.info(instance.getCache().get("hello") + "");
-        instance.getCache().put("hello", "test", 1L, TimeUnit.SECONDS);
-        LOG.info(instance.getCache().get("hello") + "");
+        KleinCache klein1 = KleinFactory.getInstance().createCache("klein1");
+        KleinCache klein2 = KleinFactory.getInstance().createCache("klein2");
+
+        klein1.put("hello", "klein");
+        LOG.info("klein1 " + klein1.get("hello"));
+        LOG.info("klein2 " + klein2.get("hello"));
+
+        klein1.put("hello", "test", 1L, TimeUnit.SECONDS);
+        LOG.info(klein1.get("hello") + "");
         Thread.sleep(500L);
-        LOG.info(instance.getCache().get("hello") + "");
+        LOG.info(klein1.get("hello") + "");
         Thread.sleep(500L);
-        LOG.info(instance.getCache().get("hello") + "");
+        LOG.info(klein1.get("hello") + "");
         System.in.read();
     }
 }

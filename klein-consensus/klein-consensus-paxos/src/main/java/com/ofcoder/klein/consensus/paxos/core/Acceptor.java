@@ -16,7 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import com.ofcoder.klein.common.Lifecycle;
+import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
@@ -28,7 +28,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
  *
  * @author 释慧利
  */
-public interface Acceptor extends Lifecycle<ConsensusProp> {
+public interface Acceptor extends Role<ConsensusProp> {
     /**
      * Process the Accept message from Proposer.
      *

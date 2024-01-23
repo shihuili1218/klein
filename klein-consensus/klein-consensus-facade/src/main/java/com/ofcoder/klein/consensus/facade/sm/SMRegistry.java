@@ -16,11 +16,14 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.ofcoder.klein.consensus.facade.Consensus;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * SMRegistry.
@@ -29,7 +32,7 @@ import org.slf4j.LoggerFactory;
  */
 public final class SMRegistry {
     private static final Logger LOG = LoggerFactory.getLogger(SMRegistry.class);
-    private static final Map<String, SM> SMS = new HashMap<>();
+    private static final ConcurrentMap<String, SM> SMS = new ConcurrentHashMap<>();
 
     /**
      * load sm.
@@ -38,11 +41,11 @@ public final class SMRegistry {
      * @param sm    sm
      */
     public static void register(final String group, final SM sm) {
-        if (SMS.containsKey(group)) {
+        if (SMS.putIfAbsent(group, sm) != null) {
             LOG.error("the group[{}] has been loaded with sm.", group);
             return;
         }
-        SMS.put(group, sm);
+        ExtensionLoader.getExtensionLoader(Consensus.class).getJoin().loadSM(group, sm);
     }
 
     /**

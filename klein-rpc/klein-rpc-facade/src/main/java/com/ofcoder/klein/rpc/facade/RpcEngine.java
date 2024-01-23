@@ -43,10 +43,8 @@ public final class RpcEngine {
         LOG.info("start rpc engine");
         Requires.requireTrue(prop.getPort() > 0 && prop.getPort() < 0xFFFF, "port out of range:" + prop.getPort());
 
-        server = ExtensionLoader.getExtensionLoader(RpcServer.class).getJoinWithGlobal(rpc);
-        server.init(prop);
-        client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoinWithGlobal(rpc);
-        client.init(prop);
+        server = ExtensionLoader.getExtensionLoader(RpcServer.class).register(rpc, prop);
+        client = ExtensionLoader.getExtensionLoader(RpcClient.class).register(rpc, prop);
     }
 
     /**

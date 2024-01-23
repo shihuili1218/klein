@@ -61,41 +61,57 @@ import com.ofcoder.klein.storage.facade.LogManager;
 public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
     private PaxosNode self;
-    private ConsensusProp prop;
-    private RpcClient client;
-    private Proxy proxy;
-    private Nwr nwr;
+    private final ConsensusProp prop;
+    private final RpcClient client;
+    private final Proxy proxy;
 
-    @Override
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        Proposal proposal = new Proposal(group, data);
-        return this.proxy.propose(proposal, apply);
+    public PaxosConsensus(final ConsensusProp prop) {
+        this.prop = prop;
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        ExtensionLoader.getExtensionLoader(Nwr.class).register(this.prop.getNwr());
+
+        // reload self information from storage.
+        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
+                .curInstanceId(0)
+                .curProposalNo(0)
+                .lastCheckpoint(0)
+                .self(prop.getSelf())
+                .build());
+        LOG.info("self info: {}", self);
+
+        initEngine();
+
+        if (self.getSelf().isOutsider() || prop.getPaxosProp().isWriteOnMaster()) {
+            this.proxy = new RedirectProxy(this.prop, this.self);
+        } else {
+            this.proxy = new DirectProxy(this.prop);
+        }
     }
 
-    private void loadSM(final String group, final SM sm) {
+    @Override
+    public void loadSM(final String group, final SM sm) {
         RuntimeAccessor.getLearner().loadSM(group, sm);
     }
 
     @Override
-    public void init(final ConsensusProp op) {
-        this.prop = op;
-        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
+    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
+        Proposal proposal = new Proposal(group, data);
+        return proxy.propose(proposal, apply);
+    }
 
-        loadNode();
-        this.proxy = this.prop.getPaxosProp().isWrite() ? new DirectProxy(this.prop) : new RedirectProxy(this.prop, this.self);
+    private void initEngine() {
 
         MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
         registerProcessor();
-        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
+        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(this.client::createConnection);
 
         RuntimeAccessor.create(this.prop, this.self);
-        SMRegistry.register(MasterSM.GROUP, new MasterSM());
-        SMRegistry.getSms().forEach(this::loadSM);
+
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
+
         if (!this.prop.isJoinCluster()) {
             RuntimeAccessor.getMaster().lookMaster();
-            preheating();
         } else {
             joinCluster(0);
         }
@@ -126,22 +142,10 @@ public class PaxosConsensus implements Consensus {
         }
     }
 
-    private void preheating() {
+    @Override
+    public void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
-    }
-
-    private void loadNode() {
-        // reload self information from storage.
-
-        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
-                .curInstanceId(0)
-                .curProposalNo(0)
-                .lastCheckpoint(0)
-                .self(prop.getSelf())
-                .build());
-
-        LOG.info("self info: {}", self);
+        SMRegistry.register(MasterSM.GROUP, new MasterSM());
     }
 
     private void registerProcessor() {

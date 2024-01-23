@@ -16,13 +16,13 @@
  */
 package com.ofcoder.klein.core.cache;
 
-import java.io.Serializable;
-import java.util.concurrent.TimeUnit;
-
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.GroupWrapper;
+
+import java.io.Serializable;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Klein Cache Implement.
@@ -32,8 +32,8 @@ import com.ofcoder.klein.core.GroupWrapper;
 public class KleinCacheImpl implements KleinCache {
     protected GroupWrapper consensus;
 
-    public KleinCacheImpl() {
-        this.consensus = new GroupWrapper(CacheSM.GROUP);
+    public KleinCacheImpl(final String group) {
+        this.consensus = new GroupWrapper(group);
     }
 
     @Override
@@ -45,7 +45,8 @@ public class KleinCacheImpl implements KleinCache {
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
         }
-        return result.getData();
+        Boolean data = result.getData();
+        return data != null && data;
     }
 
     @Override

@@ -57,7 +57,11 @@ import io.grpc.stub.StreamObserver;
 public class GrpcClient implements RpcClient {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
-    private RpcProp prop;
+    private final RpcProp prop;
+
+    public GrpcClient(final RpcProp op) {
+        this.prop = op;
+    }
 
     @Override
     public int requestTimeout() {
@@ -217,11 +221,6 @@ public class GrpcClient implements RpcClient {
                 // do nothing
             }
         });
-    }
-
-    @Override
-    public void init(final RpcProp op) {
-        this.prop = op;
     }
 
     @Override

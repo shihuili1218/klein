@@ -67,9 +67,10 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
 
     @Override
     public void handleRequest(final RedirectReq request, final RpcContext context) {
-        LOG.info("receive redirect msg, redirect: {}, changeOp: {}, changeTarget: {}", request.getRedirect(), request.getChangeOp(), request.getChangeTarget());
+        LOG.info("receive redirect msg, redirect: {}", request.getRedirect());
         switch (request.getRedirect()) {
             case RedirectReq.CHANGE_MEMBER:
+                LOG.info("receive change member, changeOp: {}, changeTarget: {}", request.getChangeOp(), request.getChangeTarget());
                 Endpoint master = MemberRegistry.getInstance().getMemberConfiguration().getMaster();
                 if (request.getChangeOp() == Master.REMOVE && request.getChangeTarget().contains(master)
                         && !takeMaster()) {
@@ -81,8 +82,14 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(result).build())));
                 break;
             case RedirectReq.TRANSACTION_REQUEST:
+                LOG.info("receive transfer request, apply: {}", request.isApply());
                 Result<Serializable> proposeResult = directProxy.propose(request.getProposal(), request.isApply());
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().proposeResult(proposeResult).build())));
+                LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
+                context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder
+                        .aRedirectResp()
+                        .proposeResult(proposeResult)
+                        .build()
+                )));
                 break;
             default:
                 break;
