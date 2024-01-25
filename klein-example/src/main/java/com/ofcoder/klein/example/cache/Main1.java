@@ -16,15 +16,16 @@
  */
 package com.ofcoder.klein.example.cache;
 
-import java.io.Serializable;
-
+import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.KleinFactory;
+import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.common.util.ThreadExecutor;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.rpc.facade.Endpoint;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinProp;
-import com.ofcoder.klein.common.util.ThreadExecutor;
-import com.ofcoder.klein.rpc.facade.Endpoint;
+import java.io.Serializable;
 
 /**
  * Main: operate cache.
@@ -45,21 +46,21 @@ public class Main1 {
 
         instance1.awaitInit();
 
-//        Thread.sleep(15000L);
+        KleinCache klein = KleinFactory.getInstance().createCache("klein");
 
         String key = "hello";
         String value = "klein";
         long start = System.currentTimeMillis();
-        LOG.info("++++++++++first put: " + instance1.getCache().put("hello1", "klein1") + ", cost: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++first put: " + klein.put("hello1", "klein1") + ", cost: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        LOG.info("++++++++++second put: " + instance1.getCache().put("hello2", "klein2") + ", cost: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++second put: " + klein.put("hello2", "klein2") + ", cost: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        LOG.info("++++++++++third put: " + instance1.getCache().put("hello3", "klein3") + ", cots: " + (System.currentTimeMillis() - start));
+        LOG.info("++++++++++third put: " + klein.put("hello3", "klein3") + ", cots: " + (System.currentTimeMillis() - start));
 
-        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
-        LOG.info("----------get hello4: " + instance1.getCache().get("hello4"));
+        LOG.info("----------get hello3: " + klein.get("hello3"));
+        LOG.info("----------get hello4: " + klein.get("hello4"));
 
         for (int i = 0; i < 50; i++) {
             int finalI = i;
@@ -67,7 +68,7 @@ public class Main1 {
                 LOG.info("---------{}---------, begin", finalI);
                 Serializable hello3 = null;
                 try {
-                    hello3 = instance1.getCache().get("hello3");
+                    hello3 = klein.get("hello3");
                     LOG.info("---------{}---------, end {}", finalI, hello3);
                 } catch (Exception e) {
                     LOG.info("---------{}---------, err {}", finalI, hello3);
@@ -76,13 +77,13 @@ public class Main1 {
         }
         Thread.sleep(5000L);
 
-        LOG.info("----------exist hello3: " + instance1.getCache().exist("hello3"));
-        LOG.info("----------exist hello4: " + instance1.getCache().exist("hello4"));
-        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));
-        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4.1"));
-        instance1.getCache().invalidate("hello3");
+        LOG.info("----------exist hello3: " + klein.exist("hello3"));
+        LOG.info("----------exist hello4: " + klein.exist("hello4"));
+        LOG.info("----------putIfPresent hello4: " + klein.putIfPresent("hello4", "klein4"));
+        LOG.info("----------putIfPresent hello4: " + klein.putIfPresent("hello4", "klein4.1"));
+        klein.invalidate("hello3");
         LOG.info("----------invalidate hello3");
-        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
+        LOG.info("----------get hello3: " + klein.get("hello3"));
 
         System.in.read();
     }

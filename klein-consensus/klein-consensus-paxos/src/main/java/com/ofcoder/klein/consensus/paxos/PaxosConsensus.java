@@ -64,7 +64,11 @@ public class PaxosConsensus implements Consensus {
     private ConsensusProp prop;
     private RpcClient client;
     private Proxy proxy;
-    private Nwr nwr;
+
+    @Override
+    public void loadSM(final String group, final SM sm) {
+        RuntimeAccessor.getLearner().loadSM(group, sm);
+    }
 
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
@@ -72,15 +76,11 @@ public class PaxosConsensus implements Consensus {
         return this.proxy.propose(proposal, apply);
     }
 
-    private void loadSM(final String group, final SM sm) {
-        RuntimeAccessor.getLearner().loadSM(group, sm);
-    }
-
     @Override
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
+        ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
 
         loadNode();
         this.proxy = this.prop.getPaxosProp().isWrite() ? new DirectProxy(this.prop) : new RedirectProxy(this.prop, this.self);
@@ -91,8 +91,10 @@ public class PaxosConsensus implements Consensus {
 
         RuntimeAccessor.create(this.prop, this.self);
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
-        SMRegistry.getSms().forEach(this::loadSM);
+
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
+
+        // todo: 这个东西干啥来着？？？失忆了！
         if (!this.prop.isJoinCluster()) {
             RuntimeAccessor.getMaster().lookMaster();
             preheating();

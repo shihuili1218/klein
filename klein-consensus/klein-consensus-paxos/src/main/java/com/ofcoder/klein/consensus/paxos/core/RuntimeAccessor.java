@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,24 +33,37 @@ public class RuntimeAccessor {
     private static Acceptor acceptor;
     private static Learner learner;
     private static Master master;
+    private static Boolean initialized = false;
 
     public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
         return skipPrepare;
     }
 
     public static Proposer getProposer() {
+        if (!initialized) {
+            throw new ConsensusException("Consensus Engine not started");
+        }
         return proposer;
     }
 
     public static Acceptor getAcceptor() {
+        if (!initialized) {
+            throw new ConsensusException("Consensus Engine not started");
+        }
         return acceptor;
     }
 
     public static Learner getLearner() {
+        if (!initialized) {
+            throw new ConsensusException("Consensus Engine not started");
+        }
         return learner;
     }
 
     public static Master getMaster() {
+        if (!initialized) {
+            throw new ConsensusException("Consensus Engine not started");
+        }
         return master;
     }
 
@@ -64,6 +78,7 @@ public class RuntimeAccessor {
         initLearner(prop, self);
         initAcceptor(prop, self);
         initProposer(prop, self);
+        initialized = true;
     }
 
     private static void initMaster(final ConsensusProp prop, final PaxosNode self) {

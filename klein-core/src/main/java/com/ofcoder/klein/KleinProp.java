@@ -16,15 +16,14 @@
  */
 package com.ofcoder.klein;
 
-import java.io.FileInputStream;
-import java.util.Properties;
-
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.core.cache.CacheProp;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
+
+import java.io.FileInputStream;
+import java.util.Properties;
 
 /**
  * Klein Prop.
@@ -41,7 +40,6 @@ public class KleinProp {
     private ConsensusProp consensusProp = new ConsensusProp();
     private StorageProp storageProp = new StorageProp();
     private RpcProp rpcProp = new RpcProp();
-    private CacheProp cacheProp = new CacheProp();
 
     public String getId() {
         return id;
@@ -113,14 +111,6 @@ public class KleinProp {
 
     public void setRpcProp(final RpcProp rpcProp) {
         this.rpcProp = rpcProp;
-    }
-
-    public CacheProp getCacheProp() {
-        return cacheProp;
-    }
-
-    public void setCacheProp(final CacheProp cacheProp) {
-        this.cacheProp = cacheProp;
     }
 
     /**

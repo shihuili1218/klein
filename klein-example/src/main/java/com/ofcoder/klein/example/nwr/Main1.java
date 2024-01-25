@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.example.nwr;
 
+import com.ofcoder.klein.KleinFactory;
+import com.ofcoder.klein.core.cache.KleinCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,26 +50,29 @@ public class Main1 {
         String key = "hello";
         String value = "klein";
         long start = System.currentTimeMillis();
-        instance1.getCache().put("hello1", "klein1");
+
+        KleinCache klein = KleinFactory.getInstance().createCache("klein");
+
+        klein.put("hello1", "klein1");
         LOG.info("++++++++++first put: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        instance1.getCache().put("hello2", "klein2");
+        klein.put("hello2", "klein2");
         LOG.info("++++++++++second put: " + (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        instance1.getCache().put("hello3", "klein3");
+        klein.put("hello3", "klein3");
         LOG.info("++++++++++third put: " + (System.currentTimeMillis() - start));
 
-        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
-        LOG.info("----------get hello4: " + instance1.getCache().get("hello4"));
-        LOG.info("----------exist hello3: " + instance1.getCache().exist("hello3"));
-        LOG.info("----------exist hello4: " + instance1.getCache().exist("hello4"));
-        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4"));
-        LOG.info("----------putIfPresent hello4: " + instance1.getCache().putIfPresent("hello4", "klein4.1"));
-        instance1.getCache().invalidate("hello3");
+        LOG.info("----------get hello3: " + klein.get("hello3"));
+        LOG.info("----------get hello4: " + klein.get("hello4"));
+        LOG.info("----------exist hello3: " + klein.exist("hello3"));
+        LOG.info("----------exist hello4: " + klein.exist("hello4"));
+        LOG.info("----------putIfPresent hello4: " + klein.putIfPresent("hello4", "klein4"));
+        LOG.info("----------putIfPresent hello4: " + klein.putIfPresent("hello4", "klein4.1"));
+        klein.invalidate("hello3");
         LOG.info("----------invalidate hello3");
-        LOG.info("----------get hello3: " + instance1.getCache().get("hello3"));
+        LOG.info("----------get hello3: " + klein.get("hello3"));
 
         System.in.read();
     }
