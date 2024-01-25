@@ -25,9 +25,11 @@ import java.util.Objects;
  * @author 释慧利
  */
 public class Endpoint implements Serializable {
+    // not in equals(hashCode)
     private String id;
     private String ip;
     private int port;
+    // not in equals(hashCode)
     private boolean outsider;
 
     public Endpoint(final String id, final String ip, final int port, final boolean outsider) {
@@ -118,12 +120,12 @@ public class Endpoint implements Serializable {
             return false;
         }
         Endpoint endpoint = (Endpoint) o;
-        return port == endpoint.port && outsider == endpoint.outsider && Objects.equals(id, endpoint.id) && Objects.equals(ip, endpoint.ip);
+        return port == endpoint.port && Objects.equals(ip, endpoint.ip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, ip, port, outsider);
+        return Objects.hash(ip, port);
     }
 
     @Override

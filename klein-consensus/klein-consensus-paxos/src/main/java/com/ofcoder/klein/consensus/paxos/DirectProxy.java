@@ -48,11 +48,15 @@ public class DirectProxy implements Proxy {
 
         CountDownLatch completed = new CountDownLatch(1);
         Result.Builder<D> builder = Result.Builder.aResult();
-        LOG.debug("Direct Propose, write: {}, master: {}", prop.getPaxosProp().isWrite(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Direct Propose, outsider: {}, write on master: {}, current master: {}", prop.getSelf().isOutsider(), prop.getPaxosProp().isWriteOnMaster(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
+        }
         RuntimeAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
             public void negotiationDone(final boolean result, final boolean changed) {
-                LOG.debug("Direct Propose negotiationDone, result: {}, change: {}", result, changed);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Direct Propose negotiationDone, result: {}, change: {}", result, changed);
+                }
                 if (result) {
                     builder.state(!changed ? Result.State.SUCCESS : Result.State.FAILURE);
                 } else {
@@ -66,7 +70,9 @@ public class DirectProxy implements Proxy {
             @Override
             @SuppressWarnings("unchecked")
             public void applyDone(final Proposal p, final Object r) {
-                LOG.debug("Direct Propose applyDone, p: {}, result: {}", p, r);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Direct Propose applyDone, p: {}, result: {}", p, r);
+                }
                 builder.data((D) r);
                 completed.countDown();
             }
