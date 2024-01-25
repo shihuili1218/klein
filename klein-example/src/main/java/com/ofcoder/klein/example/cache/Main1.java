@@ -36,10 +36,10 @@ public class Main1 {
     private static final Logger LOG = LoggerFactory.getLogger(Main1.class);
 
     public static void main(final String[] args) throws Exception {
-        System.setProperty("klein.members", "1:127.0.0.1:1218;2:127.0.0.1:1219;3:127.0.0.1:1220");
+        System.setProperty("klein.members", "1:127.0.0.1:1218:false;2:127.0.0.1:1219:false;3:127.0.0.1:1220:false");
         KleinProp prop1 = KleinProp.loadIfPresent();
 
-        prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218));
+        prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218, false));
         prop1.getRpcProp().setPort(1218);
 
         Klein instance1 = Klein.startup();

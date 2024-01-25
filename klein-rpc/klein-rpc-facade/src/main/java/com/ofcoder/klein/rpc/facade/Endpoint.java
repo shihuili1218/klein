@@ -28,11 +28,13 @@ public class Endpoint implements Serializable {
     private String id;
     private String ip;
     private int port;
+    private boolean outsider;
 
-    public Endpoint(final String id, final String ip, final int port) {
+    public Endpoint(final String id, final String ip, final int port, final boolean outsider) {
         this.id = id;
         this.ip = ip;
         this.port = port;
+        this.outsider = outsider;
     }
 
     /**
@@ -89,8 +91,26 @@ public class Endpoint implements Serializable {
         this.port = port;
     }
 
+    /**
+     * is outsider.
+     *
+     * @return is outsider
+     */
+    public boolean isOutsider() {
+        return outsider;
+    }
+
+    /**
+     * set outsider.
+     *
+     * @param outsider outsider
+     */
+    public void setOutsider(boolean outsider) {
+        this.outsider = outsider;
+    }
+
     @Override
-    public boolean equals(final Object o) {
+    public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
@@ -98,16 +118,16 @@ public class Endpoint implements Serializable {
             return false;
         }
         Endpoint endpoint = (Endpoint) o;
-        return port == endpoint.port && Objects.equals(id, endpoint.id) && Objects.equals(ip, endpoint.ip);
+        return port == endpoint.port && outsider == endpoint.outsider && Objects.equals(id, endpoint.id) && Objects.equals(ip, endpoint.ip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, ip, port);
+        return Objects.hash(id, ip, port, outsider);
     }
 
     @Override
     public String toString() {
-        return "id: " + id + ", endpoint: " + ip + ":" + port;
+        return id + ":" + ip + ":" + port + ":" + outsider;
     }
 }

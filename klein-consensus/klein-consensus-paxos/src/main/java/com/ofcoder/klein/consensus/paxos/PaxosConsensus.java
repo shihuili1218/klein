@@ -63,7 +63,8 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private ConsensusProp prop;
     private RpcClient client;
-    private Proxy proxy;
+    private Proxy redirect = new RedirectProxy(this.prop, this.self);
+    private Proxy direct = new DirectProxy(this.prop);
 
     @Override
     public void loadSM(final String group, final SM sm) {
@@ -73,7 +74,11 @@ public class PaxosConsensus implements Consensus {
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
         Proposal proposal = new Proposal(group, data);
-        return this.proxy.propose(proposal, apply);
+        if (self.getSelf().isOutsider() || (prop.getPaxosProp().isWriteOnMaster() && !RuntimeAccessor.getMaster().isSelf())) {
+            return redirect.propose(proposal, apply);
+        } else {
+            return direct.propose(proposal, apply);
+        }
     }
 
     @Override
@@ -83,7 +88,6 @@ public class PaxosConsensus implements Consensus {
         ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
 
         loadNode();
-        this.proxy = this.prop.getPaxosProp().isWrite() ? new DirectProxy(this.prop) : new RedirectProxy(this.prop, this.self);
 
         MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
         registerProcessor();
@@ -94,7 +98,6 @@ public class PaxosConsensus implements Consensus {
 
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
 
-        // todo: 这个东西干啥来着？？？失忆了！
         if (!this.prop.isJoinCluster()) {
             RuntimeAccessor.getMaster().lookMaster();
             preheating();
