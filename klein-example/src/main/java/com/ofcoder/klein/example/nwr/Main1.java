@@ -38,7 +38,7 @@ public class Main1 {
         System.setProperty("klein.consensus.nwr", "fastWrite");
         KleinProp prop1 = KleinProp.loadIfPresent();
 
-        prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218));
+        prop1.getConsensusProp().setSelf(new Endpoint("1", "127.0.0.1", 1218, false));
         prop1.getRpcProp().setPort(1218);
 
         Klein instance1 = Klein.startup();

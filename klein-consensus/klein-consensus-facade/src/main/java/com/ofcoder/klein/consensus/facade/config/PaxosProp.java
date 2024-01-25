@@ -57,7 +57,7 @@ public class PaxosProp {
         return writeOnMaster;
     }
 
-    public void setWriteOnMaster(boolean writeOnMaster) {
+    public void setWriteOnMaster(final boolean writeOnMaster) {
         this.writeOnMaster = writeOnMaster;
     }
 

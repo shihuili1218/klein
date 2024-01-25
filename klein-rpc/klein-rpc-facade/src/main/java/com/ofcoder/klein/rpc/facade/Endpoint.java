@@ -107,12 +107,12 @@ public class Endpoint implements Serializable {
      *
      * @param outsider outsider
      */
-    public void setOutsider(boolean outsider) {
+    public void setOutsider(final boolean outsider) {
         this.outsider = outsider;
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) {
             return true;
         }

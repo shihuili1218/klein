@@ -1,5 +1,15 @@
 package com.ofcoder.klein.rpc.grpc;
 
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
@@ -7,17 +17,8 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.rpc.grpc.ext.HelloProcessor;
 import com.ofcoder.klein.spi.ExtensionLoader;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * @author 释慧利
@@ -54,7 +55,7 @@ public class GrpcClientTest {
 
 
         CountDownLatch latch = new CountDownLatch(2);
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218), param, new InvokeCallback() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
@@ -70,7 +71,7 @@ public class GrpcClientTest {
 
         Thread.sleep(500);
 
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218), param, new InvokeCallback() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);

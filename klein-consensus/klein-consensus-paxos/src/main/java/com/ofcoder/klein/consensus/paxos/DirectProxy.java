@@ -49,7 +49,8 @@ public class DirectProxy implements Proxy {
         CountDownLatch completed = new CountDownLatch(1);
         Result.Builder<D> builder = Result.Builder.aResult();
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Direct Propose, outsider: {}, write on master: {}, current master: {}", prop.getSelf().isOutsider(), prop.getPaxosProp().isWriteOnMaster(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
+            LOG.debug("Direct Propose, outsider: {}, write on master: {}, current master: {}", prop.getSelf().isOutsider(),
+                    prop.getPaxosProp().isWriteOnMaster(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
         }
         RuntimeAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
