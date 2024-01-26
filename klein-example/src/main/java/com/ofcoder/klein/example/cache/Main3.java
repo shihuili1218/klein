@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
+import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.core.cache.KleinCache;
 
 /**
  * Main3: cluster member.
@@ -44,6 +46,9 @@ public class Main3 {
 //        prop3.getRpcProp().setPort(1220);
 
         Klein instance3 = Klein.startup();
+        instance3.awaitInit();
+
+        KleinCache klein = KleinFactory.getInstance().createCache("klein");
 
         System.in.read();
     }
