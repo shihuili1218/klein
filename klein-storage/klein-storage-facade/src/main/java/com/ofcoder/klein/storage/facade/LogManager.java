@@ -30,7 +30,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  * @author 释慧利
  */
 @SPI
-public interface LogManager<P extends Serializable> extends Lifecycle<StorageProp> {
+public interface LogManager<P extends Serializable> {
 
     /**
      * get log lock.
@@ -95,6 +95,11 @@ public interface LogManager<P extends Serializable> extends Lifecycle<StoragePro
      * @return last snapshot
      */
     Snap getLastSnap(String group);
+
+    /**
+     * Bean shutdown.
+     */
+    void shutdown();
 
     /**
      * Meta data.

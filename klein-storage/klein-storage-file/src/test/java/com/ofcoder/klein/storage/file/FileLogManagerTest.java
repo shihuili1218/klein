@@ -20,8 +20,7 @@ public class FileLogManagerTest {
 
     @Before
     public void setUp() {
-        join = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin("file");
-        join.init(new StorageProp());
+        join = ExtensionLoader.getExtensionLoader(LogManager.class).register("file", new StorageProp());
     }
 
     @After

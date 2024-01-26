@@ -19,8 +19,11 @@ package com.ofcoder.klein.spi;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -49,7 +52,7 @@ public final class ExtensionLoader<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExtensionLoader.class);
 
-    private static final String SHENYU_DIRECTORY = "META-INF/services/";
+    private static final String DIRECTORY = "META-INF/services/";
 
     private static final Map<Class<?>, ExtensionLoader<?>> LOADERS = new ConcurrentHashMap<>();
 
@@ -155,13 +158,32 @@ public final class ExtensionLoader<T> {
      * @param name join name
      * @return join
      */
-    public T getJoinWithGlobal(final String name) {
+    public T register(final String name, final Object... args) {
         if (!globalName.compareAndSet(null, name)) {
             if (!StringUtils.equals(name, globalName.get())) {
                 throw new SpiException(String.format("get global join, but global join[%s] already exists", globalName));
             }
         }
-        return getJoin(name);
+
+        Holder<Object> objectHolder = cachedInstances.get(name);
+        if (Objects.isNull(objectHolder)) {
+            cachedInstances.putIfAbsent(name, new Holder<>());
+            objectHolder = cachedInstances.get(name);
+        }
+        Object value = objectHolder.getValue();
+        if (Objects.isNull(value)) {
+            synchronized (cachedInstances) {
+                value = objectHolder.getValue();
+                if (Objects.isNull(value)) {
+                    Holder<T> pair = createExtension(name, args);
+                    value = pair.getValue();
+                    int order = pair.getOrder();
+                    objectHolder.setValue(value);
+                    objectHolder.setOrder(order);
+                }
+            }
+        }
+        return (T) value;
     }
 
     /**
@@ -185,21 +207,11 @@ public final class ExtensionLoader<T> {
         }
         Holder<Object> objectHolder = cachedInstances.get(name);
         if (Objects.isNull(objectHolder)) {
-            cachedInstances.putIfAbsent(name, new Holder<>());
-            objectHolder = cachedInstances.get(name);
+            throw new RuntimeException("the join not register, name is " + name);
         }
         Object value = objectHolder.getValue();
         if (Objects.isNull(value)) {
-            synchronized (cachedInstances) {
-                value = objectHolder.getValue();
-                if (Objects.isNull(value)) {
-                    Holder<T> pair = createExtension(name);
-                    value = pair.getValue();
-                    int order = pair.getOrder();
-                    objectHolder.setValue(value);
-                    objectHolder.setOrder(order);
-                }
-            }
+            throw new RuntimeException("the join is registing, name is " + name);
         }
         return (T) value;
     }
@@ -232,7 +244,7 @@ public final class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private Holder<T> createExtension(final String name) {
+    private Holder<T> createExtension(final String name, final Object... args) {
         ClassEntity classEntity = getExtensionClassesEntity().get(name);
         if (Objects.isNull(classEntity)) {
             throw new IllegalArgumentException("name is error");
@@ -241,11 +253,14 @@ public final class ExtensionLoader<T> {
         Object o = joinInstances.get(aClass);
         if (Objects.isNull(o)) {
             try {
-                joinInstances.putIfAbsent(aClass, aClass.newInstance());
+                Class[] paramTypes = Arrays.stream(args).map(Object::getClass).toArray(Class[]::new);
+                Constructor<?> constructor = aClass.getConstructor(paramTypes);
+                joinInstances.putIfAbsent(aClass, constructor.newInstance(args));
                 o = joinInstances.get(aClass);
-            } catch (InstantiationException | IllegalAccessException e) {
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                     NoSuchMethodException e) {
                 throw new IllegalStateException("Extension instance(name: " + name + ", class: "
-                        + aClass + ")  could not be instantiated: " + e.getMessage(), e);
+                        + aClass + ") could not be instantiated: " + e.getMessage(), e);
 
             }
         }
@@ -294,10 +309,10 @@ public final class ExtensionLoader<T> {
     }
 
     /**
-     * Load files under SHENYU_DIRECTORY.
+     * Load files under DIRECTORY.
      */
     private void loadDirectory(final Map<String, ClassEntity> classes) {
-        String fileName = SHENYU_DIRECTORY + clazz.getName();
+        String fileName = DIRECTORY + clazz.getName();
         try {
             Enumeration<URL> urls = Objects.nonNull(this.classLoader) ? classLoader.getResources(fileName)
                     : ClassLoader.getSystemResources(fileName);

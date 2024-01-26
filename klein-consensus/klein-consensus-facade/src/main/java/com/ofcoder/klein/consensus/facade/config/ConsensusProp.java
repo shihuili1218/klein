@@ -40,7 +40,7 @@ public class ConsensusProp {
     /**
      * all member, include self.
      */
-    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218:true"));
+    private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218:false"));
     /**
      * new node joining the cluster.
      * this member is not in the cluster, and will automatically join the cluster at startup.

@@ -61,10 +61,31 @@ import com.ofcoder.klein.storage.facade.LogManager;
 public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
     private PaxosNode self;
-    private ConsensusProp prop;
-    private RpcClient client;
-    private Proxy redirect = new RedirectProxy(this.prop, this.self);
-    private Proxy direct = new DirectProxy(this.prop);
+    private final ConsensusProp prop;
+    private final RpcClient client;
+    private final Proxy redirect;
+    private final Proxy direct;
+
+    public PaxosConsensus(ConsensusProp prop) {
+        this.prop = prop;
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        ExtensionLoader.getExtensionLoader(Nwr.class).register(this.prop.getNwr());
+
+        // reload self information from storage.
+        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
+                .curInstanceId(0)
+                .curProposalNo(0)
+                .lastCheckpoint(0)
+                .self(prop.getSelf())
+                .build());
+        LOG.info("self info: {}", self);
+
+        initEngine();
+
+        this.redirect = new RedirectProxy(this.prop, this.self);
+        this.direct = new DirectProxy(this.prop);
+    }
 
     @Override
     public void loadSM(final String group, final SM sm) {
@@ -81,26 +102,18 @@ public class PaxosConsensus implements Consensus {
         }
     }
 
-    @Override
-    public void init(final ConsensusProp op) {
-        this.prop = op;
-        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        ExtensionLoader.getExtensionLoader(Nwr.class).getJoinWithGlobal(this.prop.getNwr());
-
-        loadNode();
+    private void initEngine() {
 
         MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
         registerProcessor();
-        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(it -> this.client.createConnection(it));
+        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(this.client::createConnection);
 
         RuntimeAccessor.create(this.prop, this.self);
-        SMRegistry.register(MasterSM.GROUP, new MasterSM());
 
         LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
 
         if (!this.prop.isJoinCluster()) {
             RuntimeAccessor.getMaster().lookMaster();
-            preheating();
         } else {
             joinCluster(0);
         }
@@ -131,22 +144,10 @@ public class PaxosConsensus implements Consensus {
         }
     }
 
-    private void preheating() {
+    @Override
+    public void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
-    }
-
-    private void loadNode() {
-        // reload self information from storage.
-
-        LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
-                .curInstanceId(0)
-                .curProposalNo(0)
-                .lastCheckpoint(0)
-                .self(prop.getSelf())
-                .build());
-
-        LOG.info("self info: {}", self);
+        SMRegistry.register(MasterSM.GROUP, new MasterSM());
     }
 
     private void registerProcessor() {

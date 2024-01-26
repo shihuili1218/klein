@@ -31,39 +31,12 @@ import java.util.Properties;
  * @author 释慧利
  */
 public class KleinProp {
-    private String id = SystemPropertyUtil.get("klein.id", "1");
-    private int port = SystemPropertyUtil.getInt("klein.port", 1218);
-    private String ip = SystemPropertyUtil.get("klein.ip", "127.0.0.1");
     private String storage = SystemPropertyUtil.get("klein.storage", "file");
     private String consensus = SystemPropertyUtil.get("klein.consensus", "paxos");
     private String rpc = SystemPropertyUtil.get("klein.rpc", "grpc");
     private ConsensusProp consensusProp = new ConsensusProp();
     private StorageProp storageProp = new StorageProp();
     private RpcProp rpcProp = new RpcProp();
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(final String id) {
-        this.id = id;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(final int port) {
-        this.port = port;
-    }
-
-    public String getIp() {
-        return ip;
-    }
-
-    public void setIp(final String ip) {
-        this.ip = ip;
-    }
 
     public String getStorage() {
         return storage;

@@ -58,8 +58,7 @@ public class JepsenClient {
         LOG.info("node: {}", endpoint);
         KleinProp kleinProp = KleinProp.loadIfPresent();
 
-        client = new GrpcClient();
-        client.init(kleinProp.getRpcProp());
+        client = new GrpcClient(kleinProp.getRpcProp());
         client.createConnection(endpoint);
     }
 

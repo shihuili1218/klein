@@ -21,6 +21,7 @@ package com.ofcoder.klein.common;
  *
  * @author 释慧利
  */
+@Deprecated()
 public interface Lifecycle<O> {
 
     /**

@@ -33,7 +33,7 @@ import com.ofcoder.klein.spi.SPI;
  * @author 释慧利
  */
 @SPI
-public interface RpcClient extends Lifecycle<RpcProp> {
+public interface RpcClient {
     Logger LOG = LoggerFactory.getLogger(RpcClient.class);
 
     /**
@@ -151,4 +151,9 @@ public interface RpcClient extends Lifecycle<RpcProp> {
     default <R> R sendRequestSync(Endpoint target, Serializable request) {
         return sendRequestSync(target, request, requestTimeout());
     }
+
+    /**
+     * Bean shutdown.
+     */
+    void shutdown();
 }

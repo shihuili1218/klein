@@ -47,8 +47,21 @@ import io.grpc.util.MutableHandlerRegistry;
 @Join
 public class GrpcServer implements RpcServer {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcServer.class);
-    private Server server;
+    private final Server server;
     private final MutableHandlerRegistry handlerRegistry = new MutableHandlerRegistry();
+
+    public GrpcServer(final RpcProp op) {
+        server = ServerBuilder.forPort(op.getPort())
+                .fallbackHandlerRegistry(handlerRegistry)
+                .directExecutor()
+                .maxInboundMessageSize(op.getMaxInboundMsgSize())
+                .build();
+        try {
+            server.start();
+        } catch (IOException e) {
+            throw new StartupException(e.getMessage(), e);
+        }
+    }
 
     @Override
     public void registerProcessor(final RpcProcessor processor) {
@@ -85,20 +98,6 @@ public class GrpcServer implements RpcServer {
                 .addMethod(method, handler)
                 .build();
         this.handlerRegistry.addService(ServerInterceptors.intercept(serviceDef, new RemoteAddressInterceptor()));
-    }
-
-    @Override
-    public void init(final RpcProp op) {
-        server = ServerBuilder.forPort(op.getPort())
-                .fallbackHandlerRegistry(handlerRegistry)
-                .directExecutor()
-                .maxInboundMessageSize(op.getMaxInboundMsgSize())
-                .build();
-        try {
-            server.start();
-        } catch (IOException e) {
-            throw new StartupException(e.getMessage(), e);
-        }
     }
 
     @Override

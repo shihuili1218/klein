@@ -25,7 +25,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  */
 public class GrpcClientTest {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClientTest.class);
-    private HelloProcessor processor = new HelloProcessor();
+    private final HelloProcessor processor = new HelloProcessor();
 
     private RpcClient rpcClient;
     private RpcServer rpcServer;
@@ -33,10 +33,8 @@ public class GrpcClientTest {
     @Before
     public void setup() {
         RpcProp prop = new RpcProp();
-        rpcServer = ExtensionLoader.getExtensionLoader(RpcServer.class).getJoin("grpc");
-        rpcClient = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin("grpc");
-        rpcServer.init(prop);
-        rpcClient.init(prop);
+        rpcServer = ExtensionLoader.getExtensionLoader(RpcServer.class).register("grpc",prop);
+        rpcClient = ExtensionLoader.getExtensionLoader(RpcClient.class).register("grpc", prop);
         rpcServer.registerProcessor(processor);
     }
 
