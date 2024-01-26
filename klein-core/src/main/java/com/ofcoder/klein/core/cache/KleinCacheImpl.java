@@ -45,7 +45,8 @@ public class KleinCacheImpl implements KleinCache {
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
         }
-        return result.getData();
+        Boolean data = result.getData();
+        return data != null && data;
     }
 
     @Override
