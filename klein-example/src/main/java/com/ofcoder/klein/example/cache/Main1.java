@@ -65,7 +65,6 @@ public class Main1 {
         for (int i = 0; i < 50; i++) {
             int finalI = i;
             ThreadExecutor.execute(() -> {
-                LOG.info("---------{}---------, begin", finalI);
                 Serializable hello3 = null;
                 try {
                     hello3 = klein.get("hello3");
@@ -75,7 +74,6 @@ public class Main1 {
                 }
             });
         }
-        Thread.sleep(5000L);
 
         LOG.info("----------exist hello3: " + klein.exist("hello3"));
         LOG.info("----------exist hello4: " + klein.exist("hello4"));
