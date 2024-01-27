@@ -63,8 +63,7 @@ public class PaxosConsensus implements Consensus {
     private PaxosNode self;
     private final ConsensusProp prop;
     private final RpcClient client;
-    private final Proxy redirect;
-    private final Proxy direct;
+    private final Proxy proxy;
 
     public PaxosConsensus(ConsensusProp prop) {
         this.prop = prop;
@@ -83,8 +82,11 @@ public class PaxosConsensus implements Consensus {
 
         initEngine();
 
-        this.redirect = new RedirectProxy(this.prop, this.self);
-        this.direct = new DirectProxy(this.prop);
+        if (self.getSelf().isOutsider() || prop.getPaxosProp().isWriteOnMaster()) {
+            this.proxy = new RedirectProxy(this.prop, this.self);
+        } else {
+            this.proxy = new DirectProxy(this.prop);
+        }
     }
 
     @Override
@@ -95,11 +97,7 @@ public class PaxosConsensus implements Consensus {
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
         Proposal proposal = new Proposal(group, data);
-        if (self.getSelf().isOutsider() || (prop.getPaxosProp().isWriteOnMaster() && !RuntimeAccessor.getMaster().isSelf())) {
-            return redirect.propose(proposal, apply);
-        } else {
-            return direct.propose(proposal, apply);
-        }
+        return proxy.propose(proposal, apply);
     }
 
     private void initEngine() {

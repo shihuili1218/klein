@@ -39,10 +39,10 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  */
 public class RedirectProxy implements Proxy {
     private static final Logger LOG = LoggerFactory.getLogger(RedirectProxy.class);
-    private RpcClient client;
-    private PaxosNode self;
-    private ConsensusProp prop;
-    private Proxy directProxy;
+    private final RpcClient client;
+    private final PaxosNode self;
+    private final ConsensusProp prop;
+    private final Proxy directProxy;
 
     public RedirectProxy(final ConsensusProp op, final PaxosNode self) {
         this.self = self;
