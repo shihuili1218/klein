@@ -61,12 +61,12 @@ public class CacheSM extends AbstractSM {
         Message message = (Message) data;
         switch (message.getOp()) {
             case Message.PUT:
-                LOG.info("put {} → {} {}", message.getKey(), message.getData(), message.getExpire());
+                LOG.debug("put {} → {} {}", message.getKey(), message.getData(), message.getExpire());
                 container.put(message.getKey(), message.getData(), message.getExpire());
                 break;
             case Message.GET:
                 Object o = container.get(message.getKey());
-                LOG.info("get {} from {}", o, message.getKey());
+                LOG.debug("get {} from {}", o, message.getKey());
                 return o;
             case Message.INVALIDATE:
                 container.remove(message.getKey());
