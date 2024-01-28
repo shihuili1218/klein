@@ -12,9 +12,9 @@ import junit.framework.TestCase;
 public class MemberConfigurationTest extends TestCase {
 
     public void testInit() {
-        List<Endpoint> nodes = ImmutableList.of(RpcUtil.parseEndpoint("1:127.0.0.1:1218"),
-                RpcUtil.parseEndpoint("2:127.0.0.1:1219"),
-                RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        List<Endpoint> nodes = ImmutableList.of(RpcUtil.parseEndpoint("1:127.0.0.1:1218:false"),
+                RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"),
+                RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
@@ -24,14 +24,14 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testSeenNewConfig() {
         List<Endpoint> nodes = new ArrayList<>();
-        nodes.add(RpcUtil.parseEndpoint("1:127.0.0.1:1218"));
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("1:127.0.0.1:1218:false"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        nodes.add(RpcUtil.parseEndpoint("4:127.0.0.1:1221"));
+        nodes.add(RpcUtil.parseEndpoint("4:127.0.0.1:1221:false"));
         configuration.seenNewConfig(new HashSet<>(nodes));
 
         assertEquals(configuration.effectMembers.size(), nodes.size() - 1);
@@ -41,15 +41,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testGetEndpointById() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         configuration.seenNewConfig(new HashSet<>(nodes));
 
@@ -72,15 +72,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testIsValid() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         configuration.seenNewConfig(new HashSet<>(nodes));
 
@@ -94,15 +94,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testGetMembersWithout() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         configuration.seenNewConfig(new HashSet<>(nodes));
 
@@ -116,15 +116,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testGetLastMembers() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         configuration.seenNewConfig(new HashSet<>(nodes));
 
@@ -133,15 +133,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testGetEffectMembers() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         configuration.seenNewConfig(new HashSet<>(nodes));
 
@@ -150,15 +150,15 @@ public class MemberConfigurationTest extends TestCase {
 
     public void testEffectiveNewConfig() {
         List<Endpoint> nodes = new ArrayList<>();
-        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218");
+        Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
-        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219"));
-        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220"));
+        nodes.add(RpcUtil.parseEndpoint("2:127.0.0.1:1219:false"));
+        nodes.add(RpcUtil.parseEndpoint("3:127.0.0.1:1220:false"));
 
         MemberConfiguration configuration = new MemberConfiguration();
         configuration.init(null, nodes);
 
-        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221");
+        Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
         int version = configuration.seenNewConfig(new HashSet<>(nodes));
         configuration.effectiveNewConfig(version, new HashSet<>(nodes));
