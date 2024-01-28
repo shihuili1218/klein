@@ -7,7 +7,7 @@
     <groupId>com.ofcoder.klein</groupId>
     <artifactId>klein</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.2</version>
+    <version>0.0.3-alpha</version>
     <description>Klein is a Paxos based distributed collection tool library</description>
     <url>https://klein-doc.gitbook.io/</url>
 
@@ -59,8 +59,8 @@
 
         <disruptor.version>3.3.7</disruptor.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
-        <commons-io.version>2.6</commons-io.version>
-        <guava.version>31.1-jre</guava.version>
+        <commons-io.version>2.15.1</commons-io.version>
+        <guava.version>33.0.0-jre</guava.version>
         <commons-collections4.version>4.4</commons-collections4.version>
 
         <slf4j.version>1.7.21</slf4j.version>
@@ -69,15 +69,15 @@
         <netty.version>3.10.6.Final</netty.version>
         <hessian.version>4.0.66</hessian.version>
         <javassist_version>3.20.0-GA</javassist_version>
-        <h2.version>2.1.214</h2.version>
+        <h2.version>2.2.224</h2.version>
         <junit.version>4.13.1</junit.version>
-        <junit.dep.version>4.8.2</junit.dep.version>
+        <junit.dep.version>4.11</junit.dep.version>
         <hamcrest.version>1.3</hamcrest.version>
         <mockito.version>1.9.5</mockito.version>
         <protobuf.version>3.21.7</protobuf.version>
         <io.grpc.version>1.50.0</io.grpc.version>
 
-        <mapdb.version>3.0.9</mapdb.version>
+        <mapdb.version>3.1.0</mapdb.version>
 
         <maven-checkstyle-plugin.version>3.1.0</maven-checkstyle-plugin.version>
     </properties>

@@ -48,7 +48,10 @@ Klein是一个基于Paxos的分布式集合工具库，包括分布式Cache、�
 ### 启动
 ```
 Klein instance = Klein.startup();
-instance.getCache().put("hello", "klein");
+instance.awaitInit();
+
+KleinCache klein = KleinFactory.getInstance().createCache("klein");
+klein.put("hello", "klein");
 ```
 ### 配置
 所有可配置的参数，请查看：`com.ofcoder.klein.KleinProp`

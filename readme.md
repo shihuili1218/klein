@@ -48,7 +48,10 @@ If you are interested in distributed message queue, distributed List, distribute
 ### startup
 ```
 Klein instance = Klein.startup();
-instance.getCache().put("hello", "klein");
+instance.awaitInit();
+
+KleinCache klein = KleinFactory.getInstance().createCache("klein");
+klein.put("hello", "klein");
 ```
 ### set property
 For all configurable parameters, see: `com.ofcoder.klein.KleinProp`
