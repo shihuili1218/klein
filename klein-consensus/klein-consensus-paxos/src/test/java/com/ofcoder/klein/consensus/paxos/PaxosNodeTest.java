@@ -14,7 +14,7 @@ public class PaxosNodeTest extends TestCase {
 
     public void testGenerateNextProposalNo() {
 
-        ExtensionLoader.getExtensionLoader(Nwr.class).getJoin("majority");
+        ExtensionLoader.getExtensionLoader(Nwr.class).register("majority");
         MemberRegistry.getInstance().init(
                 null,
                 Lists.newArrayList(new Endpoint("1", "127.0.0.1", 1218, false), new Endpoint("2", "127.0.0.1", 1219, false), new Endpoint("3", "127.0.0.1", 1220, false))
