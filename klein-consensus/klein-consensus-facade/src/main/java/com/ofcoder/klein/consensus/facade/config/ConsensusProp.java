@@ -42,8 +42,8 @@ public class ConsensusProp {
      */
     private List<Endpoint> members = parseMember(SystemPropertyUtil.get("klein.members", "1:127.0.0.1:1218:false"));
     /**
-     * new node joining the cluster.
-     * this member is not in the cluster, and will automatically join the cluster at startup.
+     * The node is not included in the cluster.
+     * When it starts, it will actively join the cluster, and when it shuts down, it will actively exit the cluster.
      */
     private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
     /**

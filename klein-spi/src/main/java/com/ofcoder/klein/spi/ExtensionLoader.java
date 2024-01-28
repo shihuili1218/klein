@@ -160,11 +160,7 @@ public final class ExtensionLoader<T> {
      * @return join
      */
     public T register(final String name, final Object... args) {
-        if (!globalName.compareAndSet(null, name)) {
-            if (!StringUtils.equals(name, globalName.get())) {
-                throw new SpiException(String.format("get global join, but global join[%s] already exists", globalName));
-            }
-        }
+        globalName.compareAndSet(null, name);
 
         Holder<Object> objectHolder = cachedInstances.get(name);
         if (Objects.isNull(objectHolder)) {

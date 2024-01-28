@@ -16,16 +16,17 @@
  */
 package com.ofcoder.klein.example.cache;
 
+import java.io.Serializable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
 
 /**
  * Main: operate cache.
@@ -48,29 +49,29 @@ public class Main1 {
 
         KleinCache klein = KleinFactory.getInstance().createCache("klein");
 
-        String key = "hello";
-        String value = "klein";
         long start = System.currentTimeMillis();
         LOG.info("++++++++++first put: " + klein.put("hello1", "klein1") + ", cost: " + (System.currentTimeMillis() - start));
-
         start = System.currentTimeMillis();
         LOG.info("++++++++++second put: " + klein.put("hello2", "klein2") + ", cost: " + (System.currentTimeMillis() - start));
-
         start = System.currentTimeMillis();
-        LOG.info("++++++++++third put: " + klein.put("hello3", "klein3") + ", cots: " + (System.currentTimeMillis() - start));
-
-        LOG.info("----------get hello3: " + klein.get("hello3"));
-        LOG.info("----------get hello4: " + klein.get("hello4"));
+        LOG.info("++++++++++third put: " + klein.put("hello3", "klein3") + ", cost: " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+        LOG.info("----------get hello3: " + klein.get("hello3") + ", cost: " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+        LOG.info("----------get hello4: " + klein.get("hello4") + ", cost: " + (System.currentTimeMillis() - start));
 
         for (int i = 0; i < 50; i++) {
             int finalI = i;
             ThreadExecutor.execute(() -> {
                 Serializable hello3 = null;
+                long begin = System.currentTimeMillis();
                 try {
+                    long cost = System.currentTimeMillis() - begin;
                     hello3 = klein.get("hello3");
-                    LOG.info("---------{}---------, end {}", finalI, hello3);
+                    LOG.info("{}, succ: {}, cost: {}", finalI, hello3, cost);
                 } catch (Exception e) {
-                    LOG.info("---------{}---------, err {}", finalI, hello3);
+                    long cost = System.currentTimeMillis() - begin;
+                    LOG.info("{}, err {}, cost: {}", finalI, hello3, cost);
                 }
             });
         }
