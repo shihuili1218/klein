@@ -89,7 +89,7 @@ public abstract class ClearExpiryCacheContainer implements CacheContainer {
     }
 
     private void waitClear(final Long expire, final String cache) {
-        if (expire == Message.TTL_PERPETUITY) {
+        if (expire == CacheMessage.TTL_PERPETUITY) {
             return;
         }
         String bucket = String.valueOf(roundToNextBucket(expire));
@@ -131,7 +131,7 @@ public abstract class ClearExpiryCacheContainer implements CacheContainer {
         if (metaData == null) {
             return false;
         }
-        if (metaData.getExpire() == Message.TTL_PERPETUITY) {
+        if (metaData.getExpire() == CacheMessage.TTL_PERPETUITY) {
             return true;
         }
         if (metaData.getExpire() < TrueTime.currentTimeMillis()) {

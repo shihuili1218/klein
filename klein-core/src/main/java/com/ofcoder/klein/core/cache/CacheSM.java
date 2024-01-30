@@ -54,29 +54,29 @@ public class CacheSM extends AbstractSM {
 
     @Override
     public Object apply(final Object data) {
-        if (!(data instanceof Message)) {
+        if (!(data instanceof CacheMessage)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
             return null;
         }
-        Message message = (Message) data;
+        CacheMessage message = (CacheMessage) data;
         switch (message.getOp()) {
-            case Message.PUT:
+            case CacheMessage.PUT:
                 LOG.debug("put {} → {} {}", message.getKey(), message.getData(), message.getExpire());
                 container.put(message.getKey(), message.getData(), message.getExpire());
                 break;
-            case Message.GET:
+            case CacheMessage.GET:
                 Object o = container.get(message.getKey());
                 LOG.debug("get {} from {}", o, message.getKey());
                 return o;
-            case Message.INVALIDATE:
+            case CacheMessage.INVALIDATE:
                 container.remove(message.getKey());
                 break;
-            case Message.INVALIDATEALL:
+            case CacheMessage.INVALIDATEALL:
                 container.clear();
                 break;
-            case Message.PUTIFPRESENT:
+            case CacheMessage.PUTIFPRESENT:
                 return container.putIfAbsent(message.getKey(), message.getData(), message.getExpire());
-            case Message.EXIST:
+            case CacheMessage.EXIST:
                 return container.containsKey(message.getKey());
             default:
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
