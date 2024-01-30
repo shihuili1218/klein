@@ -50,6 +50,9 @@ instance.awaitInit();
 
 KleinCache klein = KleinFactory.getInstance().createCache("klein");
 klein.put("hello", "klein");
+
+KleinCache lock = KleinFactory.getInstance().createLock("klein");
+cache.acquire(1, TimeUnit.SECONDS);
 ```
 ### set property
 For all configurable parameters, see: `com.ofcoder.klein.KleinProp`

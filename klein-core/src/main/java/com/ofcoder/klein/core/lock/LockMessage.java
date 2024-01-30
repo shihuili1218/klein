@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.core.cache;
+package com.ofcoder.klein.core.lock;
 
 import java.io.Serializable;
 
@@ -23,19 +23,14 @@ import java.io.Serializable;
  *
  * @author far.liu
  */
-public class Message implements Serializable {
+public class LockMessage implements Serializable {
 
-    public static final byte PUT = 0x01;
-    public static final byte PUTIFPRESENT = 0x02;
-    public static final byte GET = 0x03;
-    public static final byte EXIST = 0x04;
-    public static final byte INVALIDATE = 0x05;
-    public static final byte INVALIDATEALL = 0x06;
+    public static final byte LOCK = 0x01;
+    public static final byte UNLOCK = 0x02;
     public static final long TTL_PERPETUITY = -1;
 
     private byte op;
     private String key;
-    private Serializable data;
     private long expire = TTL_PERPETUITY;
 
     public byte getOp() {
@@ -54,29 +49,11 @@ public class Message implements Serializable {
         this.key = key;
     }
 
-    public Serializable getData() {
-        return data;
-    }
-
-    public void setData(final Serializable data) {
-        this.data = data;
-    }
-
     public long getExpire() {
         return expire;
     }
 
     public void setExpire(final long expire) {
         this.expire = expire;
-    }
-
-    @Override
-    public String toString() {
-        return "Message{"
-                + "op=" + op
-                + ", key=" + key
-                + ", data=" + data
-                + ", ttl=" + expire
-                + '}';
     }
 }

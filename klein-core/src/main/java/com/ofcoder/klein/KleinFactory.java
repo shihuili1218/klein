@@ -21,6 +21,9 @@ import com.ofcoder.klein.core.cache.CacheProp;
 import com.ofcoder.klein.core.cache.CacheSM;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.core.cache.KleinCacheImpl;
+import com.ofcoder.klein.core.lock.KleinLock;
+import com.ofcoder.klein.core.lock.KleinLockImpl;
+import com.ofcoder.klein.core.lock.LockSM;
 
 public final class KleinFactory {
 
@@ -43,6 +46,20 @@ public final class KleinFactory {
         SMRegistry.register(group, new CacheSM(CacheProp.loadIfPresent()));
 
         return new KleinCacheImpl(group);
+    }
+
+    /**
+     * Return a new lock instance.
+     *
+     * @param key lock name
+     * @return lock instance
+     */
+    public KleinLock createLock(final String key) {
+
+        String group = LockSM.GROUP + "_" + key;
+        SMRegistry.register(group, new LockSM());
+
+        return new KleinLockImpl(group);
     }
 
     private static class Holder {

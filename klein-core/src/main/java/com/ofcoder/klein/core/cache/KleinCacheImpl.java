@@ -38,9 +38,9 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public boolean exist(final String key) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setKey(key);
-        message.setOp(Message.EXIST);
+        message.setOp(CacheMessage.EXIST);
         Result<Boolean> result = consensus.read(message);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
@@ -51,30 +51,30 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public <D extends Serializable> boolean put(final String key, final D data) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setData(data);
         message.setKey(key);
-        message.setOp(Message.PUT);
+        message.setOp(CacheMessage.PUT);
         Result result = consensus.propose(message);
         return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
     public <D extends Serializable> boolean put(final String key, final D data, final boolean apply) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setData(data);
         message.setKey(key);
-        message.setOp(Message.PUT);
+        message.setOp(CacheMessage.PUT);
         Result result = consensus.propose(message, apply);
         return Result.State.SUCCESS.equals(result.getState());
     }
 
     @Override
     public <D extends Serializable> boolean put(final String key, final D data, final Long ttl, final TimeUnit unit) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setData(data);
         message.setKey(key);
-        message.setOp(Message.PUT);
+        message.setOp(CacheMessage.PUT);
 
         message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
         Result result = consensus.propose(message);
@@ -83,10 +83,10 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public <D extends Serializable> D putIfPresent(final String key, final D data) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setData(data);
         message.setKey(key);
-        message.setOp(Message.PUTIFPRESENT);
+        message.setOp(CacheMessage.PUTIFPRESENT);
         Result<D> result = consensus.propose(message, true);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm. key: " + key);
@@ -96,10 +96,10 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public <D extends Serializable> D putIfPresent(final String key, final D data, final Long ttl, final TimeUnit unit) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setData(data);
         message.setKey(key);
-        message.setOp(Message.PUTIFPRESENT);
+        message.setOp(CacheMessage.PUTIFPRESENT);
         message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
 
         Result<D> result = consensus.propose(message, true);
@@ -111,9 +111,9 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public <D extends Serializable> D get(final String key) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setKey(key);
-        message.setOp(Message.GET);
+        message.setOp(CacheMessage.GET);
         Result<D> result = consensus.read(message);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException(String.format("The consensus negotiation result is %s. In this case, the operation"
@@ -124,16 +124,16 @@ public class KleinCacheImpl implements KleinCache {
 
     @Override
     public void invalidate(final String key) {
-        Message message = new Message();
+        CacheMessage message = new CacheMessage();
         message.setKey(key);
-        message.setOp(Message.INVALIDATE);
+        message.setOp(CacheMessage.INVALIDATE);
         Result result = consensus.propose(message);
     }
 
     @Override
     public void invalidateAll() {
-        Message message = new Message();
-        message.setOp(Message.INVALIDATEALL);
+        CacheMessage message = new CacheMessage();
+        message.setOp(CacheMessage.INVALIDATEALL);
         Result result = consensus.propose(message);
     }
 

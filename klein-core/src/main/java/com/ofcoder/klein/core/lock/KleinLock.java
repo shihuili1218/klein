@@ -16,10 +16,31 @@
  */
 package com.ofcoder.klein.core.lock;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * lock.
  *
  * @author 释慧利
  */
 public interface KleinLock {
+    /**
+     * Acquires the lock if it is free.
+     *
+     * @param ttl  ttl
+     * @param unit the time unit of the {@code ttl} argument
+     * @return {@code true} if the lock was acquired else the {@code false}
+     */
+    boolean acquire(long ttl, TimeUnit unit);
+
+    /**
+     * Acquires the lock if it is free.
+     * @return {@code true} if the lock was acquired else the {@code false}
+     */
+    boolean acquire();
+
+    /**
+     * Releases the lock.
+     */
+    void release();
 }
