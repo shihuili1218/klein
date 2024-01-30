@@ -48,6 +48,17 @@ public class KleinLockImpl implements KleinLock {
     }
 
     @Override
+    public boolean acquire() {
+        LockMessage message = new LockMessage();
+        message.setKey(key);
+        message.setOp(LockMessage.LOCK);
+        message.setExpire(LockMessage.TTL_PERPETUITY);
+
+        Result result = consensus.propose(message, true);
+        return Result.State.SUCCESS.equals(result.getState()) && (Boolean) result.getData();
+    }
+
+    @Override
     public void release() {
         LockMessage message = new LockMessage();
         message.setKey(key);

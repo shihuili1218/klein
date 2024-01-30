@@ -34,6 +34,12 @@ public interface KleinLock {
     boolean acquire(long ttl, TimeUnit unit);
 
     /**
+     * Acquires the lock if it is free.
+     * @return {@code true} if the lock was acquired else the {@code false}
+     */
+    boolean acquire();
+
+    /**
      * Releases the lock.
      */
     void release();
