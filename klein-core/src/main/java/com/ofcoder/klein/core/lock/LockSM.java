@@ -28,11 +28,11 @@ import com.ofcoder.klein.core.cache.CacheSM;
  */
 public class LockSM extends AbstractSM {
     public static final String GROUP = "lock";
-    private static final byte UNLOCK = 0x00;
-    private static final byte LOCKED = 0x01;
+    private static final byte UNLOCK_STATE = 0x00;
+    private static final byte LOCKED_STATE = 0x01;
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private Byte lock = UNLOCK;
+    private Byte lock_state = UNLOCK_STATE;
     private long expire = 0;
 
     @Override
@@ -44,15 +44,15 @@ public class LockSM extends AbstractSM {
         LockMessage message = (LockMessage) data;
         switch (message.getOp()) {
             case LockMessage.LOCK:
-                if (lock == UNLOCK || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
-                    lock = LOCKED;
+                if (lock_state == UNLOCK_STATE || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
+                    lock_state = LOCKED_STATE;
                     expire = message.getExpire();
                     return true;
                 } else {
                     return false;
                 }
             case LockMessage.UNLOCK:
-                lock = UNLOCK;
+                lock_state = UNLOCK_STATE;
                 expire = 0;
                 break;
             default:
@@ -63,7 +63,7 @@ public class LockSM extends AbstractSM {
 
     @Override
     protected Object makeImage() {
-        return lock;
+        return lock_state;
     }
 
     @Override
@@ -71,6 +71,6 @@ public class LockSM extends AbstractSM {
         if (!(snap instanceof Byte)) {
             return;
         }
-        lock = (Byte) snap;
+        lock_state = (Byte) snap;
     }
 }
