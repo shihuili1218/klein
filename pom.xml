@@ -7,7 +7,7 @@
     <groupId>com.ofcoder.klein</groupId>
     <artifactId>klein</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.3-alpha</version>
+    <version>0.0.4</version>
     <description>Klein is a Paxos based distributed collection tool library</description>
     <url>https://klein-doc.gitbook.io/</url>
 
