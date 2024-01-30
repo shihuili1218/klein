@@ -53,7 +53,7 @@ public class LockMessage implements Serializable {
         return expire;
     }
 
-    public void setExpire(long expire) {
+    public void setExpire(final long expire) {
         this.expire = expire;
     }
 }

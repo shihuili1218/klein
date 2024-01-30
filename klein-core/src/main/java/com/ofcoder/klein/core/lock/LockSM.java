@@ -27,7 +27,7 @@ import com.ofcoder.klein.core.cache.CacheSM;
  * Lock State Machine.
  */
 public class LockSM extends AbstractSM {
-    public static final String GROUP = "cache";
+    public static final String GROUP = "lock";
     private static final byte UNLOCK = 0x00;
     private static final byte LOCKED = 0x01;
 

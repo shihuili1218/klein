@@ -36,5 +36,5 @@ public interface KleinLock {
     /**
      * Releases the lock.
      */
-    void unlock();
+    void release();
 }

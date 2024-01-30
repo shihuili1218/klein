@@ -48,7 +48,7 @@ public class KleinLockImpl implements KleinLock {
     }
 
     @Override
-    public void unlock() {
+    public void release() {
         LockMessage message = new LockMessage();
         message.setKey(key);
         message.setOp(LockMessage.UNLOCK);
