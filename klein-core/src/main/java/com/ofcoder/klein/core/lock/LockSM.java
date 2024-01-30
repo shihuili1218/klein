@@ -32,7 +32,7 @@ public class LockSM extends AbstractSM {
     private static final byte LOCKED_STATE = 0x01;
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private Byte lock_state = UNLOCK_STATE;
+    private Byte lockState = UNLOCK_STATE;
     private long expire = 0;
 
     @Override
@@ -44,15 +44,15 @@ public class LockSM extends AbstractSM {
         LockMessage message = (LockMessage) data;
         switch (message.getOp()) {
             case LockMessage.LOCK:
-                if (lock_state == UNLOCK_STATE || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
-                    lock_state = LOCKED_STATE;
+                if (lockState == UNLOCK_STATE || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
+                    lockState = LOCKED_STATE;
                     expire = message.getExpire();
                     return true;
                 } else {
                     return false;
                 }
             case LockMessage.UNLOCK:
-                lock_state = UNLOCK_STATE;
+                lockState = UNLOCK_STATE;
                 expire = 0;
                 break;
             default:
@@ -63,7 +63,7 @@ public class LockSM extends AbstractSM {
 
     @Override
     protected Object makeImage() {
-        return lock_state;
+        return lockState;
     }
 
     @Override
@@ -71,6 +71,6 @@ public class LockSM extends AbstractSM {
         if (!(snap instanceof Byte)) {
             return;
         }
-        lock_state = (Byte) snap;
+        lockState = (Byte) snap;
     }
 }
