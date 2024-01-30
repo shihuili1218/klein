@@ -29,8 +29,6 @@ Klein is a distributed collection tool library based on Paxos, including distrib
 
 You can understand that Klein is a distributed tool that depends on your project through Maven. We hope it will replace your existing Redis, messaging middleware, registry, configuration center, etc.
 
-Of course, the project is huge, and we currently implement distributed caching.
-
 If you are interested in distributed message queue, distributed List, distributed Map, distributed Lock, we can share the existing design, you can participate in the coding work. 😆 😆 😆
 
 **Look forward to your star⭐**
