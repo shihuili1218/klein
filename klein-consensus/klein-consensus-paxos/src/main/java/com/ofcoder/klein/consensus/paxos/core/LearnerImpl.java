@@ -22,15 +22,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -43,11 +40,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Holder;
-import com.ofcoder.klein.common.util.KleinThreadFactory;
-import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
+import com.ofcoder.klein.consensus.facade.sm.SMApplier;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -77,14 +73,12 @@ public class LearnerImpl implements Learner {
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
-    private final ConcurrentMap<String, SM> sms = new ConcurrentHashMap<>();
-    private final BlockingQueue<Task> applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.priority));
-    private final ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("apply-instance", true));
+    private final ConcurrentMap<String, SMApplier<Proposal>> sms = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
-    private final TaskCallback fakeCallback = new TaskCallback() {
+    private final SMApplier.TaskCallback<Proposal> fakeCallback = new SMApplier.TaskCallback<Proposal>() {
     };
 
     public LearnerImpl(final PaxosNode self) {
@@ -97,127 +91,54 @@ public class LearnerImpl implements Learner {
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-
-        applyExecutor.execute(() -> {
-            while (true) {
-                try {
-                    Task take = applyQueue.take();
-                    switch (take.taskType) {
-                        case APPLY:
-                            _apply(take);
-                            break;
-                        case REPLAY:
-                            _replay(take);
-                            break;
-                        case SNAP_LOAD:
-                            _loadSnap(take);
-                            break;
-                        case SNAP_TAKE:
-                            _generateSnap(take);
-                            break;
-                        default:
-                            break;
-                    }
-                } catch (InterruptedException e) {
-                    LOG.warn("handle queue task, occur exception, {}", e.getMessage());
-                }
-            }
-        });
     }
 
     @Override
     public void shutdown() {
         generateSnap();
-        sms.values().forEach(SM::close);
-    }
-
-    private void _generateSnap(final Task task) {
-        Map<String, Snap> snaps = new HashMap<>();
-        CountDownLatch latch = new CountDownLatch(sms.size());
-        sms.forEach((group, sm) -> ThreadExecutor.execute(() -> {
-            try {
-                Snap lastSnap = logManager.getLastSnap(group);
-                if (lastSnap != null && lastSnap.getCheckpoint() >= sm.lastAppliedId()) {
-                    snaps.put(group, lastSnap);
-                    return;
-                }
-
-                Snap snapshot = sm.snapshot();
-                LOG.info("save snapshot, group: {}, cp: {}", group, snapshot.getCheckpoint());
-                self.updateLastCheckpoint(snapshot.getCheckpoint());
-                logManager.saveSnap(group, snapshot);
-                snaps.put(group, snapshot);
-            } finally {
-                latch.countDown();
-            }
-        }));
-
-        try {
-            if (!latch.await(2L, TimeUnit.SECONDS)) {
-                LOG.warn("generate snapshot, after waiting for 2 seconds, still didn't get all result. finish: {}", snaps.keySet());
-            }
-        } catch (InterruptedException e) {
-            LOG.warn("generate snapshot, {}, {}", snaps.keySet(), e.getMessage());
-        }
-        task.callback.onTakeSnap(snaps);
+        sms.values().forEach(SMApplier::close);
     }
 
     @Override
     public Map<String, Snap> generateSnap() {
-        CompletableFuture<Map<String, Snap>> future = new CompletableFuture<>();
-        Task e = new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP_TAKE, new TaskCallback() {
-            @Override
-            public void onTakeSnap(final Map<String, Snap> snaps) {
-                future.complete(snaps);
+        ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
+        // fixme: latch的数量根据sms来定，但是这中间sms可能会rm，那么latch就结束不了了
+        CountDownLatch latch = new CountDownLatch(sms.size());
+        sms.forEach((group, sm) -> {
+            Snap lastSnap = logManager.getLastSnap(group);
+
+            if (lastSnap != null && lastSnap.getCheckpoint() >= sm.getLastAppliedId()) {
+                result.put(group, lastSnap);
+                latch.countDown();
+            } else {
+                SMApplier.Task<Proposal> e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback<Proposal>() {
+                    @Override
+                    public void onTakeSnap(final Snap snap) {
+                        result.put(group, snap);
+                        logManager.saveSnap(group, snap);
+
+                        latch.countDown();
+                    }
+                });
+
+                sm.offer(e);
+                // ignore offer result.
             }
         });
-        boolean offer = applyQueue.offer(e);
-        // ignore offer result.
+
+        Optional<Snap> max = result.values().stream().max(Comparator.comparingLong(Snap::getCheckpoint));
+        max.ifPresent(snap -> self.updateLastCheckpoint(snap.getCheckpoint()));
+
         try {
-            return future.get(1L, TimeUnit.SECONDS);
-        } catch (Exception ex) {
-            LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
-            return null;
-        }
-    }
-
-    private void _loadSnap(final Task task) {
-        CountDownLatch latch = new CountDownLatch(task.loadSnaps.size());
-
-        task.loadSnaps.forEach((group, snap) -> ThreadExecutor.execute(() -> {
-            try {
-                Snap localSnap = logManager.getLastSnap(group);
-                if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
-                    return;
-                }
-
-                LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
-
-                SM sm = sms.get(group);
-                if (sm == null) {
-                    LOG.warn("load snap failure, group: {}, The state machine is not found."
-                            + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
-                    return;
-                }
-
-                sm.loadSnap(snap);
-                self.updateLastCheckpoint(snap.getCheckpoint());
-                self.updateCurInstanceId(snap.getCheckpoint());
-                updateAppliedId(snap.getCheckpoint());
-
-                replayLog(group, snap.getCheckpoint());
-
-                LOG.info("load snap success, group: {}, checkpoint: {}", group, snap.getCheckpoint());
-            } finally {
-                latch.countDown();
+            if (latch.await(1L, TimeUnit.SECONDS)) {
+                return result;
+            } else {
+                LOG.error("generate snapshot timeout. succ: {}, all: {}", result.keySet(), sms.keySet());
+                return result;
             }
-        }));
-
-        try {
-            boolean await = latch.await(2L, TimeUnit.SECONDS);
-            // do nothing for await.result.
-        } catch (InterruptedException e) {
-            LOG.warn("load snap, {}", e.getMessage());
+        } catch (InterruptedException ex) {
+            LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
+            return result;
         }
     }
 
@@ -227,19 +148,42 @@ public class LearnerImpl implements Learner {
             return;
         }
 
-        Task e = new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP_LOAD, fakeCallback);
-        e.loadSnaps = snaps;
-        boolean offer = applyQueue.offer(e);
-        // ignore offer result.
-    }
+        snaps.forEach((group, snap) -> {
+            Snap localSnap = logManager.getLastSnap(group);
+            if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
+                LOG.warn("load snap skip, group: {}, local.checkpoint: {}, snap.checkpoint: {}", group, localSnap.getCheckpoint(), snap.getCheckpoint());
+                return;
+            }
+            LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
 
-    private void _replay(final Task task) {
-        Map<Proposal, Object> result = this.doApply(task.priority, task.replayProposals);
-        task.callback.onApply(result);
+            if (sms.containsKey(group)) {
+                // todo：是不是要清理队列里的数据？
+                SMApplier.Task<Proposal> e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback<Proposal>() {
+                    @Override
+                    public void onLoadSnap(long checkpoint) {
+                        LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
+                        self.updateLastCheckpoint(checkpoint);
+                        self.updateCurInstanceId(checkpoint);
+                    }
+                });
+                boolean offer = sms.get(group).offer(e);
+                // ignore offer result.
+            } else {
+                LOG.warn("load snap failure, group: {}, The state machine is not found."
+                        + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+
+            }
+        });
     }
 
     @Override
     public void replayLog(final String group, final long start) {
+        if (!sms.containsKey(group)) {
+            LOG.error("{} replay log, but the sm is not exists.", group);
+            return;
+        }
+        SMApplier<Proposal> applier = sms.get(group);
+
         long curInstanceId = self.getCurInstanceId();
         for (long i = start; i <= curInstanceId; i++) {
             Instance<Proposal> instance = logManager.getInstance(i);
@@ -251,9 +195,9 @@ public class LearnerImpl implements Learner {
                 continue;
             }
 
-            Task e = new Task(i, TaskEnum.REPLAY, fakeCallback);
-            e.replayProposals = replayData;
-            boolean offer = applyQueue.offer(e);
+            SMApplier.Task<Proposal> e = SMApplier.Task.createReplayTask(i, replayData, fakeCallback);
+
+            boolean offer = applier.offer(e);
             // ignore offer result.
         }
     }
@@ -273,7 +217,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void loadSM(final String group, final SM sm) {
-        if (sms.putIfAbsent(group, sm) != null) {
+        if (sms.putIfAbsent(group, new SMApplier<>(group, sm)) != null) {
             LOG.error("the group[{}] has been loaded with sm.", group);
             return;
         }
@@ -282,73 +226,6 @@ public class LearnerImpl implements Learner {
             return;
         }
         loadSnap(ImmutableMap.of(group, lastSnap));
-    }
-
-    private void _apply(final Task task) {
-        final long lastCheckpoint = self.getLastCheckpoint();
-        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
-        final long exceptConfirmId = lastApplyId + 1;
-        final long instanceId = task.priority;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
-
-        if (instanceId <= lastApplyId) {
-            // the instance has been applied.
-            return;
-        }
-        if (instanceId > exceptConfirmId) {
-            // boost.
-            for (long i = exceptConfirmId; i < instanceId; i++) {
-                Instance<Proposal> exceptInstance = logManager.getInstance(i);
-                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    applyQueue.offer(new Task(i, TaskEnum.APPLY, fakeCallback));
-                } else {
-                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
-                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
-                    learnHard(i, defaultValue);
-                }
-            }
-
-            applyQueue.offer(task);
-            return;
-        }
-        // else: instanceId == exceptConfirmId, do apply.
-
-        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
-
-        Map<Proposal, Object> applyResult = this.doApply(localInstance.getInstanceId(), localInstance.getGrantedValue());
-        updateAppliedId(instanceId);
-
-        task.callback.onApply(applyResult);
-    }
-
-    private Map<Proposal, Object> doApply(final long instance, final List<Proposal> datas) {
-        Map<Proposal, Object> result = new HashMap<>();
-
-        if (instance <= self.getLastCheckpoint()) {
-            //do nothing
-            return result;
-        }
-        LOG.debug("doing apply instance[{}]", instance);
-
-        for (Proposal data : datas) {
-            if (data.getData() instanceof Proposal.Noop) {
-                result.put(data, null);
-                continue;
-            }
-            if (sms.containsKey(data.getGroup())) {
-                SM sm = sms.get(data.getGroup());
-                try {
-                    result.put(data, sm.apply(instance, data.getData()));
-                } catch (Exception e) {
-                    LOG.error(String.format("apply instance[%s].[%s] to sm, %s", instance, data, e.getMessage()), e);
-                    result.put(data, null);
-                }
-            } else {
-                LOG.error("the group[{}] is not loaded with sm, and the instance[{}] is not applied", data.getGroup(), instance);
-                result.put(data, null);
-            }
-        }
-        return result;
     }
 
     private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
@@ -450,10 +327,8 @@ public class LearnerImpl implements Learner {
                         logManager.getLock().writeLock().unlock();
                     }
                     // apply statemachine
-                    if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, fakeCallback))) {
-                        LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
-                        // do nothing, other threads will boost the instance
-                    }
+                    doApply(req.getInstanceId(), fakeCallback);
+
                     List<LearnCallback> remove = learningCallbacks.remove(instanceId);
                     if (remove != null) {
                         remove.forEach(r -> r.learned(true));
@@ -551,9 +426,8 @@ public class LearnerImpl implements Learner {
 
         // for self
         if (handleConfirmRequest(req)) {
-
             // apply statemachine
-            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, new TaskCallback() {
+            doApply(instanceId, new SMApplier.TaskCallback<Proposal>() {
                 @Override
                 public void onApply(final Map<Proposal, Object> result) {
                     if (LOG.isDebugEnabled()) {
@@ -561,10 +435,7 @@ public class LearnerImpl implements Learner {
                     }
                     dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
                 }
-            }))) {
-                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
-                // do nothing, other threads will boost the instance
-            }
+            });
         } else {
             dons.forEach(it -> it.getDone().applyDone(null, null));
         }
@@ -637,11 +508,57 @@ public class LearnerImpl implements Learner {
     public void handleConfirmRequest(final ConfirmReq req, final boolean isSelf) {
         if (handleConfirmRequest(req)) {
             // apply statemachine
-            if (!applyQueue.offer(new Task(req.getInstanceId(), TaskEnum.APPLY, fakeCallback))) {
-                LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size = {}.", req.getInstanceId(), applyQueue.size());
-                // do nothing, other threads will boost the instance
-            }
+            doApply(req.getInstanceId(), fakeCallback);
         }
+    }
+
+    private void doApply(long instanceId, SMApplier.TaskCallback<Proposal> callback) {
+        final long lastCheckpoint = self.getLastCheckpoint();
+        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
+        final long expectConfirmId = lastApplyId + 1;
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
+
+        if (instanceId <= lastApplyId) {
+            // the instance has been applied.
+            return;
+        }
+
+        if (instanceId > expectConfirmId) {
+            // boost.
+            for (long i = expectConfirmId; i < instanceId; i++) {
+                Instance<Proposal> exceptInstance = logManager.getInstance(i);
+
+                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
+                    // todo: 这是啥意思？
+//                    applyQueue.offer(new SMApplier.Task(i, SMApplier.TaskEnum.APPLY, fakeCallback));
+                } else {
+                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
+                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
+                    learnHard(i, defaultValue);
+                }
+            }
+            // todo：如果不offer，当前instanceId应该什么时候执行？
+//            applyQueue.offer(task);
+            return;
+        }
+        // else: instanceId == exceptConfirmId, do apply.
+
+        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
+        Map<String, List<Proposal>> groupProposals = localInstance.getGrantedValue().stream()
+                .filter(it -> it != Proposal.NOOP)
+                .collect(Collectors.groupingBy(Proposal::getGroup));
+        groupProposals.forEach((group, proposals) -> {
+            if (sms.containsKey(group)) {
+                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, callback);
+
+                if (!sms.get(group).offer(task)) {
+                    LOG.error("failed to push the instance[{}] to the applyQueue.", instanceId);
+                    // do nothing, other threads will boost the instance
+                }
+            } else {
+                LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
+            }
+        });
     }
 
     @Override
@@ -705,34 +622,4 @@ public class LearnerImpl implements Learner {
         return res;
     }
 
-    private enum TaskEnum {
-        APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE;
-    }
-
-    private static class Task {
-        private static final long HIGH_PRIORITY = -1;
-        private long priority;
-        private TaskEnum taskType;
-        private TaskCallback callback;
-        private List<Proposal> replayProposals;
-        private Map<String, Snap> loadSnaps;
-
-        Task(final long priority, final TaskEnum taskType, final TaskCallback callback) {
-            this.priority = priority;
-            this.taskType = taskType;
-            this.callback = callback;
-        }
-    }
-
-    private interface TaskCallback {
-        default void onApply(final Map<Proposal, Object> result) {
-        }
-
-        default void onTakeSnap(final Map<String, Snap> snaps) {
-
-        }
-
-        default void onLoadSnap() {
-        }
-    }
 }
