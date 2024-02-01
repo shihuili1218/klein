@@ -80,6 +80,7 @@ public class LearnerImpl implements Learner {
     private final Object appliedIdLock = new Object();
     private final SMApplier.TaskCallback<Proposal> fakeCallback = new SMApplier.TaskCallback<Proposal>() {
     };
+    private final ConcurrentMap<Long, SMApplier.TaskCallback<Proposal>> applyCallback = new ConcurrentHashMap<>();
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -157,7 +158,6 @@ public class LearnerImpl implements Learner {
             LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
 
             if (sms.containsKey(group)) {
-                // todo：是不是要清理队列里的数据？
                 SMApplier.Task<Proposal> e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback<Proposal>() {
                     @Override
                     public void onLoadSnap(long checkpoint) {
@@ -207,6 +207,7 @@ public class LearnerImpl implements Learner {
         return lastAppliedId;
     }
 
+    // todo
     private void updateAppliedId(final long instanceId) {
         if (lastAppliedId < instanceId) {
             synchronized (appliedIdLock) {
@@ -226,45 +227,6 @@ public class LearnerImpl implements Learner {
             return;
         }
         loadSnap(ImmutableMap.of(group, lastSnap));
-    }
-
-    private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
-        boolean lr = false;
-
-        if (memberConfig.allowBoost()) {
-            LOG.info("try boost instance: {}", instanceId);
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RuntimeAccessor.getProposer().tryBoost(
-                    new Holder<Long>() {
-                        @Override
-                        protected Long create() {
-                            return instanceId;
-                        }
-
-                    }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
-                            .collect(Collectors.toList())
-            );
-            try {
-                lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
-                // do nothing, lr = false
-            }
-        } else {
-            final Endpoint master = memberConfig.getMaster();
-            if (master != null) {
-                lr = learnSync(instanceId, master);
-            } else {
-                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
-                // learn hard
-//                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-//                    lr = learnSync(instanceId, it);
-//                    if (lr) {
-//                        break;
-//                    }
-//                }
-            }
-        }
-        return lr;
     }
 
     @Override
@@ -512,55 +474,6 @@ public class LearnerImpl implements Learner {
         }
     }
 
-    private void doApply(long instanceId, SMApplier.TaskCallback<Proposal> callback) {
-        final long lastCheckpoint = self.getLastCheckpoint();
-        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
-        final long expectConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
-
-        if (instanceId <= lastApplyId) {
-            // the instance has been applied.
-            return;
-        }
-
-        if (instanceId > expectConfirmId) {
-            // boost.
-            for (long i = expectConfirmId; i < instanceId; i++) {
-                Instance<Proposal> exceptInstance = logManager.getInstance(i);
-
-                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    // todo: 这是啥意思？
-//                    applyQueue.offer(new SMApplier.Task(i, SMApplier.TaskEnum.APPLY, fakeCallback));
-                } else {
-                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
-                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
-                    learnHard(i, defaultValue);
-                }
-            }
-            // todo：如果不offer，当前instanceId应该什么时候执行？
-//            applyQueue.offer(task);
-            return;
-        }
-        // else: instanceId == exceptConfirmId, do apply.
-
-        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
-        Map<String, List<Proposal>> groupProposals = localInstance.getGrantedValue().stream()
-                .filter(it -> it != Proposal.NOOP)
-                .collect(Collectors.groupingBy(Proposal::getGroup));
-        groupProposals.forEach((group, proposals) -> {
-            if (sms.containsKey(group)) {
-                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, callback);
-
-                if (!sms.get(group).offer(task)) {
-                    LOG.error("failed to push the instance[{}] to the applyQueue.", instanceId);
-                    // do nothing, other threads will boost the instance
-                }
-            } else {
-                LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
-            }
-        });
-    }
-
     @Override
     public LearnRes handleLearnRequest(final LearnReq request) {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
@@ -620,6 +533,96 @@ public class LearnerImpl implements Learner {
             }
         }
         return res;
+    }
+
+    private void doApply(long instanceId, SMApplier.TaskCallback<Proposal> callback) {
+        applyCallback.putIfAbsent(instanceId, callback);
+
+        final long lastCheckpoint = self.getLastCheckpoint();
+        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
+        final long expectConfirmId = lastApplyId + 1;
+        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
+
+        if (instanceId <= lastApplyId) {
+            // the instance has been applied.
+            return;
+        }
+
+        if (instanceId > expectConfirmId) {
+            // boost.
+            for (long i = expectConfirmId; i < instanceId; i++) {
+                Instance<Proposal> exceptInstance = logManager.getInstance(i);
+
+                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
+                    // todo: 这是啥意思？
+//                    applyQueue.offer(new SMApplier.Task(i, SMApplier.TaskEnum.APPLY, fakeCallback));
+                } else {
+                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
+                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
+                    learnHard(i, defaultValue);
+                }
+            }
+            // todo：如果不offer，当前instanceId应该什么时候执行？
+//            applyQueue.offer(task);
+            return;
+        }
+        // else: instanceId == exceptConfirmId, do apply.
+
+        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
+        Map<String, List<Proposal>> groupProposals = localInstance.getGrantedValue().stream()
+                .filter(it -> it != Proposal.NOOP)
+                .collect(Collectors.groupingBy(Proposal::getGroup));
+        groupProposals.forEach((group, proposals) -> {
+            if (sms.containsKey(group)) {
+                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, callback);
+
+                if (!sms.get(group).offer(task)) {
+                    LOG.error("failed to push the instance[{}] to the applyQueue.", instanceId);
+                    // do nothing, other threads will boost the instance
+                }
+            } else {
+                LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
+            }
+        });
+    }
+
+    private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
+        boolean lr = false;
+
+        if (memberConfig.allowBoost()) {
+            LOG.info("try boost instance: {}", instanceId);
+            CompletableFuture<Boolean> future = new CompletableFuture<>();
+            RuntimeAccessor.getProposer().tryBoost(
+                    new Holder<Long>() {
+                        @Override
+                        protected Long create() {
+                            return instanceId;
+                        }
+
+                    }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
+                            .collect(Collectors.toList())
+            );
+            try {
+                lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                // do nothing, lr = false
+            }
+        } else {
+            final Endpoint master = memberConfig.getMaster();
+            if (master != null) {
+                lr = learnSync(instanceId, master);
+            } else {
+                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
+                // learn hard
+//                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
+//                    lr = learnSync(instanceId, it);
+//                    if (lr) {
+//                        break;
+//                    }
+//                }
+            }
+        }
+        return lr;
     }
 
 }

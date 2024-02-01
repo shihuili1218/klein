@@ -43,6 +43,7 @@ public class SMApplier<P extends Serializable> {
     private final BlockingQueue<Task<P>> applyQueue;
     private long lastAppliedId = 0;
     private long lastCheckpoint = 0;
+    private boolean shutdown = false;
 
     public SMApplier(final String group, final SM sm) {
         this.group = group;
@@ -51,7 +52,7 @@ public class SMApplier<P extends Serializable> {
         ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create(this.group + "-apply", true));
 
         applyExecutor.execute(() -> {
-            while (true) {
+            while (!shutdown) {
                 try {
                     Task<P> take = applyQueue.take();
                     switch (take.taskType) {
@@ -76,7 +77,6 @@ public class SMApplier<P extends Serializable> {
     }
 
     private void _takeSnap(final Task<P> task) {
-
         Snap snapshot = sm.snapshot();
         LOG.info("take snapshot success, group: {}, cp: {}", group, snapshot.getCheckpoint());
         this.lastCheckpoint = snapshot.getCheckpoint();
@@ -84,14 +84,15 @@ public class SMApplier<P extends Serializable> {
     }
 
     private void _loadSnap(final Task<P> task) {
-        long checkpoint = lastCheckpoint;
         if (task.loadSnap.getCheckpoint() > lastCheckpoint) {
             sm.loadSnap(task.loadSnap);
+
+            this.applyQueue.removeIf(it -> it.priority != Task.HIGH_PRIORITY && it.priority < task.loadSnap.getCheckpoint());
             this.lastAppliedId = Math.max(lastAppliedId, task.loadSnap.getCheckpoint());
-            checkpoint = task.loadSnap.getCheckpoint();
+            this.lastCheckpoint = task.loadSnap.getCheckpoint();
         }
 
-        task.callback.onLoadSnap(checkpoint);
+        task.callback.onLoadSnap(lastCheckpoint);
     }
 
     private void _apply(final Task<P> task) {
@@ -124,15 +125,21 @@ public class SMApplier<P extends Serializable> {
      * close sm.
      */
     public void close() {
+        shutdown = true;
         sm.close();
     }
 
+    /**
+     * Get Last Applied Instance Id.
+     *
+     * @return Instance Id
+     */
     public long getLastAppliedId() {
         return lastAppliedId;
     }
 
-    public static enum TaskEnum {
-        APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE;
+    public enum TaskEnum {
+        APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE
     }
 
     public static class Task<P extends Serializable> {
@@ -147,7 +154,7 @@ public class SMApplier<P extends Serializable> {
         }
 
         /**
-         * create Task of TakeSnap.
+         * create Task for TaskEnum.SNAP_TAKE.
          *
          * @param callback call back
          * @param <P>      Consensus Proposal
@@ -187,29 +194,8 @@ public class SMApplier<P extends Serializable> {
             task.callback = callback;
             return task;
         }
-
-        public long getPriority() {
-            return priority;
-        }
-
-        public TaskEnum getTaskType() {
-            return taskType;
-        }
-
-        public TaskCallback<P> getCallback() {
-            return callback;
-        }
-
-        public List<P> getProposals() {
-            return proposals;
-        }
-
-        public Snap getLoadSnap() {
-            return loadSnap;
-        }
-
-
     }
+
 
     public interface TaskCallback<P> {
         default void onApply(final Map<P, Object> result) {
