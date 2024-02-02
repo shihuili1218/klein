@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -502,7 +503,8 @@ public class ProposerImpl implements Proposer {
                 if (!context.isDataChange()) {
                     dons = context.getDataWithCallback();
                 } else {
-                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
+                    // accelerate convergence
+                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(new HashMap<>()));
                 }
                 RuntimeAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
             });

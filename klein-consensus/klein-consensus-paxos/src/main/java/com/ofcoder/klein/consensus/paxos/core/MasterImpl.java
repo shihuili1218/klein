@@ -255,7 +255,7 @@ public class MasterImpl implements Master {
                         }
 
                         @Override
-                        public void applyDone(final Proposal p, final Object r) {
+                        public void applyDone(final Map<Proposal, Object> r) {
                             latch.complete(true);
                         }
                     })

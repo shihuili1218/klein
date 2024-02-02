@@ -41,8 +41,6 @@ public class SMApplier<P extends Serializable> {
     private final String group;
     private final SM sm;
     private final BlockingQueue<Task<P>> applyQueue;
-    private long lastAppliedId = 0;
-    private long lastCheckpoint = 0;
     private boolean shutdown = false;
 
     public SMApplier(final String group, final SM sm) {
@@ -79,17 +77,15 @@ public class SMApplier<P extends Serializable> {
     private void _takeSnap(final Task<P> task) {
         Snap snapshot = sm.snapshot();
         LOG.info("take snapshot success, group: {}, cp: {}", group, snapshot.getCheckpoint());
-        this.lastCheckpoint = snapshot.getCheckpoint();
         task.callback.onTakeSnap(snapshot);
     }
 
     private void _loadSnap(final Task<P> task) {
-        if (task.loadSnap.getCheckpoint() > lastCheckpoint) {
+        long lastCheckpoint = sm.lastCheckpoint();
+        if (task.loadSnap.getCheckpoint() > sm.lastCheckpoint()) {
             sm.loadSnap(task.loadSnap);
-
+            lastCheckpoint = task.loadSnap.getCheckpoint();
             this.applyQueue.removeIf(it -> it.priority != Task.HIGH_PRIORITY && it.priority < task.loadSnap.getCheckpoint());
-            this.lastAppliedId = Math.max(lastAppliedId, task.loadSnap.getCheckpoint());
-            this.lastCheckpoint = task.loadSnap.getCheckpoint();
         }
 
         task.callback.onLoadSnap(lastCheckpoint);
@@ -97,7 +93,7 @@ public class SMApplier<P extends Serializable> {
 
     private void _apply(final Task<P> task) {
 
-        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
+        final long lastApplyId = sm.lastAppliedId();
         final long instanceId = task.priority;
 
         Map<P, Object> applyResult = new HashMap<>();
@@ -107,7 +103,6 @@ public class SMApplier<P extends Serializable> {
         }
 
         // the instance has been applied.
-        this.lastAppliedId = instanceId;
         task.callback.onApply(applyResult);
     }
 
@@ -138,7 +133,7 @@ public class SMApplier<P extends Serializable> {
      * @return Instance Id
      */
     public long getLastAppliedId() {
-        return lastAppliedId;
+        return sm.lastAppliedId();
     }
 
     public enum TaskEnum {

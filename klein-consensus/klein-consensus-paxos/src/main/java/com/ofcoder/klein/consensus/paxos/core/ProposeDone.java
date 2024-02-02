@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.Map;
+
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
@@ -35,12 +37,13 @@ public interface ProposeDone {
 
     /**
      * call the method when apply done.
-     * the method is executed only when the expect proposal is reached a consensus
+     * NOTICE: The proposal that reaches consensus may not be the expected proposal
      *
-     * @param input  enter the value of the state machine
-     * @param output state machine output
+     * @param result proposal to reach consensus and corresponding state transition result,
+     *               the key is enter the value of the state machine
+     *               the value is state machine output
      */
-    default void applyDone(Proposal input, Object output) {
+    default void applyDone(Map<Proposal, Object> result) {
         // for subclass
     }
 

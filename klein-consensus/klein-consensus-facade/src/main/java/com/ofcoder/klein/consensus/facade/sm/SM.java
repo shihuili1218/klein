@@ -33,6 +33,13 @@ public interface SM {
     long lastAppliedId();
 
     /**
+     * last checkpoint.
+     *
+     * @return checkpoint
+     */
+    long lastCheckpoint();
+
+    /**
      * apply instance.
      *
      * @param instanceId instance id

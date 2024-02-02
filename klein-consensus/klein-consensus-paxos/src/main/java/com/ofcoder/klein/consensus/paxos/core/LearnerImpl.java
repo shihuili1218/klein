@@ -164,6 +164,8 @@ public class LearnerImpl implements Learner {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
                         self.updateLastCheckpoint(checkpoint);
                         self.updateCurInstanceId(checkpoint);
+
+                        applyCallback.keySet().removeIf(it -> it <= checkpoint);
                     }
                 });
                 sms.get(group).offer(e);
@@ -287,7 +289,7 @@ public class LearnerImpl implements Learner {
                         logManager.getLock().writeLock().unlock();
                     }
                     // apply statemachine
-                    doApply(req.getInstanceId());
+                    apply(req.getInstanceId());
 
                     List<LearnCallback> remove = learningCallbacks.remove(instanceId);
                     if (remove != null) {
@@ -393,13 +395,13 @@ public class LearnerImpl implements Learner {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug("instance[{}] applied, result: {}", instanceId, result);
                     }
-                    dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
+                    dons.forEach(it -> it.getDone().applyDone(result));
                 }
             });
 
-            doApply(instanceId);
+            apply(instanceId);
         } else {
-            dons.forEach(it -> it.getDone().applyDone(null, null));
+            dons.forEach(it -> it.getDone().applyDone(new HashMap<>()));
         }
 
         // for other members
@@ -470,7 +472,7 @@ public class LearnerImpl implements Learner {
     public void handleConfirmRequest(final ConfirmReq req, final boolean isSelf) {
         if (handleConfirmRequest(req)) {
             // apply statemachine
-            doApply(req.getInstanceId());
+            apply(req.getInstanceId());
         }
     }
 
@@ -535,7 +537,7 @@ public class LearnerImpl implements Learner {
         return res;
     }
 
-    private void doApply(final long instanceId) {
+    private void apply(final long instanceId) {
 
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
@@ -551,7 +553,9 @@ public class LearnerImpl implements Learner {
             // boost.
             for (long i = expectConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
-                if (exceptInstance == null || exceptInstance.getState() != Instance.State.CONFIRMED) {
+                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
+                    _apply(i);
+                } else {
                     List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
                             ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
                     learnHard(i, defaultValue);
@@ -561,6 +565,10 @@ public class LearnerImpl implements Learner {
         }
         // else: instanceId == exceptConfirmId, do apply.
 
+        _apply(instanceId);
+    }
+
+    private void _apply(final long instanceId) {
         Instance<Proposal> localInstance = logManager.getInstance(instanceId);
         Map<String, List<Proposal>> groupProposals = localInstance.getGrantedValue().stream()
                 .filter(it -> it != Proposal.NOOP)
@@ -571,7 +579,7 @@ public class LearnerImpl implements Learner {
                     @Override
                     public void onApply(Map<Proposal, Object> result) {
                         SMApplier.TaskCallback<Proposal> remove = applyCallback.remove(instanceId);
-                        if (remove != null){
+                        if (remove != null) {
                             remove.onApply(result);
                         }
                     }

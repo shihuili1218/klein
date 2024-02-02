@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -70,11 +71,11 @@ public class DirectProxy implements Proxy {
 
             @Override
             @SuppressWarnings("unchecked")
-            public void applyDone(final Proposal p, final Object r) {
+            public void applyDone(final Map<Proposal, Object> result) {
                 if (LOG.isDebugEnabled()) {
-                    LOG.debug("Direct Propose applyDone, p: {}, result: {}", p, r);
+                    LOG.debug("Direct Propose applyDone, result: {}", result);
                 }
-                builder.data((D) r);
+                builder.data((D) result.get(proposal));
                 completed.countDown();
             }
         });

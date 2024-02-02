@@ -26,10 +26,16 @@ import com.ofcoder.klein.storage.facade.Snap;
  */
 public abstract class AbstractSM implements SM {
     private static Long lastAppliedId = 0L;
+    private static Long lastCheckpoint = 0L;
 
     @Override
     public long lastAppliedId() {
         return lastAppliedId;
+    }
+
+    @Override
+    public long lastCheckpoint() {
+        return lastCheckpoint;
     }
 
     @Override
@@ -49,7 +55,9 @@ public abstract class AbstractSM implements SM {
     @Override
     public Snap snapshot() {
         try {
-            return new Snap(lastAppliedId, makeImage());
+            Snap snap = new Snap(lastAppliedId, makeImage());
+            lastCheckpoint = snap.getCheckpoint();
+            return snap;
         } catch (Exception e) {
             throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
         }
