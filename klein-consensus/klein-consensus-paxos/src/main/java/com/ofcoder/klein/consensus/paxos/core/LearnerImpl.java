@@ -287,7 +287,7 @@ public class LearnerImpl implements Learner {
                         logManager.getLock().writeLock().unlock();
                     }
                     // apply statemachine
-                    doApply(req.getInstanceId(), fakeCallback);
+                    doApply(req.getInstanceId());
 
                     List<LearnCallback> remove = learningCallbacks.remove(instanceId);
                     if (remove != null) {
@@ -387,7 +387,7 @@ public class LearnerImpl implements Learner {
         // for self
         if (handleConfirmRequest(req)) {
             // apply statemachine
-            doApply(instanceId, new SMApplier.TaskCallback<Proposal>() {
+            applyCallback.putIfAbsent(instanceId, new SMApplier.TaskCallback<Proposal>() {
                 @Override
                 public void onApply(final Map<Proposal, Object> result) {
                     if (LOG.isDebugEnabled()) {
@@ -396,6 +396,8 @@ public class LearnerImpl implements Learner {
                     dons.forEach(it -> it.getDone().applyDone(it.getProposal(), result.get(it.getProposal())));
                 }
             });
+
+            doApply(instanceId);
         } else {
             dons.forEach(it -> it.getDone().applyDone(null, null));
         }
@@ -468,7 +470,7 @@ public class LearnerImpl implements Learner {
     public void handleConfirmRequest(final ConfirmReq req, final boolean isSelf) {
         if (handleConfirmRequest(req)) {
             // apply statemachine
-            doApply(req.getInstanceId(), fakeCallback);
+            doApply(req.getInstanceId());
         }
     }
 
@@ -533,8 +535,7 @@ public class LearnerImpl implements Learner {
         return res;
     }
 
-    private void doApply(final long instanceId, final SMApplier.TaskCallback<Proposal> callback) {
-        applyCallback.putIfAbsent(instanceId, callback);
+    private void doApply(final long instanceId) {
 
         final long lastCheckpoint = self.getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
@@ -550,18 +551,12 @@ public class LearnerImpl implements Learner {
             // boost.
             for (long i = expectConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
-
-                if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    // todo: 这是啥意思？
-//                    applyQueue.offer(new SMApplier.Task(i, SMApplier.TaskEnum.APPLY, fakeCallback));
-                } else {
+                if (exceptInstance == null || exceptInstance.getState() != Instance.State.CONFIRMED) {
                     List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
                             ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
                     learnHard(i, defaultValue);
                 }
             }
-            // todo：如果不offer，当前instanceId应该什么时候执行？
-//            applyQueue.offer(task);
             return;
         }
         // else: instanceId == exceptConfirmId, do apply.
@@ -572,7 +567,15 @@ public class LearnerImpl implements Learner {
                 .collect(Collectors.groupingBy(Proposal::getGroup));
         groupProposals.forEach((group, proposals) -> {
             if (sms.containsKey(group)) {
-                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, callback);
+                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback<Proposal>() {
+                    @Override
+                    public void onApply(Map<Proposal, Object> result) {
+                        SMApplier.TaskCallback<Proposal> remove = applyCallback.remove(instanceId);
+                        if (remove != null){
+                            remove.onApply(result);
+                        }
+                    }
+                });
 
                 sms.get(group).offer(task);
             } else {
