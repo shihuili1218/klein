@@ -75,12 +75,12 @@ public class LearnerImpl implements Learner {
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SMApplier<Proposal>> sms = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, SMApplier.TaskCallback<Proposal>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
     private final SMApplier.TaskCallback<Proposal> fakeCallback = new SMApplier.TaskCallback<Proposal>() {
     };
-    private final ConcurrentMap<Long, SMApplier.TaskCallback<Proposal>> applyCallback = new ConcurrentHashMap<>();
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -175,6 +175,9 @@ public class LearnerImpl implements Learner {
 
             }
         });
+
+        snaps.values().stream().max(Comparator.comparingLong(Snap::getCheckpoint))
+                .ifPresent(snap -> updateAppliedId(snap.getCheckpoint()));
     }
 
     @Override
@@ -207,7 +210,6 @@ public class LearnerImpl implements Learner {
         return lastAppliedId;
     }
 
-    // todo
     private void updateAppliedId(final long instanceId) {
         if (lastAppliedId < instanceId) {
             synchronized (appliedIdLock) {
@@ -267,12 +269,6 @@ public class LearnerImpl implements Learner {
                             remove.forEach(r -> r.learned(true));
                         }
                     });
-                    if (!learned.contains(instanceId)) {
-                        List<LearnCallback> remove = learningCallbacks.remove(instanceId);
-                        if (remove != null) {
-                            remove.forEach(r -> r.learned(false));
-                        }
-                    }
                 } else if (result.isResult() == Sync.SINGLE) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
@@ -582,6 +578,7 @@ public class LearnerImpl implements Learner {
                         if (remove != null) {
                             remove.onApply(result);
                         }
+                        updateAppliedId(instanceId);
                     }
                 });
 
