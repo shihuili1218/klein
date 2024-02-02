@@ -160,7 +160,7 @@ public class LearnerImpl implements Learner {
             if (sms.containsKey(group)) {
                 SMApplier.Task<Proposal> e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback<Proposal>() {
                     @Override
-                    public void onLoadSnap(long checkpoint) {
+                    public void onLoadSnap(final long checkpoint) {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
                         self.updateLastCheckpoint(checkpoint);
                         self.updateCurInstanceId(checkpoint);
@@ -533,7 +533,7 @@ public class LearnerImpl implements Learner {
         return res;
     }
 
-    private void doApply(long instanceId, SMApplier.TaskCallback<Proposal> callback) {
+    private void doApply(final long instanceId, final SMApplier.TaskCallback<Proposal> callback) {
         applyCallback.putIfAbsent(instanceId, callback);
 
         final long lastCheckpoint = self.getLastCheckpoint();

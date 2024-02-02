@@ -145,7 +145,7 @@ public class SMApplier<P extends Serializable> {
         APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE
     }
 
-    public static class Task<P extends Serializable> {
+    public static final class Task<P extends Serializable> {
         public static final long HIGH_PRIORITY = -1;
         private long priority;
         private TaskEnum taskType;
@@ -157,7 +157,7 @@ public class SMApplier<P extends Serializable> {
         }
 
         /**
-         * create Task for TaskEnum.SNAP_TAKE.
+         * create task for TaskEnum.SNAP_TAKE.
          *
          * @param callback call back
          * @param <P>      Consensus Proposal
@@ -171,6 +171,14 @@ public class SMApplier<P extends Serializable> {
             return task;
         }
 
+        /**
+         * create task for TaskEnum.SNAP_LOAD.
+         *
+         * @param loadSnap snapshot
+         * @param callback load snap callback
+         * @param <P>      Consensus Proposal
+         * @return Task Object
+         */
         public static <P extends Serializable> Task<P> createLoadSnapTask(final Snap loadSnap, final TaskCallback<P> callback) {
             Task<P> task = new Task<>();
             task.priority = HIGH_PRIORITY;
@@ -180,6 +188,15 @@ public class SMApplier<P extends Serializable> {
             return task;
         }
 
+        /**
+         * create task for TaskEnum.APPLY.
+         *
+         * @param instanceId apply instance id
+         * @param proposals  apply proposal
+         * @param callback   apply callbacl
+         * @param <P>        consensus proposal
+         * @return task object
+         */
         public static <P extends Serializable> Task<P> createApplyTask(final long instanceId, final List<P> proposals, final TaskCallback<P> callback) {
             Task<P> task = new Task<>();
             task.priority = instanceId;
@@ -189,6 +206,15 @@ public class SMApplier<P extends Serializable> {
             return task;
         }
 
+        /**
+         * create task for TaskEnum.REPLAY.
+         *
+         * @param instanceId apply instance id
+         * @param proposals  apply proposal
+         * @param callback   apply callbacl
+         * @param <P>        consensus proposal
+         * @return task object
+         */
         public static <P extends Serializable> Task<P> createReplayTask(final long instanceId, final List<P> proposals, final TaskCallback<P> callback) {
             Task<P> task = new Task<>();
             task.priority = instanceId;
@@ -199,16 +225,30 @@ public class SMApplier<P extends Serializable> {
         }
     }
 
-
     public interface TaskCallback<P> {
+        /**
+         * call after apply.
+         *
+         * @param result apply result
+         */
         default void onApply(final Map<P, Object> result) {
 
         }
 
+        /**
+         * call after take snapshot.
+         *
+         * @param snap snapshot
+         */
         default void onTakeSnap(final Snap snap) {
 
         }
 
+        /**
+         * call after load snapshot.
+         *
+         * @param checkpoint snapshot's checkpoint
+         */
         default void onLoadSnap(final long checkpoint) {
 
         }
