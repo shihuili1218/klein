@@ -115,10 +115,13 @@ public class SMApplier<P extends Serializable> {
      * offer task.
      *
      * @param t task
-     * @return success or failure
      */
-    public boolean offer(final Task<P> t) {
-        return applyQueue.offer(t);
+    public void offer(final Task<P> t) {
+        boolean offer = applyQueue.offer(t);
+        if (!offer) {
+            LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size: {}.", t.priority, applyQueue.size());
+        }
+        // do nothing, other threads will boost the instance
     }
 
     /**

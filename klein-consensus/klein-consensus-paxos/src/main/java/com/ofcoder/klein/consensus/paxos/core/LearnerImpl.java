@@ -166,8 +166,7 @@ public class LearnerImpl implements Learner {
                         self.updateCurInstanceId(checkpoint);
                     }
                 });
-                boolean offer = sms.get(group).offer(e);
-                // ignore offer result.
+                sms.get(group).offer(e);
             } else {
                 LOG.warn("load snap failure, group: {}, The state machine is not found."
                         + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
@@ -197,8 +196,7 @@ public class LearnerImpl implements Learner {
 
             SMApplier.Task<Proposal> e = SMApplier.Task.createReplayTask(i, replayData, fakeCallback);
 
-            boolean offer = applier.offer(e);
-            // ignore offer result.
+            applier.offer(e);
         }
     }
 
@@ -576,10 +574,7 @@ public class LearnerImpl implements Learner {
             if (sms.containsKey(group)) {
                 SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, callback);
 
-                if (!sms.get(group).offer(task)) {
-                    LOG.error("failed to push the instance[{}] to the applyQueue.", instanceId);
-                    // do nothing, other threads will boost the instance
-                }
+                sms.get(group).offer(task);
             } else {
                 LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
             }
