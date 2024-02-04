@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -25,22 +24,22 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.util.KleinThreadFactory;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
  * SM Applier.
  */
-public class SMApplier<P extends Serializable> {
+public class SMApplier {
     private static final Logger LOG = LoggerFactory.getLogger(SMApplier.class);
     private final String group;
     private final SM sm;
-    private final BlockingQueue<Task<P>> applyQueue;
+    private final BlockingQueue<Task> applyQueue;
     private boolean shutdown = false;
 
     public SMApplier(final String group, final SM sm) {
@@ -52,7 +51,7 @@ public class SMApplier<P extends Serializable> {
         applyExecutor.execute(() -> {
             while (!shutdown) {
                 try {
-                    Task<P> take = applyQueue.take();
+                    Task take = applyQueue.take();
                     switch (take.taskType) {
                         case APPLY:
                         case REPLAY:
@@ -74,13 +73,13 @@ public class SMApplier<P extends Serializable> {
         });
     }
 
-    private void _takeSnap(final Task<P> task) {
+    private void _takeSnap(final Task task) {
         Snap snapshot = sm.snapshot();
         LOG.info("take snapshot success, group: {}, cp: {}", group, snapshot.getCheckpoint());
         task.callback.onTakeSnap(snapshot);
     }
 
-    private void _loadSnap(final Task<P> task) {
+    private void _loadSnap(final Task task) {
         long lastCheckpoint = sm.lastCheckpoint();
         if (task.loadSnap.getCheckpoint() > sm.lastCheckpoint()) {
             sm.loadSnap(task.loadSnap);
@@ -91,15 +90,17 @@ public class SMApplier<P extends Serializable> {
         task.callback.onLoadSnap(lastCheckpoint);
     }
 
-    private void _apply(final Task<P> task) {
+    private void _apply(final Task task) {
 
         final long lastApplyId = sm.lastAppliedId();
         final long instanceId = task.priority;
 
-        Map<P, Object> applyResult = new HashMap<>();
+        Map<Command, Object> applyResult = new HashMap<>();
         if (instanceId > lastApplyId) {
             LOG.debug("doing apply instance[{}]", instanceId);
-            applyResult = task.proposals.stream().collect(Collectors.toMap(p -> p, p -> sm.apply(instanceId, p)));
+            task.proposals.forEach(it -> {
+                applyResult.put(it, sm.apply(instanceId, it.getData()));
+            });
         }
 
         // the instance has been applied.
@@ -111,7 +112,7 @@ public class SMApplier<P extends Serializable> {
      *
      * @param t task
      */
-    public void offer(final Task<P> t) {
+    public void offer(final Task t) {
         boolean offer = applyQueue.offer(t);
         if (!offer) {
             LOG.error("failed to push the instance[{}] to the applyQueue, applyQueue.size: {}.", t.priority, applyQueue.size());
@@ -140,12 +141,14 @@ public class SMApplier<P extends Serializable> {
         APPLY, REPLAY, SNAP_LOAD, SNAP_TAKE
     }
 
-    public static final class Task<P extends Serializable> {
+    public static final class Task {
         public static final long HIGH_PRIORITY = -1;
+        private static final SMApplier.TaskCallback fakeCallback = new SMApplier.TaskCallback() {
+        };
         private long priority;
         private TaskEnum taskType;
-        private TaskCallback<P> callback;
-        private List<P> proposals;
+        private TaskCallback callback;
+        private List<? extends Command> proposals;
         private Snap loadSnap;
 
         private Task() {
@@ -155,11 +158,10 @@ public class SMApplier<P extends Serializable> {
          * create task for TaskEnum.SNAP_TAKE.
          *
          * @param callback call back
-         * @param <P>      Consensus Proposal
          * @return Task Object
          */
-        public static <P extends Serializable> Task<P> createTakeSnapTask(final TaskCallback<P> callback) {
-            Task<P> task = new Task<>();
+        public static Task createTakeSnapTask(final TaskCallback callback) {
+            Task task = new Task();
             task.priority = HIGH_PRIORITY;
             task.taskType = TaskEnum.SNAP_TAKE;
             task.callback = callback;
@@ -171,11 +173,10 @@ public class SMApplier<P extends Serializable> {
          *
          * @param loadSnap snapshot
          * @param callback load snap callback
-         * @param <P>      Consensus Proposal
          * @return Task Object
          */
-        public static <P extends Serializable> Task<P> createLoadSnapTask(final Snap loadSnap, final TaskCallback<P> callback) {
-            Task<P> task = new Task<>();
+        public static Task createLoadSnapTask(final Snap loadSnap, final TaskCallback callback) {
+            Task task = new Task();
             task.priority = HIGH_PRIORITY;
             task.taskType = TaskEnum.SNAP_LOAD;
             task.loadSnap = loadSnap;
@@ -189,11 +190,10 @@ public class SMApplier<P extends Serializable> {
          * @param instanceId apply instance id
          * @param proposals  apply proposal
          * @param callback   apply callbacl
-         * @param <P>        consensus proposal
          * @return task object
          */
-        public static <P extends Serializable> Task<P> createApplyTask(final long instanceId, final List<P> proposals, final TaskCallback<P> callback) {
-            Task<P> task = new Task<>();
+        public static Task createApplyTask(final long instanceId, final List<? extends Command> proposals, final TaskCallback callback) {
+            Task task = new Task();
             task.priority = instanceId;
             task.taskType = TaskEnum.APPLY;
             task.proposals = proposals;
@@ -206,27 +206,25 @@ public class SMApplier<P extends Serializable> {
          *
          * @param instanceId apply instance id
          * @param proposals  apply proposal
-         * @param callback   apply callbacl
-         * @param <P>        consensus proposal
          * @return task object
          */
-        public static <P extends Serializable> Task<P> createReplayTask(final long instanceId, final List<P> proposals, final TaskCallback<P> callback) {
-            Task<P> task = new Task<>();
+        public static Task createReplayTask(final long instanceId, final List<? extends Command> proposals) {
+            Task task = new Task();
             task.priority = instanceId;
             task.taskType = TaskEnum.REPLAY;
             task.proposals = proposals;
-            task.callback = callback;
+            task.callback = Task.fakeCallback;
             return task;
         }
     }
 
-    public interface TaskCallback<P> {
+    public interface TaskCallback {
         /**
          * call after apply.
          *
          * @param result apply result
          */
-        default void onApply(final Map<P, Object> result) {
+        default void onApply(final Map<Command, Object> result) {
 
         }
 

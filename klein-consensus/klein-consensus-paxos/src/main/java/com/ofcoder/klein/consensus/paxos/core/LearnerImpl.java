@@ -41,6 +41,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMApplier;
@@ -73,14 +74,12 @@ public class LearnerImpl implements Learner {
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
-    private final ConcurrentMap<String, SMApplier<Proposal>> sms = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, SMApplier> sms = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<LearnCallback>> learningCallbacks = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long, SMApplier.TaskCallback<Proposal>> applyCallback = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
-    private final SMApplier.TaskCallback<Proposal> fakeCallback = new SMApplier.TaskCallback<Proposal>() {
-    };
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -112,7 +111,7 @@ public class LearnerImpl implements Learner {
                 result.put(group, lastSnap);
                 latch.countDown();
             } else {
-                SMApplier.Task<Proposal> e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback<Proposal>() {
+                SMApplier.Task e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback() {
                     @Override
                     public void onTakeSnap(final Snap snap) {
                         result.put(group, snap);
@@ -158,7 +157,7 @@ public class LearnerImpl implements Learner {
             LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
 
             if (sms.containsKey(group)) {
-                SMApplier.Task<Proposal> e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback<Proposal>() {
+                SMApplier.Task e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback() {
                     @Override
                     public void onLoadSnap(final long checkpoint) {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
@@ -166,6 +165,7 @@ public class LearnerImpl implements Learner {
                         self.updateCurInstanceId(checkpoint);
 
                         applyCallback.keySet().removeIf(it -> it <= checkpoint);
+                        replayLog(group, checkpoint);
                     }
                 });
                 sms.get(group).offer(e);
@@ -186,7 +186,7 @@ public class LearnerImpl implements Learner {
             LOG.error("{} replay log, but the sm is not exists.", group);
             return;
         }
-        SMApplier<Proposal> applier = sms.get(group);
+        SMApplier applier = sms.get(group);
 
         long curInstanceId = self.getCurInstanceId();
         for (long i = start; i <= curInstanceId; i++) {
@@ -194,12 +194,14 @@ public class LearnerImpl implements Learner {
             if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
                 break;
             }
-            List<Proposal> replayData = instance.getGrantedValue().stream().filter(it -> StringUtils.equals(group, it.getGroup())).collect(Collectors.toList());
+            List<Command> replayData = instance.getGrantedValue().stream()
+                    .filter(it -> StringUtils.equals(group, it.getGroup()))
+                    .collect(Collectors.toList());
             if (CollectionUtils.isEmpty(replayData)) {
                 continue;
             }
 
-            SMApplier.Task<Proposal> e = SMApplier.Task.createReplayTask(i, replayData, fakeCallback);
+            SMApplier.Task e = SMApplier.Task.createReplayTask(i, replayData);
 
             applier.offer(e);
         }
@@ -220,7 +222,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void loadSM(final String group, final SM sm) {
-        if (sms.putIfAbsent(group, new SMApplier<>(group, sm)) != null) {
+        if (sms.putIfAbsent(group, new SMApplier(group, sm)) != null) {
             LOG.error("the group[{}] has been loaded with sm.", group);
             return;
         }
@@ -367,6 +369,7 @@ public class LearnerImpl implements Learner {
     @Override
     public void confirm(final long instanceId, final String checksum, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
+        applyCallback.putIfAbsent(instanceId, dons.stream().map(ProposalWithDone::getDone).collect(Collectors.toList()));
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -385,16 +388,6 @@ public class LearnerImpl implements Learner {
         // for self
         if (handleConfirmRequest(req)) {
             // apply statemachine
-            applyCallback.putIfAbsent(instanceId, new SMApplier.TaskCallback<Proposal>() {
-                @Override
-                public void onApply(final Map<Proposal, Object> result) {
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("instance[{}] applied, result: {}", instanceId, result);
-                    }
-                    dons.forEach(it -> it.getDone().applyDone(result));
-                }
-            });
-
             apply(instanceId);
         } else {
             dons.forEach(it -> it.getDone().applyDone(new HashMap<>()));
@@ -566,17 +559,21 @@ public class LearnerImpl implements Learner {
 
     private void _apply(final long instanceId) {
         Instance<Proposal> localInstance = logManager.getInstance(instanceId);
-        Map<String, List<Proposal>> groupProposals = localInstance.getGrantedValue().stream()
+        Map<String, List<Command>> groupProposals = localInstance.getGrantedValue().stream()
                 .filter(it -> it != Proposal.NOOP)
-                .collect(Collectors.groupingBy(Proposal::getGroup));
+                .collect(Collectors.groupingBy(Proposal::getGroup, Collectors.toList()));
+
         groupProposals.forEach((group, proposals) -> {
             if (sms.containsKey(group)) {
-                SMApplier.Task<Proposal> task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback<Proposal>() {
+                SMApplier.Task task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback() {
+
                     @Override
-                    public void onApply(Map<Proposal, Object> result) {
-                        SMApplier.TaskCallback<Proposal> remove = applyCallback.remove(instanceId);
+                    public void onApply(Map<Command, Object> result) {
+                        List<ProposeDone> remove = applyCallback.remove(instanceId);
                         if (remove != null) {
-                            remove.onApply(result);
+                            Map<Proposal, Object> proposalResult = new HashMap<>();
+                            result.forEach((k,v) -> proposalResult.put((Proposal) k, v));
+                            remove.forEach(it -> it.applyDone(proposalResult));
                         }
                         updateAppliedId(instanceId);
                     }
