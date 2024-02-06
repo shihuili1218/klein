@@ -60,7 +60,7 @@ import com.ofcoder.klein.storage.facade.LogManager;
 @Join
 public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
-    private PaxosNode self;
+    private final PaxosNode self;
     private final ConsensusProp prop;
     private final RpcClient client;
     private final Proxy proxy;

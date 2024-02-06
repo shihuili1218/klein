@@ -568,11 +568,11 @@ public class LearnerImpl implements Learner {
                 SMApplier.Task task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback() {
 
                     @Override
-                    public void onApply(Map<Command, Object> result) {
+                    public void onApply(final Map<Command, Object> result) {
                         List<ProposeDone> remove = applyCallback.remove(instanceId);
                         if (remove != null) {
                             Map<Proposal, Object> proposalResult = new HashMap<>();
-                            result.forEach((k,v) -> proposalResult.put((Proposal) k, v));
+                            result.forEach((k, v) -> proposalResult.put((Proposal) k, v));
                             remove.forEach(it -> it.applyDone(proposalResult));
                         }
                         updateAppliedId(instanceId);

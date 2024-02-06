@@ -143,7 +143,7 @@ public class SMApplier {
 
     public static final class Task {
         public static final long HIGH_PRIORITY = -1;
-        private static final SMApplier.TaskCallback fakeCallback = new SMApplier.TaskCallback() {
+        private static final SMApplier.TaskCallback FAKE_CALLBACK = new SMApplier.TaskCallback() {
         };
         private long priority;
         private TaskEnum taskType;
@@ -213,7 +213,7 @@ public class SMApplier {
             task.priority = instanceId;
             task.taskType = TaskEnum.REPLAY;
             task.proposals = proposals;
-            task.callback = Task.fakeCallback;
+            task.callback = Task.FAKE_CALLBACK;
             return task;
         }
     }
