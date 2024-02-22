@@ -161,9 +161,6 @@ public class LearnerImpl implements Learner {
                     @Override
                     public void onLoadSnap(final long checkpoint) {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
-                        self.updateLastCheckpoint(checkpoint);
-                        self.updateCurInstanceId(checkpoint);
-
                         applyCallback.keySet().removeIf(it -> it <= checkpoint);
                         replayLog(group, checkpoint);
                     }
@@ -177,7 +174,11 @@ public class LearnerImpl implements Learner {
         });
 
         snaps.values().stream().max(Comparator.comparingLong(Snap::getCheckpoint))
-                .ifPresent(snap -> updateAppliedId(snap.getCheckpoint()));
+                .ifPresent(snap -> {
+                    self.updateLastCheckpoint(snap.getCheckpoint());
+                    self.updateCurInstanceId(snap.getCheckpoint());
+                    updateAppliedId(snap.getCheckpoint());
+                });
     }
 
     @Override
