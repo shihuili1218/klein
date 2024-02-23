@@ -77,6 +77,7 @@ public abstract class AbstractSM implements SM {
         }
         try {
             lastAppliedId = snap.getCheckpoint();
+            lastCheckpoint = snap.getCheckpoint();
             loadImage(snap.getSnap());
         } catch (Exception e) {
             throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);

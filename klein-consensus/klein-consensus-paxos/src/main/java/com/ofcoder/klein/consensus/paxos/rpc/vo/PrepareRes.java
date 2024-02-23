@@ -33,7 +33,6 @@ public class PrepareRes implements Serializable {
     private long curProposalNo;
     private long curInstanceId;
     private List<Instance<Proposal>> instances;
-    private NodeState nodeState;
 
     public String getNodeId() {
         return nodeId;
@@ -55,17 +54,12 @@ public class PrepareRes implements Serializable {
         return instances;
     }
 
-    public NodeState getNodeState() {
-        return nodeState;
-    }
-
     public static final class Builder {
         private String nodeId;
         private boolean result;
         private long curProposalNo;
         private long curInstanceId;
         private List<Instance<Proposal>> instances;
-        private NodeState nodeState;
 
         private Builder() {
         }
@@ -135,17 +129,6 @@ public class PrepareRes implements Serializable {
         }
 
         /**
-         * masterState.
-         *
-         * @param masterState masterState
-         * @return Builder
-         */
-        public Builder nodeState(final NodeState masterState) {
-            this.nodeState = masterState;
-            return this;
-        }
-
-        /**
          * build.
          *
          * @return PrepareRes
@@ -157,7 +140,6 @@ public class PrepareRes implements Serializable {
             prepareRes.instances = this.instances;
             prepareRes.curProposalNo = this.curProposalNo;
             prepareRes.nodeId = this.nodeId;
-            prepareRes.nodeState = this.nodeState;
             return prepareRes;
         }
     }

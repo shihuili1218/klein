@@ -56,6 +56,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -167,7 +168,7 @@ public class ProposerImpl implements Proposer {
      * @param ctxt              Negotiation Context
      * @param callback          Callback of accept phase,
      *                          if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
-     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, Endpoint)}
+     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, NodeState)}
      */
     private void accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
@@ -232,7 +233,7 @@ public class ProposerImpl implements Proposer {
 
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-            callback.learn(ctxt, it);
+            callback.learn(ctxt, result.getNodeState());
             return;
         }
 
@@ -411,8 +412,7 @@ public class ProposerImpl implements Proposer {
                 ThreadExecutor.execute(() -> forcePrepare(ctxt.createUntappedRef(), callback));
             }
 
-            // todo ??????
-            RuntimeAccessor.getLearner().pullSameData(result.getNodeState());
+//            RuntimeAccessor.getLearner().pullSameData(result.getNodeState());
         }
     }
 
@@ -511,8 +511,8 @@ public class ProposerImpl implements Proposer {
         }
 
         @Override
-        public void learn(final ProposeContext context, final Endpoint it) {
-            LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), it.getId());
+        public void learn(final ProposeContext context, final NodeState target) {
+            LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), target.getNodeId());
             ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
@@ -521,7 +521,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do learn
-                RuntimeAccessor.getLearner().learn(context.getInstanceId(), it);
+                RuntimeAccessor.getLearner().pullSameData(target);
             });
 
         }

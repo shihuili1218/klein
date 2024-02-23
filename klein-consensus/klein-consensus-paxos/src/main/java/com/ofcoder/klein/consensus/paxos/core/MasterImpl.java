@@ -469,7 +469,7 @@ public class MasterImpl implements Master {
      */
     private boolean sendHeartbeat(final boolean probe) {
         final long curInstanceId = self.getCurInstanceId();
-        long lastCheckpoint = self.getLastCheckpoint();
+        long lastCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
         final Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
@@ -564,14 +564,14 @@ public class MasterImpl implements Master {
                 restartWaitHb();
             }
             return NewMasterRes.Builder.aNewMasterRes()
-                    .checkpoint(self.getLastCheckpoint())
+                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
                     .curInstanceId(self.getCurInstanceId())
                     .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                     .granted(true)
                     .build();
         } else {
             return NewMasterRes.Builder.aNewMasterRes()
-                    .checkpoint(self.getLastCheckpoint())
+                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
                     .curInstanceId(self.getCurInstanceId())
                     .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
                     .granted(false)

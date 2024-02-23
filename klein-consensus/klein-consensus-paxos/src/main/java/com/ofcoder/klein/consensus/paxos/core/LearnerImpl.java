@@ -22,13 +22,13 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -80,6 +80,7 @@ public class LearnerImpl implements Learner {
     private ConsensusProp prop;
     private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
+    private final AtomicBoolean learning = new AtomicBoolean(false);
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -105,29 +106,17 @@ public class LearnerImpl implements Learner {
         // fixme: latch的数量根据sms来定，但是这中间sms可能会rm，那么latch就结束不了了
         CountDownLatch latch = new CountDownLatch(sms.size());
         sms.forEach((group, sm) -> {
-            Snap lastSnap = logManager.getLastSnap(group);
+            SMApplier.Task e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback() {
+                @Override
+                public void onTakeSnap(final Snap snap) {
+                    result.put(group, snap);
+                    latch.countDown();
+                }
+            });
 
-            if (lastSnap != null && lastSnap.getCheckpoint() >= sm.getLastAppliedId()) {
-                result.put(group, lastSnap);
-                latch.countDown();
-            } else {
-                SMApplier.Task e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback() {
-                    @Override
-                    public void onTakeSnap(final Snap snap) {
-                        result.put(group, snap);
-                        logManager.saveSnap(group, snap);
-
-                        latch.countDown();
-                    }
-                });
-
-                sm.offer(e);
-                // ignore offer result.
-            }
+            sm.offer(e);
+            // ignore offer result.
         });
-
-        Optional<Snap> max = result.values().stream().max(Comparator.comparingLong(Snap::getCheckpoint));
-        max.ifPresent(snap -> self.updateLastCheckpoint(snap.getCheckpoint()));
 
         try {
             if (latch.await(1L, TimeUnit.SECONDS)) {
@@ -143,42 +132,44 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public void loadSnap(final Map<String, Snap> snaps) {
+    public void loadSnapSync(final Map<String, Snap> snaps) {
         if (MapUtils.isEmpty(snaps)) {
             return;
         }
 
-        snaps.forEach((group, snap) -> {
-            Snap localSnap = logManager.getLastSnap(group);
-            if (localSnap != null && localSnap.getCheckpoint() > snap.getCheckpoint()) {
-                LOG.warn("load snap skip, group: {}, local.checkpoint: {}, snap.checkpoint: {}", group, localSnap.getCheckpoint(), snap.getCheckpoint());
-                return;
-            }
-            LOG.info("load snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
+        CountDownLatch latch = new CountDownLatch(snaps.size());
 
+        snaps.forEach((group, snap) -> {
             if (sms.containsKey(group)) {
                 SMApplier.Task e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback() {
                     @Override
                     public void onLoadSnap(final long checkpoint) {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
+
+                        self.updateCurInstanceId(snap.getCheckpoint());
+                        updateAppliedId(snap.getCheckpoint());
+
                         applyCallback.keySet().removeIf(it -> it <= checkpoint);
-                        replayLog(group, checkpoint);
+                        latch.countDown();
+
+//                        replayLog(group, checkpoint);
                     }
                 });
                 sms.get(group).offer(e);
             } else {
+                latch.countDown();
                 LOG.warn("load snap failure, group: {}, The state machine is not found."
                         + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
-
             }
         });
 
-        snaps.values().stream().max(Comparator.comparingLong(Snap::getCheckpoint))
-                .ifPresent(snap -> {
-                    self.updateLastCheckpoint(snap.getCheckpoint());
-                    self.updateCurInstanceId(snap.getCheckpoint());
-                    updateAppliedId(snap.getCheckpoint());
-                });
+        try {
+            if (!latch.await(1L, TimeUnit.SECONDS)) {
+                LOG.error("load snapshot timeout. snaps: {}, all: {}", snaps.keySet(), sms.keySet());
+            }
+        } catch (InterruptedException ex) {
+            LOG.error(String.format("load snapshot occur exception. %s", ex.getMessage()), ex);
+        }
     }
 
     @Override
@@ -213,6 +204,13 @@ public class LearnerImpl implements Learner {
         return lastAppliedId;
     }
 
+    @Override
+    public long getLastCheckpoint() {
+        return sms.values().stream()
+                .mapToLong(SMApplier::getLastCheckpoint)
+                .max().orElse(-1L);
+    }
+
     private void updateAppliedId(final long instanceId) {
         if (lastAppliedId < instanceId) {
             synchronized (appliedIdLock) {
@@ -231,11 +229,17 @@ public class LearnerImpl implements Learner {
         if (lastSnap == null) {
             return;
         }
-        loadSnap(ImmutableMap.of(group, lastSnap));
+        loadSnapSync(ImmutableMap.of(group, lastSnap));
     }
 
-    @Override
-    public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
+    /**
+     * Send the learn message to <code>target</code>.
+     *
+     * @param instanceId instance to learn
+     * @param target     learn objective
+     * @param callback   Callbacks of learning results
+     */
+    private void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
         learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
 
@@ -314,27 +318,22 @@ public class LearnerImpl implements Learner {
         final long targetCheckpoint = state.getLastCheckpoint();
         final long targetApplied = state.getLastAppliedInstanceId();
         long localApplied = lastAppliedId;
-        long localCheckpoint = self.getLastCheckpoint();
+        long localCheckpoint = getLastCheckpoint();
         if (targetApplied <= localApplied) {
             // same data
             return;
         }
 
         LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, self.getLastCheckpoint(), localApplied);
+                target.getId(), targetCheckpoint, targetApplied, getLastCheckpoint(), localApplied);
         if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
             snapSync(target);
             pullSameData(state);
         } else {
             for (long i = localApplied + 1; i <= targetApplied; i++) {
-                RuntimeAccessor.getLearner().learn(i, target);
+                learn(i, target, new DefaultLearnCallback());
             }
         }
-    }
-
-    @Override
-    public void pushSameData(final Endpoint state) {
-
     }
 
     @Override
@@ -351,12 +350,13 @@ public class LearnerImpl implements Learner {
                     .nodeId(self.getSelf().getId())
                     .proposalNo(self.getCurProposalNo())
                     .memberConfigurationVersion(memberConfig.getVersion())
-                    .checkpoint(self.getLastCheckpoint())
+                    .checkpoint(getLastCheckpoint())
                     .build();
             SnapSyncRes res = client.sendRequestSync(target, req, 1000);
 
             if (res != null) {
-                loadSnap(res.getImages());
+                //
+                loadSnapSync(res.getImages());
                 checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
             }
 
@@ -413,9 +413,9 @@ public class LearnerImpl implements Learner {
     private boolean handleConfirmRequest(final ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
-        if (req.getInstanceId() <= self.getLastCheckpoint()) {
+        if (req.getInstanceId() <= getLastCheckpoint()) {
             // the instance is compressed.
-            LOG.info("the instance[{}] is compressed, checkpoint[{}]", req.getInstanceId(), self.getLastCheckpoint());
+            LOG.info("the instance[{}] is compressed, checkpoint[{}]", req.getInstanceId(), getLastCheckpoint());
             return false;
         }
 
@@ -427,7 +427,7 @@ public class LearnerImpl implements Learner {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
+                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
                 return false;
             }
 
@@ -440,7 +440,7 @@ public class LearnerImpl implements Learner {
             // check sum
             if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
                 LOG.info("local.checksum: {}, req.checksum: {}", localInstance.getChecksum(), req.getChecksum());
-                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()));
+                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
                 return false;
             }
 
@@ -471,7 +471,7 @@ public class LearnerImpl implements Learner {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
         LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
 
-        if (request.getInstanceId() <= self.getLastCheckpoint()) {
+        if (request.getInstanceId() <= getLastCheckpoint()) {
             return res.result(Sync.SNAP).build();
         }
 
@@ -479,7 +479,7 @@ public class LearnerImpl implements Learner {
 
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
-                    self.getLastCheckpoint(), self.getCurInstanceId());
+                    getLastCheckpoint(), self.getCurInstanceId());
             if (memberConfig.allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
@@ -516,7 +516,7 @@ public class LearnerImpl implements Learner {
         LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
                 .images(new HashMap<>())
-                .checkpoint(self.getLastCheckpoint())
+                .checkpoint(getLastCheckpoint())
                 .build();
         for (String group : sms.keySet()) {
             Snap lastSnap = logManager.getLastSnap(group);
@@ -529,7 +529,7 @@ public class LearnerImpl implements Learner {
 
     private void apply(final long instanceId) {
 
-        final long lastCheckpoint = self.getLastCheckpoint();
+        final long lastCheckpoint = getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
         final long expectConfirmId = lastApplyId + 1;
         LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
@@ -624,6 +624,24 @@ public class LearnerImpl implements Learner {
             }
         }
         return lr;
+    }
+
+    /**
+     * Synchronous learning.
+     *
+     * @param instanceId instance to learn
+     * @param target     learn objective
+     * @return learn result
+     */
+    private boolean learnSync(long instanceId, Endpoint target) {
+        long singleTimeoutMS = 150;
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        learn(instanceId, target, future::complete);
+        try {
+            return future.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
 }

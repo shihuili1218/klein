@@ -53,7 +53,7 @@ public interface Learner extends Role<ConsensusProp> {
      * @param snaps key: sm key
      *              value: snap
      */
-    void loadSnap(Map<String, Snap> snaps);
+    void loadSnapSync(Map<String, Snap> snaps);
 
     /**
      * replay log, re-enter instance into sm.
@@ -64,6 +64,7 @@ public interface Learner extends Role<ConsensusProp> {
     void replayLog(String group, long start);
 
     long getLastAppliedInstanceId();
+    long getLastCheckpoint();
 
     /**
      * Load SM, one group will only load one SM.
@@ -72,45 +73,6 @@ public interface Learner extends Role<ConsensusProp> {
      * @param sm    state machine
      */
     void loadSM(String group, SM sm);
-
-    /**
-     * Send the learn message to <code>target</code>.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @param callback   Callbacks of learning results
-     */
-    void learn(long instanceId, Endpoint target, LearnCallback callback);
-
-    /**
-     * Send the learn message to <code>target</code>.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @see Learner#learn(long, Endpoint, LearnCallback)
-     */
-    default void learn(long instanceId, Endpoint target) {
-        learn(instanceId, target, new DefaultLearnCallback());
-    }
-
-    /**
-     * Synchronous learning.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @return learn result
-     * @see Learner#learn(long, Endpoint, LearnCallback)
-     */
-    default boolean learnSync(long instanceId, Endpoint target) {
-        long singleTimeoutMS = 150;
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        learn(instanceId, target, future::complete);
-        try {
-            return future.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     /**
      * Send confirm message.
@@ -128,14 +90,6 @@ public interface Learner extends Role<ConsensusProp> {
      * @param state target information
      */
     void pullSameData(NodeState state);
-
-    /**
-     * Master pushes data to slave, target is slave.
-     * Caller is master.
-     *
-     * @param target target
-     */
-    void pushSameData(Endpoint target);
 
     /**
      * Keep consistent with the data in the cluster.

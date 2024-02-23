@@ -30,6 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.Command;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
@@ -41,11 +43,13 @@ public class SMApplier {
     private final SM sm;
     private final BlockingQueue<Task> applyQueue;
     private boolean shutdown = false;
+    private LogManager logManager;
 
     public SMApplier(final String group, final SM sm) {
         this.group = group;
         this.sm = sm;
         this.applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.priority));
+        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create(this.group + "-apply", true));
 
         applyExecutor.execute(() -> {
@@ -74,20 +78,32 @@ public class SMApplier {
     }
 
     private void _takeSnap(final Task task) {
-        Snap snapshot = sm.snapshot();
-        LOG.info("take snapshot success, group: {}, cp: {}", group, snapshot.getCheckpoint());
-        task.callback.onTakeSnap(snapshot);
+        Snap lastSnap = logManager.getLastSnap(group);
+        if (lastSnap == null || lastSnap.getCheckpoint() < sm.lastAppliedId()) {
+            lastSnap = sm.snapshot();
+            logManager.saveSnap(group, lastSnap);
+            LOG.info("take snapshot success, group: {}, cp: {}", group, lastSnap.getCheckpoint());
+        }
+
+        task.callback.onTakeSnap(lastSnap);
     }
 
     private void _loadSnap(final Task task) {
-        long lastCheckpoint = sm.lastCheckpoint();
-        if (task.loadSnap.getCheckpoint() > sm.lastCheckpoint()) {
+        Snap localSnap = logManager.getLastSnap(group);
+        long checkpoint = sm.lastCheckpoint();
+        if (task.loadSnap.getCheckpoint() <= sm.lastAppliedId()) {
+            LOG.warn("load snap skip, group: {}, local.lastAppliedId: {}, snap.checkpoint: {}", group, sm.lastAppliedId(), task.loadSnap.getCheckpoint());
+        } else if (localSnap != null && localSnap.getCheckpoint() > task.loadSnap.getCheckpoint()) {
+            LOG.warn("load snap skip, group: {}, local.checkpoint: {}, snap.checkpoint: {}", group, localSnap.getCheckpoint(), task.loadSnap.getCheckpoint());
+        } else {
             sm.loadSnap(task.loadSnap);
-            lastCheckpoint = task.loadSnap.getCheckpoint();
+            logManager.saveSnap(group, task.loadSnap);
+            checkpoint = task.loadSnap.getCheckpoint();
             this.applyQueue.removeIf(it -> it.priority != Task.HIGH_PRIORITY && it.priority < task.loadSnap.getCheckpoint());
+            LOG.info("load snap success, group: {}, checkpoint: {}", group, task.loadSnap.getCheckpoint());
         }
 
-        task.callback.onLoadSnap(lastCheckpoint);
+        task.callback.onLoadSnap(checkpoint);
     }
 
     private void _apply(final Task task) {
@@ -135,6 +151,10 @@ public class SMApplier {
      */
     public long getLastAppliedId() {
         return sm.lastAppliedId();
+    }
+
+    public long getLastCheckpoint(){
+        return sm.lastCheckpoint();
     }
 
     public enum TaskEnum {
