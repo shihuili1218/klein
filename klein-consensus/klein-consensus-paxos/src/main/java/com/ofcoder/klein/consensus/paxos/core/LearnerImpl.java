@@ -232,6 +232,33 @@ public class LearnerImpl implements Learner {
         loadSnapSync(ImmutableMap.of(group, lastSnap));
     }
 
+    @Override
+    public void alignData(final NodeState state) {
+        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+        long localApplied = lastAppliedId;
+        long localCheckpoint = getLastCheckpoint();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                target.getId(), targetCheckpoint, targetApplied, getLastCheckpoint(), localApplied);
+        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
+            snapSync(target);
+            alignData(state);
+        } else {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
+                learn(i, target, new DefaultLearnCallback());
+            }
+        }
+    }
+
     /**
      * Send the learn message to <code>target</code>.
      *
@@ -307,38 +334,6 @@ public class LearnerImpl implements Learner {
                 }
             }
         }, 1000);
-    }
-
-    @Override
-    public void pullSameData(final NodeState state) {
-        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
-        if (target == null) {
-            return;
-        }
-        final long targetCheckpoint = state.getLastCheckpoint();
-        final long targetApplied = state.getLastAppliedInstanceId();
-        long localApplied = lastAppliedId;
-        long localCheckpoint = getLastCheckpoint();
-        if (targetApplied <= localApplied) {
-            // same data
-            return;
-        }
-
-        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, getLastCheckpoint(), localApplied);
-        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
-            snapSync(target);
-            pullSameData(state);
-        } else {
-            for (long i = localApplied + 1; i <= targetApplied; i++) {
-                learn(i, target, new DefaultLearnCallback());
-            }
-        }
-    }
-
-    @Override
-    public boolean healthy() {
-        return true;
     }
 
     private long snapSync(final Endpoint target) {

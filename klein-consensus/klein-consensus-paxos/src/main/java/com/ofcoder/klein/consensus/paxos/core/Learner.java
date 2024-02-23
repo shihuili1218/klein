@@ -18,8 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -30,7 +28,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
@@ -84,19 +81,12 @@ public interface Learner extends Role<ConsensusProp> {
     void confirm(long instanceId, String checksum, List<ProposalWithDone> dons);
 
     /**
-     * Keep the data consistent with master, state is master.
+     * Keep the data consistent with target node.
      * Caller is slave.
      *
      * @param state target information
      */
-    void pullSameData(NodeState state);
-
-    /**
-     * Keep consistent with the data in the cluster.
-     *
-     * @return <code>true:</code> same data, <code>false:</code>: not the same
-     */
-    boolean healthy();
+    void alignData(NodeState state);
 
     /**
      * Processing confirm message.
