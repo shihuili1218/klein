@@ -61,7 +61,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
             this.listeners.forEach(it -> it.change(this.masterState));
         } else if (isValid(nodeId)) {
             this.master = getEndpointById(nodeId);
-            this.masterState = isSelf() ? ElectState.BOOSTING : ElectState.FOLLOWING;
+            this.masterState = isSelf() ? ElectState.LEADING : ElectState.FOLLOWING;
             this.listeners.forEach(it -> it.change(this.masterState));
             LOG.info("node-{} was promoted to master, version: {}", nodeId, this.version.get());
         }
@@ -165,9 +165,9 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     public enum ElectState {
         ELECTING(-1),
         FOLLOWING(0),
-        BOOSTING(1);
-        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(BOOSTING);
-        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, BOOSTING);
+        LEADING(1);
+        public static final List<ElectState> BOOSTING_STATE = ImmutableList.of(LEADING);
+        public static final List<ElectState> PROPOSE_STATE = ImmutableList.of(FOLLOWING, LEADING);
         private int state;
 
         ElectState(final int state) {

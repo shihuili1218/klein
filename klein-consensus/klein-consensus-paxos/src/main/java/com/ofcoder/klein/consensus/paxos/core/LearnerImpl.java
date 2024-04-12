@@ -235,27 +235,42 @@ public class LearnerImpl implements Learner {
     @Override
     public void alignData(final NodeState state) {
         final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
-        if (target == null) {
-            return;
-        }
-        final long targetCheckpoint = state.getLastCheckpoint();
-        final long targetApplied = state.getLastAppliedInstanceId();
-        long localApplied = lastAppliedId;
-        long localCheckpoint = getLastCheckpoint();
-        if (targetApplied <= localApplied) {
-            // same data
+        if (target == null || !learning.compareAndSet(false, true)) {
             return;
         }
 
-        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, getLastCheckpoint(), localApplied);
-        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
-            snapSync(target);
-            alignData(state);
-        } else {
-            for (long i = localApplied + 1; i <= targetApplied; i++) {
-                learn(i, target, new DefaultLearnCallback());
+        try {
+            final long targetCheckpoint = state.getLastCheckpoint();
+            final long targetApplied = state.getLastAppliedInstanceId();
+            long localApplied = lastAppliedId;
+            long localCheckpoint = getLastCheckpoint();
+            if (targetApplied <= localApplied) {
+                // same data
+                return;
             }
+
+            LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                    target.getId(), targetCheckpoint, targetApplied, getLastCheckpoint(), localApplied);
+            if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
+                _snapSync(target);
+                alignData(state);
+            } else {
+                long diff = targetApplied - localApplied;
+                CountDownLatch latch = new CountDownLatch((int) diff);
+
+                for (long i = localApplied + 1; i <= targetApplied; i++) {
+                    _learn(i, target, result -> latch.countDown());
+                }
+
+                try {
+                    boolean await = latch.await(this.prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+                    // do nothing for await's result
+                } catch (InterruptedException e) {
+                    LOG.debug(e.getMessage());
+                }
+            }
+        } finally {
+            learning.compareAndSet(true, false);
         }
     }
 
@@ -266,7 +281,7 @@ public class LearnerImpl implements Learner {
      * @param target     learn objective
      * @param callback   Callbacks of learning results
      */
-    private void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
+    private void _learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
         learningCallbacks.putIfAbsent(instanceId, new ArrayList<>());
         learningCallbacks.get(instanceId).add(callback);
 
@@ -295,7 +310,7 @@ public class LearnerImpl implements Learner {
             public void complete(final LearnRes result) {
                 if (result.isResult() == Sync.SNAP) {
                     LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
-                    long checkpoint = snapSync(target);
+                    long checkpoint = _snapSync(target);
                     Set<Long> learned = learningCallbacks.keySet().stream().filter(it -> checkpoint >= it).collect(Collectors.toSet());
                     learned.forEach(it -> {
                         List<LearnCallback> remove = learningCallbacks.remove(it);
@@ -336,7 +351,12 @@ public class LearnerImpl implements Learner {
         }, 1000);
     }
 
-    private long snapSync(final Endpoint target) {
+    private AtomicBoolean snapSyncing = new AtomicBoolean(false);
+
+    private  long _snapSync(final Endpoint target) {
+
+        if (snapSyncing.compareAndSet())
+
         LOG.info("start snap sync from node-{}", target.getId());
 
         long checkpoint = -1;
@@ -350,7 +370,6 @@ public class LearnerImpl implements Learner {
             SnapSyncRes res = client.sendRequestSync(target, req, 1000);
 
             if (res != null) {
-                //
                 loadSnapSync(res.getImages());
                 checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
             }
@@ -422,7 +441,7 @@ public class LearnerImpl implements Learner {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
+                _learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
                 return false;
             }
 
@@ -435,7 +454,7 @@ public class LearnerImpl implements Learner {
             // check sum
             if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
                 LOG.info("local.checksum: {}, req.checksum: {}", localInstance.getChecksum(), req.getChecksum());
-                learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
+                _learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new DefaultLearnCallback());
                 return false;
             }
 
@@ -541,9 +560,22 @@ public class LearnerImpl implements Learner {
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     _apply(i);
                 } else {
-                    List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
-                            ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
-                    learnHard(i, defaultValue);
+                    if (memberConfig.allowBoost()) {
+                        List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
+                                ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
+                        _boost(i, defaultValue);
+                    } else {
+                        final Endpoint master = memberConfig.getMaster();
+                        if (master != null) {
+                            CompletableFuture<Boolean> future = new CompletableFuture<>();
+                            _learn(instanceId, master, future::complete);
+                            try {
+                                future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+                            } catch (Exception e) {
+                                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
+                            }
+                        }
+                    }
                 }
             }
             return;
@@ -582,60 +614,34 @@ public class LearnerImpl implements Learner {
         });
     }
 
-    private boolean learnHard(final long instanceId, final List<Proposal> defaultValue) {
-        boolean lr = false;
+    private void _boost(final long instanceId, final List<Proposal> defaultValue) {
+        LOG.info("try boost instance: {}", instanceId);
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        RuntimeAccessor.getProposer().tryBoost(
+                new Holder<Long>() {
+                    @Override
+                    protected Long create() {
+                        return instanceId;
+                    }
 
-        if (memberConfig.allowBoost()) {
-            LOG.info("try boost instance: {}", instanceId);
-            CompletableFuture<Boolean> future = new CompletableFuture<>();
-            RuntimeAccessor.getProposer().tryBoost(
-                    new Holder<Long>() {
-                        @Override
-                        protected Long create() {
-                            return instanceId;
-                        }
-
-                    }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
-                            .collect(Collectors.toList())
-            );
-            try {
-                lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
-                // do nothing, lr = false
-            }
-        } else {
-            final Endpoint master = memberConfig.getMaster();
-            if (master != null) {
-                lr = learnSync(instanceId, master);
-            } else {
-                LOG.info("learnHard, instance: {}, master is null, wait master.", instanceId);
-                // learn hard
-//                for (Endpoint it : self.getMemberConfiguration().getMembersWithoutSelf()) {
-//                    lr = learnSync(instanceId, it);
-//                    if (lr) {
-//                        break;
-//                    }
-//                }
-            }
+                }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
+                        .collect(Collectors.toList())
+        );
+        try {
+            boolean lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            // do nothing
         }
-        return lr;
     }
 
-    /**
-     * Synchronous learning.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @return learn result
-     */
-    private boolean learnSync(long instanceId, Endpoint target) {
-        long singleTimeoutMS = 150;
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        learn(instanceId, target, future::complete);
-        try {
-            return future.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            return false;
+    interface LearnCallback {
+        void learned(boolean result);
+    }
+
+    static class DefaultLearnCallback implements LearnCallback {
+        @Override
+        public void learned(final boolean result) {
+
         }
     }
 

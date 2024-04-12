@@ -82,7 +82,7 @@ public interface Learner extends Role<ConsensusProp> {
 
     /**
      * Keep the data consistent with target node.
-     * Caller is slave.
+     * This is a synchronous blocking method.
      *
      * @param state target information
      */
@@ -113,16 +113,5 @@ public interface Learner extends Role<ConsensusProp> {
      * @return handle result
      */
     SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
-
-    interface LearnCallback {
-        void learned(boolean result);
-    }
-
-    class DefaultLearnCallback implements LearnCallback {
-        @Override
-        public void learned(final boolean result) {
-
-        }
-    }
 
 }
