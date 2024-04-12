@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -62,6 +63,7 @@ public interface Learner extends Role<ConsensusProp> {
 
     long getLastAppliedInstanceId();
     long getLastCheckpoint();
+    Set<String> getGroups();
 
     /**
      * Load SM, one group will only load one SM.
@@ -81,14 +83,6 @@ public interface Learner extends Role<ConsensusProp> {
     void confirm(long instanceId, String checksum, List<ProposalWithDone> dons);
 
     /**
-     * Keep the data consistent with target node.
-     * Caller is slave.
-     *
-     * @param state target information
-     */
-    void alignData(NodeState state);
-
-    /**
      * Processing confirm message.
      * The confirm message is used to submit an instance.
      *
@@ -97,32 +91,6 @@ public interface Learner extends Role<ConsensusProp> {
      */
     void handleConfirmRequest(ConfirmReq req, boolean isSelf);
 
-    /**
-     * Processing learn message.
-     * Other members learn the specified instance from themselves.
-     *
-     * @param req message
-     * @return handle result
-     */
-    LearnRes handleLearnRequest(LearnReq req);
 
-    /**
-     * Processing Snapshot Synchronization message.
-     *
-     * @param req message
-     * @return handle result
-     */
-    SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
-
-    interface LearnCallback {
-        void learned(boolean result);
-    }
-
-    class DefaultLearnCallback implements LearnCallback {
-        @Override
-        public void learned(final boolean result) {
-
-        }
-    }
 
 }

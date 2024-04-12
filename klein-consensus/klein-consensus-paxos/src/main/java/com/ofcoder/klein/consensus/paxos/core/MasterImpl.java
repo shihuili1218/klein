@@ -537,7 +537,7 @@ public class MasterImpl implements Master {
             if (!request.isProbe() && !isSelf) {
                 // check and update instance
                 ThreadExecutor.execute(() -> {
-                    RuntimeAccessor.getLearner().alignData(nodeState);
+                    RuntimeAccessor.getDataAligner().alignData(nodeState);
                 });
             }
 

@@ -99,6 +99,7 @@ public class SMApplier {
             sm.loadSnap(task.loadSnap);
             logManager.saveSnap(group, task.loadSnap);
             checkpoint = task.loadSnap.getCheckpoint();
+            // todo: callback.onApply removeIf
             this.applyQueue.removeIf(it -> it.priority != Task.HIGH_PRIORITY && it.priority < task.loadSnap.getCheckpoint());
             LOG.info("load snap success, group: {}, checkpoint: {}", group, task.loadSnap.getCheckpoint());
         }

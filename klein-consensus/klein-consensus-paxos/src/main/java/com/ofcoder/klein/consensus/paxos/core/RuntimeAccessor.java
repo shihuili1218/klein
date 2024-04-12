@@ -16,11 +16,11 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Runtime Accessor.
@@ -28,11 +28,12 @@ import java.util.concurrent.atomic.AtomicReference;
  * @author 释慧利
  */
 public class RuntimeAccessor {
-    private static AtomicReference<ProposerImpl.PrepareState> skipPrepare = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
+    private static final AtomicReference<ProposerImpl.PrepareState> skipPrepare = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
     private static Proposer proposer;
     private static Acceptor acceptor;
     private static Learner learner;
     private static Master master;
+    private static DataAligner dataAligner;
     private static Boolean initialized = false;
 
     public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
@@ -67,6 +68,13 @@ public class RuntimeAccessor {
         return master;
     }
 
+    public static DataAligner getDataAligner() {
+        if (!initialized) {
+            throw new ConsensusException("Consensus Engine not started");
+        }
+        return dataAligner;
+    }
+
     /**
      * create master, learner, acceptor, proposer.
      *
@@ -78,7 +86,13 @@ public class RuntimeAccessor {
         initLearner(prop, self);
         initAcceptor(prop, self);
         initProposer(prop, self);
+        initDataAligner(prop, self);
         initialized = true;
+    }
+
+    private static void initDataAligner(final ConsensusProp prop, final PaxosNode self) {
+        dataAligner = new DataAligner(self);
+        dataAligner.init(prop);
     }
 
     private static void initMaster(final ConsensusProp prop, final PaxosNode self) {
