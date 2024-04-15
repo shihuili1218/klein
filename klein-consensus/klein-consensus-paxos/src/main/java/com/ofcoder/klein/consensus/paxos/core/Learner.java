@@ -33,6 +33,12 @@ import com.ofcoder.klein.storage.facade.Snap;
  */
 public interface Learner extends Role<ConsensusProp> {
 
+    long getLastAppliedInstanceId();
+
+    long getLastCheckpoint();
+
+    Set<String> getGroups();
+
     /**
      * generate and save snapshot.
      *
@@ -55,12 +61,6 @@ public interface Learner extends Role<ConsensusProp> {
      * @param start start instance id
      */
     void replayLog(String group, long start);
-
-    long getLastAppliedInstanceId();
-
-    long getLastCheckpoint();
-
-    Set<String> getGroups();
 
     /**
      * Load SM, one group will only load one SM.

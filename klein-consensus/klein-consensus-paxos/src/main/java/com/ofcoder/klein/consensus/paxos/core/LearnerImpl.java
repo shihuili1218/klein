@@ -90,6 +90,23 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
+    public long getLastAppliedInstanceId() {
+        return lastAppliedId;
+    }
+
+    @Override
+    public long getLastCheckpoint() {
+        return sms.values().stream()
+                .mapToLong(SMApplier::getLastCheckpoint)
+                .max().orElse(-1L);
+    }
+
+    @Override
+    public Set<String> getGroups() {
+        return sms.keySet();
+    }
+
+    @Override
     public Map<String, Snap> generateSnap() {
         ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
         // fixme: latch的数量根据sms来定，但是这中间sms可能会rm，那么latch就结束不了了
@@ -186,23 +203,6 @@ public class LearnerImpl implements Learner {
 
             applier.offer(e);
         }
-    }
-
-    @Override
-    public long getLastAppliedInstanceId() {
-        return lastAppliedId;
-    }
-
-    @Override
-    public long getLastCheckpoint() {
-        return sms.values().stream()
-                .mapToLong(SMApplier::getLastCheckpoint)
-                .max().orElse(-1L);
-    }
-
-    @Override
-    public Set<String> getGroups() {
-        return sms.keySet();
     }
 
     private void updateAppliedId(final long instanceId) {
@@ -373,7 +373,7 @@ public class LearnerImpl implements Learner {
                 .filter(it -> it != Proposal.NOOP)
                 .collect(Collectors.groupingBy(Proposal::getGroup, Collectors.toList()));
 
-        // fixme: 把instanceId传到sms里面去，不用在外面过滤
+        // fixme: 把instanceId传到sms里面去，不用在外面过滤，让所有的sm对齐instanceId
         groupProposals.forEach((group, proposals) -> {
             if (sms.containsKey(group)) {
                 SMApplier.Task task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback() {
