@@ -17,8 +17,10 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -32,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslator;
@@ -85,6 +88,7 @@ public class ProposerImpl implements Proposer {
      * The instance of the Prepare phase has been executed.
      */
     private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
+    private final Set<Long> runningInstance = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private LogManager<Proposal> logManager;
 
     public ProposerImpl(final PaxosNode self) {
@@ -112,11 +116,6 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.handleEventsWith(eventHandler);
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
-        memberConfig.addHealthyListener(healthy -> {
-            if (memberConfig.allowPropose()) {
-                eventHandler.triggerHandle();
-            }
-        });
     }
 
     @Override
@@ -141,16 +140,28 @@ public class ProposerImpl implements Proposer {
      * @param done client's callbck
      */
     @Override
-    public void propose(final Proposal data, final ProposeDone done) {
+    public void propose(final Proposal data, final ProposeDone done, final boolean now) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
 
-        final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
-            event.setProposal(data);
-            event.setDone(done);
-        };
-        this.proposeQueue.publishEvent(translator);
+        if (now) {
+            ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return self.incrementInstanceId();
+                }
+            }, Lists.newArrayList(new ProposalWithDone(data, done)));
+
+            prepare(ctxt, new PrepareCallback());
+        } else {
+            final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
+                event.setProposal(data);
+                event.setDone(done);
+            };
+            this.proposeQueue.publishEvent(translator);
+        }
+
     }
 
     /**
@@ -171,10 +182,26 @@ public class ProposerImpl implements Proposer {
      *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, NodeState)}
      */
     private void accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
+        if (!runningInstance.add(ctxt.getInstanceId())) {
+            // fixme: 等待其他线程执行完，返回正确的结果
+            ctxt.getDataWithCallback().stream().map(ProposalWithDone::getDone).forEach(it -> it.negotiationDone(false, false));
+            return;
+        }
+
+        try {
+            _accept(grantedProposalNo, ctxt, callback);
+        } finally {
+            runningInstance.remove(ctxt.getInstanceId());
+        }
+    }
+
+    private void _accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         ctxt.setGrantedProposalNo(grantedProposalNo);
 
+        logManager.getInstance()
+        // fixme :一个proposalNo只能有一个提案，要重新定义preparedInstanceMap的使用
         // choose valid proposal, and calculate checksum.
         List<Proposal> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
         String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
@@ -257,14 +284,13 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final List<ProposalWithDone> defaultProposal) {
-        tryBoost(instanceHolder, memberConfig, defaultProposal);
-    }
-
-    @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final PaxosMemberConfiguration memberConfiguration,
-                         final List<ProposalWithDone> defaultProposal) {
-        ProposeContext ctxt = new ProposeContext(memberConfiguration.createRef(), instanceHolder, defaultProposal);
+    public void tryBoost(final Long instanceId, final ProposeDone done) {
+        ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
+            @Override
+            protected Long create() {
+                return instanceId;
+            }
+        }, Lists.newArrayList(new ProposalWithDone(Proposal.NOOP, done)));
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -423,13 +449,6 @@ public class ProposerImpl implements Proposer {
 
         public ProposeEventHandler(final int batchSize) {
             this.batchSize = batchSize;
-        }
-
-        private void triggerHandle() {
-            if (tasks.isEmpty()) {
-                return;
-            }
-            propose(Proposal.NOOP, new ProposeDone.FakeProposeDone());
         }
 
         private void handle() {
