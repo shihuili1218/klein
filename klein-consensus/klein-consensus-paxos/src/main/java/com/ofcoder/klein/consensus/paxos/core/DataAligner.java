@@ -249,11 +249,8 @@ public class DataAligner {
             if (memberConfig.allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
-                List<Proposal> defaultValue = instance == null || CollectionUtils.isEmpty(instance.getGrantedValue())
-                        ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
                 CountDownLatch latch = new CountDownLatch(1);
-
-                RuntimeAccessor.getProposer().tryBoost(request.getInstanceId(), defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> latch.countDown())).collect(Collectors.toList()));
+                RuntimeAccessor.getProposer().tryBoost(request.getInstanceId(), (result, dataChange) -> latch.countDown());
 
                 try {
                     boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);

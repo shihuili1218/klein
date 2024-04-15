@@ -348,9 +348,17 @@ public class LearnerImpl implements Learner {
                     _apply(i);
                 } else {
                     if (memberConfig.allowBoost()) {
-                        List<Proposal> defaultValue = exceptInstance == null || CollectionUtils.isEmpty(exceptInstance.getGrantedValue())
-                                ? Lists.newArrayList(Proposal.NOOP) : exceptInstance.getGrantedValue();
-                        _boost(i, defaultValue);
+                        LOG.info("try boost instance: {}", instanceId);
+
+                        CountDownLatch latch = new CountDownLatch(1);
+                        RuntimeAccessor.getProposer().tryBoost(i, (result, dataChange) -> latch.countDown());
+                        try {
+                            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                            // do nothing for await's result
+                        } catch (InterruptedException e) {
+                            LOG.debug(e.getMessage());
+                        }
+
                     } else {
                         final Endpoint master = memberConfig.getMaster();
                         if (master != null) {
@@ -394,19 +402,6 @@ public class LearnerImpl implements Learner {
                 LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
             }
         });
-    }
-
-    private void _boost(final long instanceId, final List<Proposal> defaultValue) {
-        LOG.info("try boost instance: {}", instanceId);
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        RuntimeAccessor.getProposer().tryBoost(instanceId, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
-                .collect(Collectors.toList())
-        );
-        try {
-            boolean lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            // do nothing
-        }
     }
 
     class ApplyAfterLearnCallback implements DataAligner.LearnCallback {
