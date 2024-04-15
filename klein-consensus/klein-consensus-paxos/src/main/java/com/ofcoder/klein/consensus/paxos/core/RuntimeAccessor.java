@@ -28,7 +28,7 @@ import com.ofcoder.klein.consensus.paxos.PaxosNode;
  * @author 释慧利
  */
 public class RuntimeAccessor {
-    private static final AtomicReference<ProposerImpl.PrepareState> skipPrepare = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
+    private static final AtomicReference<ProposerImpl.PrepareState> SKIP_PREPARE = new AtomicReference<>(ProposerImpl.PrepareState.NO_PREPARE);
     private static Proposer proposer;
     private static Acceptor acceptor;
     private static Learner learner;
@@ -37,7 +37,7 @@ public class RuntimeAccessor {
     private static Boolean initialized = false;
 
     public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
-        return skipPrepare;
+        return SKIP_PREPARE;
     }
 
     public static Proposer getProposer() {

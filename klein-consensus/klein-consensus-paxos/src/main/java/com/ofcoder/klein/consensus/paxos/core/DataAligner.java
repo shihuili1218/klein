@@ -91,7 +91,7 @@ public class DataAligner {
         });
     }
 
-    void init(ConsensusProp op) {
+    void init(final ConsensusProp op) {
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
@@ -308,6 +308,7 @@ public class DataAligner {
     }
 
     private static final class Task {
+
         public static final long HIGH_PRIORITY = -1;
         private static final LearnCallback FAKE_CALLBACK = result -> {
         };
@@ -316,13 +317,12 @@ public class DataAligner {
         private Endpoint target;
         private LearnCallback callback;
 
-        private Task(long priority, TaskEnum taskType, Endpoint target, LearnCallback callback) {
+        private Task(final long priority, final TaskEnum taskType, final Endpoint target, final LearnCallback callback) {
             this.priority = priority;
             this.taskType = taskType;
             this.target = target;
             this.callback = callback;
         }
     }
-
 
 }

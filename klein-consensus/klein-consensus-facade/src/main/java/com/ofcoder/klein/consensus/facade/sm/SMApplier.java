@@ -154,7 +154,7 @@ public class SMApplier {
         return sm.lastAppliedId();
     }
 
-    public long getLastCheckpoint(){
+    public long getLastCheckpoint() {
         return sm.lastCheckpoint();
     }
 

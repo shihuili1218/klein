@@ -420,7 +420,7 @@ public class LearnerImpl implements Learner {
     class ApplyAfterLearnCallback implements DataAligner.LearnCallback {
         private final long instanceId;
 
-        ApplyAfterLearnCallback(long instanceId) {
+        ApplyAfterLearnCallback(final long instanceId) {
             this.instanceId = instanceId;
         }
 

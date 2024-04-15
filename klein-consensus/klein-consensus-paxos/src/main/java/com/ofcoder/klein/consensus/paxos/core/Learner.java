@@ -24,11 +24,6 @@ import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
@@ -62,7 +57,9 @@ public interface Learner extends Role<ConsensusProp> {
     void replayLog(String group, long start);
 
     long getLastAppliedInstanceId();
+
     long getLastCheckpoint();
+
     Set<String> getGroups();
 
     /**
@@ -90,7 +87,5 @@ public interface Learner extends Role<ConsensusProp> {
      * @param isSelf from self
      */
     void handleConfirmRequest(ConfirmReq req, boolean isSelf);
-
-
 
 }

@@ -17,7 +17,6 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * Phase Callback.
