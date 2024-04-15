@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Lists;
-import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -254,12 +253,7 @@ public class DataAligner {
                         ? Lists.newArrayList(Proposal.NOOP) : instance.getGrantedValue();
                 CountDownLatch latch = new CountDownLatch(1);
 
-                RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
-                    @Override
-                    protected Long create() {
-                        return request.getInstanceId();
-                    }
-                }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> latch.countDown())).collect(Collectors.toList()));
+                RuntimeAccessor.getProposer().tryBoost(request.getInstanceId(), defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> latch.countDown())).collect(Collectors.toList()));
 
                 try {
                     boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);

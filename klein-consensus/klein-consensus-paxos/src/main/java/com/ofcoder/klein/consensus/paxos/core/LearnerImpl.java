@@ -36,7 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -329,7 +328,7 @@ public class LearnerImpl implements Learner {
         // fixme: 存在多个线程同时进来、_apply、_boost、_learn
         // _apply: 会执行多次，Applier排队执行的
         // _boost: 会抢占，
-        // _learn: 多次执行，
+        // _learn: 多次执行，Aligner排队执行的
 
         final long lastCheckpoint = getLastCheckpoint();
         final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
@@ -400,15 +399,8 @@ public class LearnerImpl implements Learner {
     private void _boost(final long instanceId, final List<Proposal> defaultValue) {
         LOG.info("try boost instance: {}", instanceId);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        RuntimeAccessor.getProposer().tryBoost(
-                new Holder<Long>() {
-                    @Override
-                    protected Long create() {
-                        return instanceId;
-                    }
-
-                }, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
-                        .collect(Collectors.toList())
+        RuntimeAccessor.getProposer().tryBoost(instanceId, defaultValue.stream().map(it -> new ProposalWithDone(it, (result, dataChange) -> future.complete(result)))
+                .collect(Collectors.toList())
         );
         try {
             boolean lr = future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);

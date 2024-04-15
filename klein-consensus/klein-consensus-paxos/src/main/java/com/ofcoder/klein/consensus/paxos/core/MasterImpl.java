@@ -17,7 +17,6 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -27,23 +26,18 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
-import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
 import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
@@ -62,16 +56,11 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.PushCompleteDataRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
 
 /**
  * Master implement.
@@ -88,7 +77,6 @@ public class MasterImpl implements Master {
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
-    private LogManager<Proposal> logManager;
     private final AtomicBoolean changing = new AtomicBoolean(false);
     private final Nwr nwr;
 
@@ -135,7 +123,6 @@ public class MasterImpl implements Master {
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         waitHeartbeatTimer = new RepeatedTimer("follower-wait-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
@@ -236,89 +223,25 @@ public class MasterImpl implements Master {
             req.setVersion(version);
             CompletableFuture<Boolean> latch = new CompletableFuture<>();
 
-            RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
+            RuntimeAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
                 @Override
-                protected Long create() {
-                    return self.incrementInstanceId();
+                public void negotiationDone(final boolean result, final boolean changed) {
+                    if (!result || changed) {
+                        latch.complete(false);
+                    }
                 }
-            }, curConfiguration, Lists.newArrayList(
-                    new ProposalWithDone(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
-                        @Override
-                        public void negotiationDone(final boolean result, final boolean changed) {
-                            if (!result || changed) {
-                                latch.complete(false);
-                                return;
-                            }
 
-                            // 2. Copy instance(version = 0, confirmed) to new quorum
-                            pushCompleteData(newConfig, 0);
-                        }
-
-                        @Override
-                        public void applyDone(final Map<Proposal, Object> r) {
-                            latch.complete(true);
-                        }
-                    })
-            ));
+                @Override
+                public void applyDone(final Map<Proposal, Object> r) {
+                    latch.complete(true);
+                }
+            }, false);
             return latch.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             // do nothing
             return false;
         } finally {
             changing.compareAndSet(true, false);
-        }
-    }
-
-    private void pushCompleteData(final Set<Endpoint> newConfig, final int times) {
-        int cur = times + 1;
-        if (cur >= 3) {
-            throw new ChangeMemberException("push complete data to new quorum failure.");
-        }
-
-        Map<String, Snap> snaps = RuntimeAccessor.getLearner().generateSnap();
-        List<Instance<Proposal>> instanceConfirmed = logManager.getInstanceConfirmed();
-        PushCompleteDataReq completeDataReq = PushCompleteDataReq.Builder.aPushCompleteDataReq()
-                .snaps(snaps)
-                .confirmedInstances(instanceConfirmed)
-                .build();
-
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        Quorum quorum = new SingleQuorum(newConfig, this.nwr.w(newConfig.size()));
-        quorum.grant(self.getSelf());
-        if (quorum.isGranted() == Quorum.GrantResult.PASS) {
-            future.complete(true);
-        }
-        newConfig.stream().filter(it -> !it.equals(self.getSelf()))
-                .forEach(it -> client.sendRequestAsync(it, completeDataReq, new AbstractInvokeCallback<PushCompleteDataRes>() {
-                    @Override
-                    public void error(final Throwable err) {
-                        quorum.refuse(it);
-                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
-                            future.complete(false);
-                        }
-                    }
-
-                    @Override
-                    public void complete(final PushCompleteDataRes result) {
-                        if (result.isSuccess()) {
-                            quorum.grant(it);
-                        } else {
-                            quorum.refuse(it);
-                        }
-                        if (quorum.isGranted() == Quorum.GrantResult.PASS) {
-                            future.complete(true);
-                        } else if (quorum.isGranted() == Quorum.GrantResult.REFUSE) {
-                            future.complete(false);
-                        }
-                        // else ignore
-                    }
-                }, 2000));
-        try {
-            if (!future.get(2010, TimeUnit.MILLISECONDS)) {
-                pushCompleteData(newConfig, cur);
-            }
-        } catch (Exception e) {
-            throw new ConsensusException(String.format("push data to %s, %s", newConfig, e.getMessage()), e);
         }
     }
 
@@ -360,20 +283,15 @@ public class MasterImpl implements Master {
 
             CountDownLatch latch = new CountDownLatch(1);
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
-            RuntimeAccessor.getProposer().tryBoost(
-                    new Holder<Long>() {
-                        @Override
-                        protected Long create() {
-                            return self.incrementInstanceId();
-                        }
-                    }, Lists.newArrayList(new ProposalWithDone(proposal, (result, changed) -> {
-                        LOG.info("electing master, negotiationDone: {}", result);
-                        if (result && !changed) {
-                            newMaster(latch);
-                        } else {
-                            latch.countDown();
-                        }
-                    })));
+
+            RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
+                LOG.info("electing master, negotiationDone: {}", result);
+                if (result && !changed) {
+                    newMaster(latch);
+                } else {
+                    latch.countDown();
+                }
+            }, true);
 
             try {
                 boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
@@ -426,38 +344,22 @@ public class MasterImpl implements Master {
         if (result.isGranted()) {
             quorum.grant(it);
             if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
-                memberConfig.changeMaster(self.getSelf().getId());
-                ThreadExecutor.execute(MasterImpl.this::_boosting);
                 restartSendHbNow();
-                latch.countDown();
+
+                RuntimeAccessor.getProposer().propose(Proposal.NOOP, (noopResult, dataChange) -> {
+                    if (noopResult) {
+                        memberConfig.changeMaster(self.getSelf().getId());
+                    } else {
+                        restartElect();
+                    }
+                    latch.countDown();
+                }, true);
             }
         } else {
             quorum.refuse(it);
             if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
                 latch.countDown();
             }
-        }
-    }
-
-    private void _boosting() {
-
-        LOG.info("boosting instance.");
-        long miniInstanceId = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
-        long maxInstanceId = self.getCurInstanceId();
-        for (; miniInstanceId < maxInstanceId; miniInstanceId++) {
-            Instance<Proposal> instance = logManager.getInstance(miniInstanceId);
-            if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
-                continue;
-            }
-            List<Proposal> grantedValue = instance != null && CollectionUtils.isNotEmpty(instance.getGrantedValue())
-                    ? instance.getGrantedValue() : Lists.newArrayList(Proposal.NOOP);
-            long finalMiniInstanceId = miniInstanceId;
-            RuntimeAccessor.getProposer().tryBoost(new Holder<Long>() {
-                @Override
-                protected Long create() {
-                    return finalMiniInstanceId;
-                }
-            }, grantedValue.stream().map(i -> new ProposalWithDone(i, new ProposeDone.FakeProposeDone())).collect(Collectors.toList()));
         }
     }
 

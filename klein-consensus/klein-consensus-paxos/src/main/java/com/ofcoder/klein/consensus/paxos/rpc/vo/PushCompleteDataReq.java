@@ -29,6 +29,7 @@ import com.ofcoder.klein.storage.facade.Snap;
  *
  * @author 释慧利
  */
+@Deprecated
 public class PushCompleteDataReq implements Serializable {
 
     private Map<String, Snap> snaps;

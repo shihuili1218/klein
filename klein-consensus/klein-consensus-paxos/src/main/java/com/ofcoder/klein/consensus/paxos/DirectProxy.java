@@ -78,7 +78,8 @@ public class DirectProxy implements Proxy {
                 builder.data((D) result.get(proposal));
                 completed.countDown();
             }
-        });
+        }, false);
+
         try {
             if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
                 LOG.warn("******** negotiation timeout ********");
