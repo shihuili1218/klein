@@ -198,8 +198,6 @@ public class ProposerImpl implements Proposer {
     private void _accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
-        ctxt.setGrantedProposalNo(grantedProposalNo);
-
         logManager.getInstance()
         // fixme :一个proposalNo只能有一个提案，要重新定义preparedInstanceMap的使用
         // choose valid proposal, and calculate checksum.
@@ -211,6 +209,7 @@ public class ProposerImpl implements Proposer {
         ctxt.setConsensusData(ctxt.isDataChange() ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
                 : originalProposals);
         ctxt.setConsensusChecksum(ChecksumUtil.md5(Hessian2Util.serialize(ctxt.getConsensusData())));
+        ctxt.setGrantedProposalNo(grantedProposalNo);
 
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
