@@ -17,11 +17,11 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -31,14 +31,15 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMApplier;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -67,7 +68,6 @@ public class LearnerImpl implements Learner {
     private final ConcurrentMap<String, SMApplier> sms = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
-    private Long lastAppliedId = 0L;
     private final Object appliedIdLock = new Object();
 
     public LearnerImpl(final PaxosNode self) {
@@ -90,7 +90,9 @@ public class LearnerImpl implements Learner {
 
     @Override
     public long getLastAppliedInstanceId() {
-        return lastAppliedId;
+        return sms.values().stream()
+                .mapToLong(SMApplier::getLastAppliedId)
+                .max().orElse(-1L);
     }
 
     @Override
@@ -107,9 +109,10 @@ public class LearnerImpl implements Learner {
 
     @Override
     public Map<String, Snap> generateSnap() {
+        Map<String, SMApplier> sms = new HashMap<>(this.sms);
         ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
-        // fixme: latch的数量根据sms来定，但是这中间sms可能会rm，那么latch就结束不了了
         CountDownLatch latch = new CountDownLatch(sms.size());
+
         sms.forEach((group, sm) -> {
             SMApplier.Task e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback() {
                 @Override
@@ -118,18 +121,14 @@ public class LearnerImpl implements Learner {
                     latch.countDown();
                 }
             });
-
             sm.offer(e);
-            // ignore offer result.
         });
 
         try {
-            if (latch.await(1L, TimeUnit.SECONDS)) {
-                return result;
-            } else {
+            if (!latch.await(1L, TimeUnit.SECONDS)) {
                 LOG.error("generate snapshot timeout. succ: {}, all: {}", result.keySet(), sms.keySet());
-                return result;
             }
+            return result;
         } catch (InterruptedException ex) {
             LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
             return result;
@@ -152,11 +151,9 @@ public class LearnerImpl implements Learner {
                         LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
 
                         self.updateCurInstanceId(snap.getCheckpoint());
-                        updateAppliedId(snap.getCheckpoint());
 
                         applyCallback.keySet().removeIf(it -> it <= checkpoint);
                         latch.countDown();
-
 //                        replayLog(group, checkpoint);
                     }
                 });
@@ -201,14 +198,6 @@ public class LearnerImpl implements Learner {
             SMApplier.Task e = SMApplier.Task.createReplayTask(i, replayData);
 
             applier.offer(e);
-        }
-    }
-
-    private void updateAppliedId(final long instanceId) {
-        if (lastAppliedId < instanceId) {
-            synchronized (appliedIdLock) {
-                this.lastAppliedId = Math.max(lastAppliedId, instanceId);
-            }
         }
     }
 
@@ -325,15 +314,13 @@ public class LearnerImpl implements Learner {
     }
 
     private void apply(final long instanceId) {
-        // fixme: 存在多个线程同时进来、_apply、_boost、_learn
         // _apply: 会执行多次，Applier排队执行的
-        // _boost: 会抢占，
+        // _boost: 会抢占，在accept阶段会有ConcurrentSet
         // _learn: 多次执行，Aligner排队执行的
 
-        final long lastCheckpoint = getLastCheckpoint();
-        final long lastApplyId = Math.max(lastAppliedId, lastCheckpoint);
+        final long lastApplyId = getLastAppliedInstanceId();
         final long expectConfirmId = lastApplyId + 1;
-        LOG.info("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, lastAppliedId, lastCheckpoint);
+        LOG.debug("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, getLastAppliedInstanceId(), getLastCheckpoint());
 
         if (instanceId <= lastApplyId) {
             // the instance has been applied.
@@ -375,33 +362,31 @@ public class LearnerImpl implements Learner {
     }
 
     private void _apply(final long instanceId) {
-        Instance<Proposal> localInstance = logManager.getInstance(instanceId);
-        Map<String, List<Command>> groupProposals = localInstance.getGrantedValue().stream()
-                .filter(it -> it != Proposal.NOOP)
-                .collect(Collectors.groupingBy(Proposal::getGroup, Collectors.toList()));
 
-        // fixme: 把instanceId传到sms里面去，不用在外面过滤，让所有的sm对齐instanceId
-        groupProposals.forEach((group, proposals) -> {
-            if (sms.containsKey(group)) {
-                SMApplier.Task task = SMApplier.Task.createApplyTask(instanceId, proposals, new SMApplier.TaskCallback() {
+        List<SMApplier> smAppliers = new ArrayList<>(sms.values());
+        CountDownLatch latch = new CountDownLatch(smAppliers.size());
+        List<ProposeDone> remove = applyCallback.remove(instanceId);
+        Map<Proposal, Object> applyResult = new ConcurrentHashMap<>();
 
-                    @Override
-                    public void onApply(final Map<Command, Object> result) {
-                        List<ProposeDone> remove = applyCallback.remove(instanceId);
-                        if (remove != null) {
-                            Map<Proposal, Object> proposalResult = new HashMap<>();
-                            result.forEach((k, v) -> proposalResult.put((Proposal) k, v));
-                            remove.forEach(it -> it.applyDone(proposalResult));
-                        }
-                        updateAppliedId(instanceId);
-                    }
-                });
-
-                sms.get(group).offer(task);
-            } else {
-                LOG.info("offer apply task, the {} sm is not exists. instanceId: {}", group, instanceId);
+        SMApplier.Task applyTask = SMApplier.Task.createApplyTask(instanceId, new SMApplier.TaskCallback() {
+            @Override
+            public void onApply(final Map<Command, Object> result) {
+                result.forEach((k, v) -> applyResult.put((Proposal) k, v));
+                latch.countDown();
             }
         });
+        smAppliers.forEach(it -> it.offer(applyTask));
+
+        try {
+            if (!latch.await(1, TimeUnit.SECONDS)) {
+                LOG.error("apply sm timeout, instanceId: {}", instanceId);
+            }
+            if (remove != null) {
+                remove.forEach(it -> it.applyDone(applyResult));
+            }
+        } catch (InterruptedException e) {
+            throw new StateMachineException(e.getMessage(), e);
+        }
     }
 
     class ApplyAfterLearnCallback implements DataAligner.LearnCallback {

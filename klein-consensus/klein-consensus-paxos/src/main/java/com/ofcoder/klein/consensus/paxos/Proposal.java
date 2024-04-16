@@ -27,7 +27,6 @@ import com.ofcoder.klein.consensus.facade.Command;
  * @author 释慧利
  */
 public class Proposal implements Command {
-    public static final Proposal NOOP = new Proposal(Noop.GROUP, Noop.DEFAULT);
     private String group;
     private Object data;
 
@@ -39,6 +38,7 @@ public class Proposal implements Command {
         this.data = data;
     }
 
+    @Override
     public String getGroup() {
         return group;
     }
@@ -81,11 +81,4 @@ public class Proposal implements Command {
                 + '}';
     }
 
-    /**
-     * No operation proposal.
-     */
-    public static class Noop implements Serializable {
-        public static final Noop DEFAULT = new Noop();
-        public static final String GROUP = "NOOP";
-    }
 }

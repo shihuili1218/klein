@@ -24,6 +24,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
 
@@ -43,7 +45,9 @@ public class SMApplier {
     private final SM sm;
     private final BlockingQueue<Task> applyQueue;
     private boolean shutdown = false;
-    private LogManager logManager;
+    private LogManager<Command> logManager;
+    private Long lastAppliedId = 0L;
+    private Long lastCheckpoint = 0L;
 
     public SMApplier(final String group, final SM sm) {
         this.group = group;
@@ -79,8 +83,10 @@ public class SMApplier {
 
     private void _takeSnap(final Task task) {
         Snap lastSnap = logManager.getLastSnap(group);
-        if (lastSnap == null || lastSnap.getCheckpoint() < sm.lastAppliedId()) {
-            lastSnap = sm.snapshot();
+
+        if (lastSnap == null || lastSnap.getCheckpoint() < lastAppliedId) {
+            lastSnap = new Snap(lastAppliedId, sm.makeImage());
+            this.lastCheckpoint = lastAppliedId;
             logManager.saveSnap(group, lastSnap);
             LOG.info("take snapshot success, group: {}, cp: {}", group, lastSnap.getCheckpoint());
         }
@@ -90,34 +96,40 @@ public class SMApplier {
 
     private void _loadSnap(final Task task) {
         Snap localSnap = logManager.getLastSnap(group);
-        long checkpoint = sm.lastCheckpoint();
-        if (task.loadSnap.getCheckpoint() <= sm.lastAppliedId()) {
-            LOG.warn("load snap skip, group: {}, local.lastAppliedId: {}, snap.checkpoint: {}", group, sm.lastAppliedId(), task.loadSnap.getCheckpoint());
+
+        if (task.loadSnap.getCheckpoint() <= lastAppliedId) {
+            LOG.warn("load snap skip, group: {}, local.lastAppliedId: {}, snap.checkpoint: {}", group, lastAppliedId, task.loadSnap.getCheckpoint());
         } else if (localSnap != null && localSnap.getCheckpoint() > task.loadSnap.getCheckpoint()) {
             LOG.warn("load snap skip, group: {}, local.checkpoint: {}, snap.checkpoint: {}", group, localSnap.getCheckpoint(), task.loadSnap.getCheckpoint());
         } else {
-            sm.loadSnap(task.loadSnap);
+            sm.loadImage(task.loadSnap);
             logManager.saveSnap(group, task.loadSnap);
-            checkpoint = task.loadSnap.getCheckpoint();
+            lastCheckpoint = task.loadSnap.getCheckpoint();
+            lastAppliedId = task.loadSnap.getCheckpoint();
             // todo: callback.onApply removeIf
             this.applyQueue.removeIf(it -> it.priority != Task.HIGH_PRIORITY && it.priority < task.loadSnap.getCheckpoint());
             LOG.info("load snap success, group: {}, checkpoint: {}", group, task.loadSnap.getCheckpoint());
         }
 
-        task.callback.onLoadSnap(checkpoint);
+        task.callback.onLoadSnap(lastCheckpoint);
     }
 
     private void _apply(final Task task) {
 
-        final long lastApplyId = sm.lastAppliedId();
+        final long lastApplyId = this.lastAppliedId;
         final long instanceId = task.priority;
+
+        Instance<Command> instance = logManager.getInstance(instanceId);
+        List<Command> proposals = instance.getGrantedValue().stream()
+                .filter(it -> it != Command.NOOP)
+                .filter(it -> group.equals(it.getGroup()))
+                .collect(Collectors.toList());
 
         Map<Command, Object> applyResult = new HashMap<>();
         if (instanceId > lastApplyId) {
             LOG.debug("doing apply instance[{}]", instanceId);
-            task.proposals.forEach(it -> {
-                applyResult.put(it, sm.apply(instanceId, it.getData()));
-            });
+            proposals.forEach(it -> applyResult.put(it, sm.apply(it.getData())));
+            this.lastAppliedId = instanceId;
         }
 
         // the instance has been applied.
@@ -151,11 +163,11 @@ public class SMApplier {
      * @return Instance Id
      */
     public long getLastAppliedId() {
-        return sm.lastAppliedId();
+        return lastAppliedId;
     }
 
     public long getLastCheckpoint() {
-        return sm.lastCheckpoint();
+        return lastCheckpoint;
     }
 
     public enum TaskEnum {
@@ -209,15 +221,13 @@ public class SMApplier {
          * create task for TaskEnum.APPLY.
          *
          * @param instanceId apply instance id
-         * @param proposals  apply proposal
-         * @param callback   apply callbacl
+         * @param callback   apply callback
          * @return task object
          */
-        public static Task createApplyTask(final long instanceId, final List<? extends Command> proposals, final TaskCallback callback) {
+        public static Task createApplyTask(final long instanceId, final TaskCallback callback) {
             Task task = new Task();
             task.priority = instanceId;
             task.taskType = TaskEnum.APPLY;
-            task.proposals = proposals;
             task.callback = callback;
             return task;
         }

@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import com.ofcoder.klein.storage.facade.Snap;
-
 /**
  * State machine.
  *
@@ -26,41 +24,26 @@ import com.ofcoder.klein.storage.facade.Snap;
 public interface SM {
 
     /**
-     * last applied instance id.
-     *
-     * @return instance id
-     */
-    long lastAppliedId();
-
-    /**
-     * last checkpoint.
-     *
-     * @return checkpoint
-     */
-    long lastCheckpoint();
-
-    /**
      * apply instance.
      *
-     * @param instanceId instance id
-     * @param data       proposal's data
+     * @param data proposal's data
      * @return apply result
      */
-    Object apply(long instanceId, Object data);
+    Object apply(Object data);
 
     /**
      * make a snapshot.
      *
      * @return snapshot
      */
-    Snap snapshot();
+    Object makeImage();
 
     /**
      * load snapshot.
      *
      * @param snap snapshot
      */
-    void loadSnap(Snap snap);
+    void loadImage(Object snap);
 
     /**
      * close sm.

@@ -285,7 +285,6 @@ public class MasterImpl implements Master {
             Proposal proposal = new Proposal(MasterSM.GROUP, req);
 
             RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
-                LOG.info("electing master, negotiationDone: {}", result);
                 if (result && !changed) {
                     newMaster(latch);
                 } else {
