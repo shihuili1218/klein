@@ -32,8 +32,6 @@ public class PaxosNode extends Node {
     private final Object instanceIdLock = new Object();
     private long curProposalNo = 0;
     private final Object proposalNoLock = new Object();
-    private long lastCheckpoint = 0;
-    private final Object checkpointLock = new Object();
     private Endpoint self;
 
     /**
@@ -107,23 +105,6 @@ public class PaxosNode extends Node {
         return self;
     }
 
-    public long getLastCheckpoint() {
-        return lastCheckpoint;
-    }
-
-    /**
-     * update last checkpoint.
-     *
-     * @param checkpoint checkpoint
-     */
-    public void updateLastCheckpoint(final long checkpoint) {
-        if (lastCheckpoint < checkpoint) {
-            synchronized (checkpointLock) {
-                this.lastCheckpoint = Math.max(lastCheckpoint, checkpoint);
-            }
-        }
-    }
-
     @Override
     public boolean equals(final Object o) {
         if (this == o) {
@@ -134,12 +115,12 @@ public class PaxosNode extends Node {
         }
         PaxosNode node = (PaxosNode) o;
         return getCurInstanceId() == node.getCurInstanceId() && getCurProposalNo() == node.getCurProposalNo()
-                && lastCheckpoint == node.lastCheckpoint && Objects.equals(getSelf(), node.getSelf());
+                && Objects.equals(getSelf(), node.getSelf());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCurInstanceId(), getCurProposalNo(), lastCheckpoint, getSelf());
+        return Objects.hash(getCurInstanceId(), getCurProposalNo(), getSelf());
     }
 
     @Override
@@ -147,7 +128,6 @@ public class PaxosNode extends Node {
         return "PaxosNode{"
                 + "curInstanceId=" + curInstanceId
                 + ", curProposalNo=" + curProposalNo
-                + ", lastCheckpoint=" + lastCheckpoint
                 + ", self=" + self
                 + '}';
     }
@@ -224,7 +204,6 @@ public class PaxosNode extends Node {
             paxosNode.curProposalNo = this.curProposalNo;
             paxosNode.curInstanceId = this.curInstanceId;
             paxosNode.self = this.self;
-            paxosNode.lastCheckpoint = this.lastCheckpoint;
             return paxosNode;
         }
     }

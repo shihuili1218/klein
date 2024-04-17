@@ -36,7 +36,7 @@ public class MasterSM extends AbstractSM {
     }
 
     @Override
-    protected Object apply(final Object data) {
+    public Object apply(final Object data) {
         LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
         if (data instanceof ElectionOp) {
             electMaster((ElectionOp) data);
@@ -57,12 +57,12 @@ public class MasterSM extends AbstractSM {
     }
 
     @Override
-    protected Object makeImage() {
+    public Object makeImage() {
         return MemberRegistry.getInstance().getMemberConfiguration().createRef();
     }
 
     @Override
-    protected void loadImage(final Object snap) {
+    public void loadImage(final Object snap) {
         LOG.info("LOAD SNAP: {}", snap);
         if (!(snap instanceof PaxosMemberConfiguration)) {
             return;

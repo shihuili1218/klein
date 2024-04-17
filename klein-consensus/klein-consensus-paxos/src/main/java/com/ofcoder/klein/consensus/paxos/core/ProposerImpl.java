@@ -17,7 +17,10 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -31,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslator;
@@ -46,6 +50,7 @@ import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
@@ -55,6 +60,7 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -82,7 +88,8 @@ public class ProposerImpl implements Proposer {
     /**
      * The instance of the Prepare phase has been executed.
      */
-    private final ConcurrentMap<Long, Instance<Proposal>> preparedInstanceMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Instance<Command>> seenInstances = new ConcurrentHashMap<>();
+    private final Set<Long> runningInstance = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private LogManager<Proposal> logManager;
 
     public ProposerImpl(final PaxosNode self) {
@@ -110,11 +117,6 @@ public class ProposerImpl implements Proposer {
         proposeDisruptor.handleEventsWith(eventHandler);
         proposeDisruptor.setDefaultExceptionHandler(new DisruptorExceptionHandler<Object>(getClass().getSimpleName()));
         this.proposeQueue = proposeDisruptor.start();
-        memberConfig.addHealthyListener(healthy -> {
-            if (memberConfig.allowPropose()) {
-                eventHandler.triggerHandle();
-            }
-        });
     }
 
     @Override
@@ -136,19 +138,31 @@ public class ProposerImpl implements Proposer {
      * and process it as {@link ProposeEventHandler}
      *
      * @param data client's data
-     * @param done client's callbck
+     * @param done client's callback
      */
     @Override
-    public void propose(final Proposal data, final ProposeDone done) {
+    public void propose(final Command data, final ProposeDone done, final boolean now) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
 
-        final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
-            event.setProposal(data);
-            event.setDone(done);
-        };
-        this.proposeQueue.publishEvent(translator);
+        if (now) {
+            ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
+                @Override
+                protected Long create() {
+                    return self.incrementInstanceId();
+                }
+            }, Lists.newArrayList(new ProposalWithDone(data, done)));
+
+            prepare(ctxt, new PrepareCallback());
+        } else {
+            final EventTranslator<ProposalWithDone> translator = (event, sequence) -> {
+                event.setProposal(data);
+                event.setDone(done);
+            };
+            this.proposeQueue.publishEvent(translator);
+        }
+
     }
 
     /**
@@ -166,22 +180,35 @@ public class ProposerImpl implements Proposer {
      * @param ctxt              Negotiation Context
      * @param callback          Callback of accept phase,
      *                          if the majority approved accept, call {@link PhaseCallback.AcceptPhaseCallback#granted(ProposeContext)}
-     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, Endpoint)}
+     *                          if an acceptor returns a confirmed instance, call {@link PhaseCallback.AcceptPhaseCallback#learn(ProposeContext, NodeState)}
      */
     private void accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
+        if (!runningInstance.add(ctxt.getInstanceId())) {
+            // fixme: 等待其他线程执行完，返回正确的结果
+            ctxt.getDataWithCallback().stream().map(ProposalWithDone::getDone).forEach(it -> it.negotiationDone(false, false));
+            return;
+        }
+
+        try {
+            _accept(grantedProposalNo, ctxt, callback);
+        } finally {
+            runningInstance.remove(ctxt.getInstanceId());
+        }
+    }
+
+    private void _accept(final long grantedProposalNo, final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback) {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
-        ctxt.setGrantedProposalNo(grantedProposalNo);
-
         // choose valid proposal, and calculate checksum.
-        List<Proposal> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
+        List<Command> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
         String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
-        ctxt.setDataChange(preparedInstanceMap.containsKey(ctxt.getInstanceId())
-                && CollectionUtils.isNotEmpty(preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue())
-                && !StringUtils.equals(preparedInstanceMap.get(ctxt.getInstanceId()).getChecksum(), originalChecksum));
-        ctxt.setConsensusData(ctxt.isDataChange() ? preparedInstanceMap.get(ctxt.getInstanceId()).getGrantedValue()
+        ctxt.setDataChange(seenInstances.containsKey(ctxt.getInstanceId())
+                && CollectionUtils.isNotEmpty(seenInstances.get(ctxt.getInstanceId()).getGrantedValue())
+                && !StringUtils.equals(seenInstances.get(ctxt.getInstanceId()).getChecksum(), originalChecksum));
+        ctxt.setConsensusData(ctxt.isDataChange() ? seenInstances.get(ctxt.getInstanceId()).getGrantedValue()
                 : originalProposals);
-        ctxt.setConsensusChecksum(ChecksumUtil.md5(Hessian2Util.serialize(ctxt.getConsensusData())));
+        ctxt.setConsensusChecksum(ctxt.isDataChange() ? seenInstances.get(ctxt.getInstanceId()).getChecksum() : originalChecksum);
+        ctxt.setGrantedProposalNo(grantedProposalNo);
 
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
         final AcceptReq req = AcceptReq.Builder.anAcceptReq()
@@ -231,7 +258,7 @@ public class ProposerImpl implements Proposer {
 
         if (result.getInstanceState() == Instance.State.CONFIRMED
                 && ctxt.getAcceptNexted().compareAndSet(false, true)) {
-            callback.learn(ctxt, it);
+            callback.learn(ctxt, result.getNodeState());
             return;
         }
 
@@ -255,14 +282,13 @@ public class ProposerImpl implements Proposer {
     }
 
     @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final List<ProposalWithDone> defaultProposal) {
-        tryBoost(instanceHolder, memberConfig, defaultProposal);
-    }
-
-    @Override
-    public void tryBoost(final Holder<Long> instanceHolder, final PaxosMemberConfiguration memberConfiguration,
-                         final List<ProposalWithDone> defaultProposal) {
-        ProposeContext ctxt = new ProposeContext(memberConfiguration.createRef(), instanceHolder, defaultProposal);
+    public void tryBoost(final Long instanceId, final ProposeDone done) {
+        ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
+            @Override
+            protected Long create() {
+                return instanceId;
+            }
+        }, Lists.newArrayList(new ProposalWithDone(Command.NOOP, done)));
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -301,7 +327,7 @@ public class ProposerImpl implements Proposer {
             try {
                 // do prepare
                 CountDownLatch latch = new CountDownLatch(1);
-                forcePrepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
+                _prepare(ctxt, new PhaseCallback.PreparePhaseCallback() {
                     @Override
                     public void granted(final long grantedProposalNo, final ProposeContext context) {
                         latch.countDown();
@@ -329,14 +355,14 @@ public class ProposerImpl implements Proposer {
 
     }
 
-    private void forcePrepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
+    private void _prepare(final ProposeContext ctxt, final PhaseCallback.PreparePhaseCallback callback) {
         // check retry times, refused() is invoked only when the number of retry times reaches the threshold
         if (ctxt.getTimesAndIncrement() >= this.prop.getRetry()) {
             callback.refused(ctxt);
             return;
         }
 
-        preparedInstanceMap.clear();
+        seenInstances.clear();
 
         final long proposalNo = self.generateNextProposalNo();
         final PaxosMemberConfiguration memberConfiguration = ctxt.getMemberConfiguration().createRef();
@@ -362,7 +388,7 @@ public class ProposerImpl implements Proposer {
                     ctxt.getPrepareQuorum().refuse(it);
                     if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                             && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                        ThreadExecutor.execute(() -> forcePrepare(ctxt.createUntappedRef(), callback));
+                        ThreadExecutor.execute(() -> _prepare(ctxt.createUntappedRef(), callback));
                     }
                 }
 
@@ -381,12 +407,12 @@ public class ProposerImpl implements Proposer {
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
-        for (Instance<Proposal> instance : result.getInstances()) {
-            if (preparedInstanceMap.putIfAbsent(instance.getInstanceId(), instance) != null) {
-                synchronized (preparedInstanceMap) {
-                    Instance<Proposal> prepared = preparedInstanceMap.get(instance.getInstanceId());
+        for (Instance<Command> instance : result.getInstances()) {
+            if (seenInstances.putIfAbsent(instance.getInstanceId(), instance) != null) {
+                synchronized (seenInstances) {
+                    Instance<Command> prepared = seenInstances.get(instance.getInstanceId());
                     if (instance.getProposalNo() > prepared.getProposalNo()) {
-                        preparedInstanceMap.put(instance.getInstanceId(), instance);
+                        seenInstances.put(instance.getInstanceId(), instance);
                     }
                 }
             }
@@ -407,11 +433,10 @@ public class ProposerImpl implements Proposer {
             // do prepare phase
             if (ctxt.getPrepareQuorum().isGranted() == SingleQuorum.GrantResult.REFUSE
                     && ctxt.getPrepareNexted().compareAndSet(false, true)) {
-                ThreadExecutor.execute(() -> forcePrepare(ctxt.createUntappedRef(), callback));
+                ThreadExecutor.execute(() -> _prepare(ctxt.createUntappedRef(), callback));
             }
 
-            // todo ??????
-            RuntimeAccessor.getLearner().pullSameData(result.getNodeState());
+//            RuntimeAccessor.getLearner().pullSameData(result.getNodeState());
         }
     }
 
@@ -422,13 +447,6 @@ public class ProposerImpl implements Proposer {
 
         public ProposeEventHandler(final int batchSize) {
             this.batchSize = batchSize;
-        }
-
-        private void triggerHandle() {
-            if (tasks.isEmpty()) {
-                return;
-            }
-            propose(Proposal.NOOP, new ProposeDone.FakeProposeDone());
         }
 
         private void handle() {
@@ -491,7 +509,7 @@ public class ProposerImpl implements Proposer {
         public void granted(final ProposeContext context) {
             LOG.debug("accept granted. proposalNo: {}, instance: {}", context.getGrantedProposalNo(), context.getInstanceId());
 
-            ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
+            ProposerImpl.this.seenInstances.remove(context.getInstanceId());
 
             context.getDataWithCallback().forEach(it ->
                     it.getDone().negotiationDone(true, context.isDataChange()));
@@ -502,16 +520,17 @@ public class ProposerImpl implements Proposer {
                 if (!context.isDataChange()) {
                     dons = context.getDataWithCallback();
                 } else {
-                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(null, null));
+                    // accelerate convergence
+                    context.getDataWithCallback().forEach(it -> it.getDone().applyDone(new HashMap<>()));
                 }
                 RuntimeAccessor.getLearner().confirm(context.getInstanceId(), context.getConsensusChecksum(), dons);
             });
         }
 
         @Override
-        public void learn(final ProposeContext context, final Endpoint it) {
-            LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), it.getId());
-            ProposerImpl.this.preparedInstanceMap.remove(context.getInstanceId());
+        public void learn(final ProposeContext context, final NodeState target) {
+            LOG.debug("accept finds that the instance is confirmed. proposalNo: {}, instance: {}, target: {}", context.getGrantedProposalNo(), context.getInstanceId(), target.getNodeId());
+            ProposerImpl.this.seenInstances.remove(context.getInstanceId());
 
             for (ProposalWithDone event : context.getDataWithCallback()) {
                 event.getDone().negotiationDone(false, false);
@@ -519,7 +538,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do learn
-                RuntimeAccessor.getLearner().learn(context.getInstanceId(), it);
+                RuntimeAccessor.getDataAligner().alignData(target);
             });
 
         }

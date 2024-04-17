@@ -24,6 +24,10 @@
             <groupId>com.ofcoder.klein.consensus.facade</groupId>
             <artifactId>klein-consensus-facade</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

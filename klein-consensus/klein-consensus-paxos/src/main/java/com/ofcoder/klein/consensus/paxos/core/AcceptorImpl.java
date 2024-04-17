@@ -22,6 +22,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -48,7 +49,7 @@ public class AcceptorImpl implements Acceptor {
 
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
-    private LogManager<Proposal> logManager;
+    private LogManager<Command> logManager;
     private final Object negLock = new Object();
 
     public AcceptorImpl(final PaxosNode self) {
@@ -73,12 +74,21 @@ public class AcceptorImpl implements Acceptor {
         final long selfProposalNo = self.getCurProposalNo();
         final long selfInstanceId = self.getCurInstanceId();
         final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
+        final long selfCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
+        final NodeState selfState = NodeState.Builder.aNodeState()
+                .nodeId(self.getSelf().getId())
+                .maxInstanceId(selfInstanceId)
+                .lastCheckpoint(selfCheckpoint)
+                .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
+                .build();
 
-        if (req.getInstanceId() <= self.getLastCheckpoint() || req.getInstanceId() <= RuntimeAccessor.getLearner().getLastAppliedInstanceId()) {
+        if (req.getInstanceId() <= selfCheckpoint || req.getInstanceId() <= RuntimeAccessor.getLearner().getLastAppliedInstanceId()) {
+
             return AcceptRes.Builder.anAcceptRes()
                     .nodeId(self.getSelf().getId())
                     .result(false)
                     .instanceState(Instance.State.CONFIRMED)
+                    .nodeState(selfState)
                     .curInstanceId(selfInstanceId)
                     .curProposalNo(selfProposalNo).build();
         }
@@ -86,9 +96,9 @@ public class AcceptorImpl implements Acceptor {
             try {
                 logManager.getLock().writeLock().lock();
 
-                Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
+                Instance<Command> localInstance = logManager.getInstance(req.getInstanceId());
                 if (localInstance == null) {
-                    localInstance = Instance.Builder.<Proposal>anInstance()
+                    localInstance = Instance.Builder.<Command>anInstance()
                             .instanceId(req.getInstanceId())
                             .proposalNo(req.getProposalNo())
                             .state(Instance.State.PREPARED)
@@ -107,13 +117,14 @@ public class AcceptorImpl implements Acceptor {
                             .curProposalNo(selfProposalNo)
                             .curInstanceId(selfInstanceId)
                             .instanceState(localInstance.getState())
+                            .nodeState(selfState)
                             .build();
                     logManager.updateInstance(localInstance);
                     return res;
                 }
 
                 // check proposals include change member
-                for (Proposal datum : req.getData()) {
+                for (Command datum : req.getData()) {
                     if (datum.getData() instanceof ChangeMemberOp) {
                         ChangeMemberOp data = (ChangeMemberOp) datum.getData();
                         memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
@@ -127,7 +138,8 @@ public class AcceptorImpl implements Acceptor {
 
                 if (localInstance.getState() == Instance.State.CONFIRMED) {
                     resBuilder.result(false)
-                            .instanceState(localInstance.getState());
+                            .instanceState(localInstance.getState())
+                            .nodeState(selfState);
                 } else {
                     localInstance.setState(Instance.State.ACCEPTED);
                     localInstance.setProposalNo(req.getProposalNo());
@@ -136,7 +148,8 @@ public class AcceptorImpl implements Acceptor {
                     logManager.updateInstance(localInstance);
 
                     resBuilder.result(true)
-                            .instanceState(localInstance.getState());
+                            .instanceState(localInstance.getState())
+                            .nodeState(selfState);
                 }
                 return resBuilder.build();
             } finally {
@@ -153,24 +166,18 @@ public class AcceptorImpl implements Acceptor {
         synchronized (negLock) {
             final long curProposalNo = self.getCurProposalNo();
             final long curInstanceId = self.getCurInstanceId();
-            long lastCheckpoint = self.getLastCheckpoint();
+            long lastCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
             final PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
 
             PrepareRes.Builder res = PrepareRes.Builder.aPrepareRes()
                     .nodeId(self.getSelf().getId())
                     .curProposalNo(curProposalNo)
-                    .curInstanceId(curInstanceId)
-                    .nodeState(NodeState.Builder.aNodeState()
-                            .nodeId(self.getSelf().getId())
-                            .maxInstanceId(curInstanceId)
-                            .lastCheckpoint(lastCheckpoint)
-                            .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
-                            .build());
+                    .curInstanceId(curInstanceId);
 
             if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
                 return res.result(false).instances(new ArrayList<>()).build();
             } else {
-                List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+                List<Instance<Command>> instances = logManager.getInstanceNoConfirm();
                 return res.result(true).instances(instances).build();
             }
         }

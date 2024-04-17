@@ -51,7 +51,7 @@ public class PushCompleteDataProcessor extends AbstractRpcProcessor<PushComplete
         LOG.info("receive push complete data");
         PushCompleteDataRes res = new PushCompleteDataRes();
 
-        RuntimeAccessor.getLearner().loadSnap(request.getSnaps());
+        RuntimeAccessor.getLearner().loadSnapSync(request.getSnaps());
 
         logManager.getLock().writeLock().lock();
         try {

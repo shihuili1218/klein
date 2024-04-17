@@ -16,71 +16,12 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
-import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
-import com.ofcoder.klein.storage.facade.Snap;
-
 /**
  * Add Snapshot and Checkpoint in SM.
  *
  * @author 释慧利
  */
 public abstract class AbstractSM implements SM {
-    private static Long lastAppliedId = 0L;
-
-    @Override
-    public long lastAppliedId() {
-        return lastAppliedId;
-    }
-
-    @Override
-    public Object apply(final long instanceId, final Object data) {
-        lastAppliedId = Math.max(instanceId, lastAppliedId);
-        return apply(data);
-    }
-
-    /**
-     * apply instance.
-     *
-     * @param data proposal's data
-     * @return apply result
-     */
-    protected abstract Object apply(Object data);
-
-    @Override
-    public Snap snapshot() {
-        try {
-            return new Snap(lastAppliedId, makeImage());
-        } catch (Exception e) {
-            throw new StateMachineException("Create snapshot failure, " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * take a photo.
-     *
-     * @return image
-     */
-    protected abstract Object makeImage();
-
-    @Override
-    public void loadSnap(final Snap snap) {
-        if (snap == null) {
-            return;
-        }
-        try {
-            lastAppliedId = snap.getCheckpoint();
-            loadImage(snap.getSnap());
-        } catch (Exception e) {
-            throw new StateMachineException("Load snapshot failure, " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * load image.
-     *
-     * @param snap image
-     */
-    protected abstract void loadImage(Object snap);
 
     @Override
     public void close() {

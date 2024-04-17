@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.io.Serializable;
 import java.util.List;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.storage.facade.Instance;
 
@@ -32,8 +33,7 @@ public class PrepareRes implements Serializable {
     private boolean result;
     private long curProposalNo;
     private long curInstanceId;
-    private List<Instance<Proposal>> instances;
-    private NodeState nodeState;
+    private List<Instance<Command>> instances;
 
     public String getNodeId() {
         return nodeId;
@@ -51,12 +51,8 @@ public class PrepareRes implements Serializable {
         return curInstanceId;
     }
 
-    public List<Instance<Proposal>> getInstances() {
+    public List<Instance<Command>> getInstances() {
         return instances;
-    }
-
-    public NodeState getNodeState() {
-        return nodeState;
     }
 
     public static final class Builder {
@@ -64,8 +60,7 @@ public class PrepareRes implements Serializable {
         private boolean result;
         private long curProposalNo;
         private long curInstanceId;
-        private List<Instance<Proposal>> instances;
-        private NodeState nodeState;
+        private List<Instance<Command>> instances;
 
         private Builder() {
         }
@@ -129,19 +124,8 @@ public class PrepareRes implements Serializable {
          * @param instances instances
          * @return Builder
          */
-        public Builder instances(final List<Instance<Proposal>> instances) {
+        public Builder instances(final List<Instance<Command>> instances) {
             this.instances = instances;
-            return this;
-        }
-
-        /**
-         * masterState.
-         *
-         * @param masterState masterState
-         * @return Builder
-         */
-        public Builder nodeState(final NodeState masterState) {
-            this.nodeState = masterState;
             return this;
         }
 
@@ -157,7 +141,6 @@ public class PrepareRes implements Serializable {
             prepareRes.instances = this.instances;
             prepareRes.curProposalNo = this.curProposalNo;
             prepareRes.nodeId = this.nodeId;
-            prepareRes.nodeState = this.nodeState;
             return prepareRes;
         }
     }

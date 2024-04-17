@@ -16,7 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 import org.junit.Test;
 

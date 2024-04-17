@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 
 import java.util.List;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
@@ -27,14 +28,14 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
  */
 public class AcceptReq extends BaseReq {
     private long instanceId;
-    private List<Proposal> data;
+    private List<Command> data;
     private String checksum;
 
     public long getInstanceId() {
         return instanceId;
     }
 
-    public List<Proposal> getData() {
+    public List<Command> getData() {
         return data;
     }
 
@@ -44,7 +45,7 @@ public class AcceptReq extends BaseReq {
 
     public static final class Builder {
         private long instanceId;
-        private List<Proposal> data;
+        private List<Command> data;
         private String nodeId;
         private long proposalNo;
         private int memberConfigurationVersion;
@@ -79,7 +80,7 @@ public class AcceptReq extends BaseReq {
          * @param data data
          * @return Builder
          */
-        public Builder data(final List<Proposal> data) {
+        public Builder data(final List<Command> data) {
             this.data = data;
             return this;
         }

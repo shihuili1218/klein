@@ -1,0 +1,319 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.ofcoder.klein.consensus.paxos.core;
+
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+
+import org.apache.commons.collections4.CollectionUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Lists;
+import com.ofcoder.klein.common.util.KleinThreadFactory;
+import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.PaxosNode;
+import com.ofcoder.klein.consensus.paxos.Proposal;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
+import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+
+public class DataAligner {
+    private static final Logger LOG = LoggerFactory.getLogger(DataAligner.class);
+    private final PaxosNode self;
+    private ConsensusProp prop;
+    private final PaxosMemberConfiguration memberConfig;
+    private LogManager<Proposal> logManager;
+    private RpcClient client;
+    private final BlockingQueue<Task> learnQueue;
+    private boolean shutdown = false;
+
+    public DataAligner(final PaxosNode self) {
+        this.self = self;
+        this.learnQueue = new PriorityBlockingQueue<>(1024, Comparator.comparingLong(value -> value.priority));
+        this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+
+        ExecutorService alignerExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("data-aligner", true));
+        alignerExecutor.execute(() -> {
+            while (!shutdown) {
+                try {
+                    Task take = learnQueue.take();
+                    switch (take.taskType) {
+                        case DIFF:
+                            _learn(take.priority, take.target, take.callback);
+                            break;
+                        case SNAP:
+                            _snapSync(take.target, take.callback);
+                            break;
+                        default:
+                            break;
+                    }
+                } catch (InterruptedException e) {
+                    LOG.warn("handle queue task, occur exception, {}", e.getMessage());
+                }
+            }
+        });
+    }
+
+    void init(final ConsensusProp op) {
+        this.prop = op;
+        this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
+        this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+    }
+
+    /**
+     * Keep the data consistent with target node.
+     * This is a synchronous blocking method.
+     *
+     * @param state target information
+     */
+    public void alignData(final NodeState state) {
+        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+        long localApplied = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
+        long localCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
+        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
+
+            learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, result -> {
+                if (result) {
+                    alignData(state);
+                }
+            }));
+
+        } else {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
+                learnQueue.offer(new Task(i, TaskEnum.DIFF, target, result -> {
+                }));
+            }
+        }
+    }
+
+    /**
+     * Send the learn message to <code>target</code>.
+     *
+     * @param instanceId instance to learn
+     * @param target     learn objective
+     * @param callback   Callbacks of learning results
+     */
+    public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
+        learnQueue.offer(new Task(instanceId, TaskEnum.DIFF, target, callback));
+    }
+
+    private void _learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
+
+        Instance<Proposal> instance = logManager.getInstance(instanceId);
+        if (instance != null && instance.getState() == Instance.State.CONFIRMED) {
+            callback.learned(true);
+            return;
+        }
+
+        LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
+        LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
+        client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
+            @Override
+            public void error(final Throwable err) {
+                LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
+                callback.learned(false);
+            }
+
+            @Override
+            public void complete(final LearnRes result) {
+                if (result.isResult() == Sync.SNAP) {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
+                    learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, callback));
+
+                } else if (result.isResult() == Sync.SINGLE) {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
+                    Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
+                            .instanceId(instanceId)
+                            .proposalNo(result.getInstance().getProposalNo())
+                            .grantedValue(result.getInstance().getGrantedValue())
+                            .state(result.getInstance().getState())
+                            .build();
+
+                    try {
+                        logManager.getLock().writeLock().lock();
+                        logManager.updateInstance(update);
+                        callback.learned(true);
+                    } catch (Exception e) {
+                        callback.learned(false);
+                    } finally {
+                        logManager.getLock().writeLock().unlock();
+                    }
+                } else {
+                    LOG.info("learn instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());
+                    callback.learned(false);
+                }
+            }
+        }, 1000);
+    }
+
+    private void _snapSync(final Endpoint target, final LearnCallback callback) {
+        LOG.info("start snap sync from node-{}", target.getId());
+
+        boolean result = false;
+        long checkpoint = -1;
+        try {
+            SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
+                    .nodeId(self.getSelf().getId())
+                    .proposalNo(self.getCurProposalNo())
+                    .memberConfigurationVersion(memberConfig.getVersion())
+                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                    .build();
+            SnapSyncRes res = client.sendRequestSync(target, req, 1000);
+
+            if (res != null) {
+                RuntimeAccessor.getLearner().loadSnapSync(res.getImages());
+                checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
+
+                long finalCheckpoint = checkpoint;
+                Predicate<Task> successPredicate = it -> it.priority != Task.HIGH_PRIORITY && it.priority < finalCheckpoint;
+                this.learnQueue.stream().filter(successPredicate).forEach(it -> it.callback.learned(true));
+                this.learnQueue.removeIf(successPredicate);
+                result = true;
+            }
+        } catch (Throwable e) {
+            LOG.error(e.getMessage(), e);
+        } finally {
+            callback.learned(result);
+        }
+    }
+
+    /**
+     * Processing learn message.
+     * Other members learn the specified instance from themselves.
+     *
+     * @param request message
+     * @return handle result
+     */
+    public LearnRes handleLearnRequest(final LearnReq request) {
+        LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
+        LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
+
+        if (request.getInstanceId() <= RuntimeAccessor.getLearner().getLastCheckpoint()) {
+            return res.result(Sync.SNAP).build();
+        }
+
+        Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
+
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
+                    RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
+            if (memberConfig.allowBoost()) {
+                LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
+
+                CountDownLatch latch = new CountDownLatch(1);
+                RuntimeAccessor.getProposer().tryBoost(request.getInstanceId(), (result, dataChange) -> latch.countDown());
+
+                try {
+                    boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                    // do nothing for await's result
+                } catch (InterruptedException e) {
+                    LOG.debug(e.getMessage());
+                }
+
+                instance = logManager.getInstance(request.getInstanceId());
+            }
+        }
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            return res.result(Sync.NO_SUPPORT).instance(instance).build();
+        } else {
+            return res.result(Sync.SINGLE).instance(instance).build();
+        }
+    }
+
+    /**
+     * Processing Snapshot Synchronization message.
+     *
+     * @param req message
+     * @return handle result
+     */
+    public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
+        LOG.info("processing the pull snap message from node-{}", req.getNodeId());
+        SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
+                .images(new HashMap<>())
+                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                .build();
+        for (String group : RuntimeAccessor.getLearner().getGroups()) {
+            Snap lastSnap = logManager.getLastSnap(group);
+            if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
+                res.getImages().put(group, lastSnap);
+            }
+        }
+        return res;
+    }
+
+    interface LearnCallback {
+        void learned(boolean result);
+    }
+
+    public enum TaskEnum {
+        DIFF, SNAP
+    }
+
+    private static final class Task {
+
+        public static final long HIGH_PRIORITY = -1;
+        private static final LearnCallback FAKE_CALLBACK = result -> {
+        };
+        private long priority;
+        private TaskEnum taskType;
+        private Endpoint target;
+        private LearnCallback callback;
+
+        private Task(final long priority, final TaskEnum taskType, final Endpoint target, final LearnCallback callback) {
+            this.priority = priority;
+            this.taskType = taskType;
+            this.target = target;
+            this.callback = callback;
+        }
+    }
+
+}

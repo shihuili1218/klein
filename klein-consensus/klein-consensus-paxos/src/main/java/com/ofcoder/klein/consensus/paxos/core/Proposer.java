@@ -16,13 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
-
-import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.Role;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 
 /**
  * Proposer Role.
@@ -35,26 +32,17 @@ public interface Proposer extends Role<ConsensusProp> {
      *
      * @param data client's data
      * @param done client's callback
+     * @param now  execute right now
      */
-    void propose(Proposal data, ProposeDone done);
+    void propose(Command data, ProposeDone done, boolean now);
 
     /**
-     * Try to boost instance.
+     * Try to boost instance right now.
      * Boost the copy of the proposal to the majority and the confirm status is reached
      *
-     * @param instanceHolder  id of the instance that you want to boost
-     * @param defaultProposal default proposal and boost callback
+     * @param instanceId id of the instance that you want to boost
+     * @param done       boost callback
      */
-    void tryBoost(Holder<Long> instanceHolder, List<ProposalWithDone> defaultProposal);
-
-    /**
-     * Try to boost instance.
-     * Boost the copy of the proposal to the majority and the confirm status is reached
-     *
-     * @param instanceHolder      id of the instance that you want to boost
-     * @param defaultProposal     default proposal and boost callback
-     * @param memberConfiguration member config
-     */
-    void tryBoost(Holder<Long> instanceHolder, PaxosMemberConfiguration memberConfiguration, List<ProposalWithDone> defaultProposal);
+    void tryBoost(Long instanceId, ProposeDone done);
 
 }

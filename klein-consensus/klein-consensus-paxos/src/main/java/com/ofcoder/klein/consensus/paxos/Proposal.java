@@ -16,16 +16,16 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
 import java.util.Objects;
+
+import com.ofcoder.klein.consensus.facade.Command;
 
 /**
  * Proposal.
  *
  * @author 释慧利
  */
-public class Proposal implements Serializable {
-    public static final Proposal NOOP = new Proposal(Noop.GROUP, Noop.DEFAULT);
+public class Proposal implements Command {
     private String group;
     private Object data;
 
@@ -37,6 +37,7 @@ public class Proposal implements Serializable {
         this.data = data;
     }
 
+    @Override
     public String getGroup() {
         return group;
     }
@@ -45,6 +46,7 @@ public class Proposal implements Serializable {
         this.group = group;
     }
 
+    @Override
     public Object getData() {
         return data;
     }
@@ -78,11 +80,4 @@ public class Proposal implements Serializable {
                 + '}';
     }
 
-    /**
-     * No operation proposal.
-     */
-    public static class Noop implements Serializable {
-        public static final Noop DEFAULT = new Noop();
-        public static final String GROUP = "NOOP";
-    }
 }

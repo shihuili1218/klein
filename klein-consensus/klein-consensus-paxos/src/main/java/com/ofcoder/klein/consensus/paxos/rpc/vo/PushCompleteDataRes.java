@@ -23,6 +23,7 @@ import java.io.Serializable;
  *
  * @author 释慧利
  */
+@Deprecated
 public class PushCompleteDataRes implements Serializable {
     private boolean success;
 

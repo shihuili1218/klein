@@ -60,7 +60,7 @@ import com.ofcoder.klein.storage.facade.LogManager;
 @Join
 public class PaxosConsensus implements Consensus {
     private static final Logger LOG = LoggerFactory.getLogger(PaxosConsensus.class);
-    private PaxosNode self;
+    private final PaxosNode self;
     private final ConsensusProp prop;
     private final RpcClient client;
     private final Proxy proxy;
@@ -89,6 +89,33 @@ public class PaxosConsensus implements Consensus {
         }
     }
 
+    private void initEngine() {
+
+        MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
+        registerProcessor();
+        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(this.client::createConnection);
+
+        RuntimeAccessor.create(this.prop, this.self);
+
+        LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
+    }
+
+    private void registerProcessor() {
+        // negotiation
+        RpcEngine.registerProcessor(new PrepareProcessor(this.self));
+        RpcEngine.registerProcessor(new AcceptProcessor(this.self));
+        RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
+        RpcEngine.registerProcessor(new LearnProcessor(this.self));
+        // master
+        RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
+        RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
+        RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
+        RpcEngine.registerProcessor(new RedirectProcessor(this.self, this.prop));
+        RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
+        RpcEngine.registerProcessor(new PreElectProcessor(this.self));
+
+    }
+
     @Override
     public void loadSM(final String group, final SM sm) {
         RuntimeAccessor.getLearner().loadSM(group, sm);
@@ -100,15 +127,10 @@ public class PaxosConsensus implements Consensus {
         return proxy.propose(proposal, apply);
     }
 
-    private void initEngine() {
-
-        MemberRegistry.getInstance().init(this.self.getSelf(), this.prop.getMembers());
-        registerProcessor();
-        MemberRegistry.getInstance().getMemberConfiguration().getAllMembers().forEach(this.client::createConnection);
-
-        RuntimeAccessor.create(this.prop, this.self);
-
-        LOG.info("cluster info: {}", MemberRegistry.getInstance().getMemberConfiguration());
+    @Override
+    public void preheating() {
+//        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+        SMRegistry.register(MasterSM.GROUP, new MasterSM());
 
         if (!this.prop.isJoinCluster()) {
             RuntimeAccessor.getMaster().lookMaster();
@@ -140,28 +162,6 @@ public class PaxosConsensus implements Consensus {
         if (!result) {
             joinCluster(cur);
         }
-    }
-
-    @Override
-    public void preheating() {
-//        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
-        SMRegistry.register(MasterSM.GROUP, new MasterSM());
-    }
-
-    private void registerProcessor() {
-        // negotiation
-        RpcEngine.registerProcessor(new PrepareProcessor(this.self));
-        RpcEngine.registerProcessor(new AcceptProcessor(this.self));
-        RpcEngine.registerProcessor(new ConfirmProcessor(this.self));
-        RpcEngine.registerProcessor(new LearnProcessor(this.self));
-        // master
-        RpcEngine.registerProcessor(new HeartbeatProcessor(this.self));
-        RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
-        RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
-        RpcEngine.registerProcessor(new RedirectProcessor(this.self, this.prop));
-        RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
-        RpcEngine.registerProcessor(new PreElectProcessor(this.self));
-
     }
 
     @Override

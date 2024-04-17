@@ -18,19 +18,12 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
 
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
@@ -39,6 +32,12 @@ import com.ofcoder.klein.storage.facade.Snap;
  * @author 释慧利
  */
 public interface Learner extends Role<ConsensusProp> {
+
+    long getLastAppliedInstanceId();
+
+    long getLastCheckpoint();
+
+    Set<String> getGroups();
 
     /**
      * generate and save snapshot.
@@ -53,7 +52,7 @@ public interface Learner extends Role<ConsensusProp> {
      * @param snaps key: sm key
      *              value: snap
      */
-    void loadSnap(Map<String, Snap> snaps);
+    void loadSnapSync(Map<String, Snap> snaps);
 
     /**
      * replay log, re-enter instance into sm.
@@ -63,8 +62,6 @@ public interface Learner extends Role<ConsensusProp> {
      */
     void replayLog(String group, long start);
 
-    long getLastAppliedInstanceId();
-
     /**
      * Load SM, one group will only load one SM.
      *
@@ -72,45 +69,6 @@ public interface Learner extends Role<ConsensusProp> {
      * @param sm    state machine
      */
     void loadSM(String group, SM sm);
-
-    /**
-     * Send the learn message to <code>target</code>.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @param callback   Callbacks of learning results
-     */
-    void learn(long instanceId, Endpoint target, LearnCallback callback);
-
-    /**
-     * Send the learn message to <code>target</code>.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @see Learner#learn(long, Endpoint, LearnCallback)
-     */
-    default void learn(long instanceId, Endpoint target) {
-        learn(instanceId, target, new DefaultLearnCallback());
-    }
-
-    /**
-     * Synchronous learning.
-     *
-     * @param instanceId instance to learn
-     * @param target     learn objective
-     * @return learn result
-     * @see Learner#learn(long, Endpoint, LearnCallback)
-     */
-    default boolean learnSync(long instanceId, Endpoint target) {
-        long singleTimeoutMS = 150;
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        learn(instanceId, target, future::complete);
-        try {
-            return future.get(singleTimeoutMS, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            return false;
-        }
-    }
 
     /**
      * Send confirm message.
@@ -122,29 +80,6 @@ public interface Learner extends Role<ConsensusProp> {
     void confirm(long instanceId, String checksum, List<ProposalWithDone> dons);
 
     /**
-     * Keep the data consistent with master, state is master.
-     * Caller is slave.
-     *
-     * @param state target information
-     */
-    void pullSameData(NodeState state);
-
-    /**
-     * Master pushes data to slave, target is slave.
-     * Caller is master.
-     *
-     * @param target target
-     */
-    void pushSameData(Endpoint target);
-
-    /**
-     * Keep consistent with the data in the cluster.
-     *
-     * @return <code>true:</code> same data, <code>false:</code>: not the same
-     */
-    boolean healthy();
-
-    /**
      * Processing confirm message.
      * The confirm message is used to submit an instance.
      *
@@ -152,33 +87,5 @@ public interface Learner extends Role<ConsensusProp> {
      * @param isSelf from self
      */
     void handleConfirmRequest(ConfirmReq req, boolean isSelf);
-
-    /**
-     * Processing learn message.
-     * Other members learn the specified instance from themselves.
-     *
-     * @param req message
-     * @return handle result
-     */
-    LearnRes handleLearnRequest(LearnReq req);
-
-    /**
-     * Processing Snapshot Synchronization message.
-     *
-     * @param req message
-     * @return handle result
-     */
-    SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
-
-    interface LearnCallback {
-        void learned(boolean result);
-    }
-
-    class DefaultLearnCallback implements LearnCallback {
-        @Override
-        public void learned(final boolean result) {
-
-        }
-    }
 
 }

@@ -31,6 +31,7 @@ public class AcceptRes implements Serializable {
     private long curProposalNo;
     private long curInstanceId;
     private Instance.State instanceState;
+    private NodeState nodeState;
 
     public String getNodeId() {
         return nodeId;
@@ -52,12 +53,17 @@ public class AcceptRes implements Serializable {
         return instanceState;
     }
 
+    public NodeState getNodeState() {
+        return nodeState;
+    }
+
     public static final class Builder {
         private String nodeId;
         private boolean result;
         private long proposalNo;
         private long instanceId;
         private Instance.State instanceState;
+        private NodeState nodeState;
 
         private Builder() {
         }
@@ -127,6 +133,17 @@ public class AcceptRes implements Serializable {
         }
 
         /**
+         * selfState.
+         *
+         * @param selfState selfState
+         * @return Builder
+         */
+        public Builder nodeState(final NodeState selfState) {
+            this.nodeState = selfState;
+            return this;
+        }
+
+        /**
          * build.
          *
          * @return AcceptRes
@@ -138,6 +155,7 @@ public class AcceptRes implements Serializable {
             acceptRes.curProposalNo = this.proposalNo;
             acceptRes.instanceState = this.instanceState;
             acceptRes.nodeId = this.nodeId;
+            acceptRes.nodeState = this.nodeState;
             return acceptRes;
         }
     }

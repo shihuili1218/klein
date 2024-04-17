@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.common.disruptor.DisruptorEvent;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
@@ -25,22 +26,22 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
  * @author 释慧利
  */
 public class ProposalWithDone extends DisruptorEvent {
-    private Proposal proposal;
+    private Command proposal;
     private ProposeDone done;
 
     public ProposalWithDone() {
     }
 
-    public ProposalWithDone(final Proposal proposal, final ProposeDone done) {
+    public ProposalWithDone(final Command proposal, final ProposeDone done) {
         this.proposal = proposal;
         this.done = done;
     }
 
-    public Proposal getProposal() {
+    public Command getProposal() {
         return proposal;
     }
 
-    public void setProposal(final Proposal proposal) {
+    public void setProposal(final Command proposal) {
         this.proposal = proposal;
     }
 

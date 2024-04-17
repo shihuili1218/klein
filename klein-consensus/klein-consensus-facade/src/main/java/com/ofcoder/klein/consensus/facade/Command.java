@@ -14,28 +14,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.core;
+package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
+import java.io.Serializable;
 
 /**
- * Phase Callback.
- *
- * @author 释慧利
+ * consensus content.
  */
-public interface PhaseCallback {
+public interface Command extends Serializable {
 
-    interface PreparePhaseCallback {
-        void granted(long grantedProposalNo, ProposeContext context);
+    Command NOOP = new Command() {
 
-        void refused(ProposeContext context);
+        @Override
+        public String getGroup() {
+            return Noop.GROUP;
+        }
+
+        @Override
+        public Object getData() {
+            return Noop.DEFAULT;
+        }
+    };
+
+    String getGroup();
+
+    /**
+     * client's input data.
+     *
+     * @return data
+     */
+    Object getData();
+
+    /**
+     * No operation proposal.
+     */
+    class Noop implements Serializable {
+        public static final Noop DEFAULT = new Noop();
+        public static final String GROUP = "NOOP";
     }
-
-    interface AcceptPhaseCallback {
-        void granted(ProposeContext context);
-
-        void learn(ProposeContext context, NodeState target);
-
-    }
-
 }
