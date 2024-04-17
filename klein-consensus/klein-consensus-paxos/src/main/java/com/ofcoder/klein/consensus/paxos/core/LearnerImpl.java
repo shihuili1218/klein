@@ -327,10 +327,19 @@ public class LearnerImpl implements Learner {
         }
 
         if (instanceId > expectConfirmId) {
+            registerApplyCallback(instanceId - 1, Lists.newArrayList(new ProposeDone() {
+                @Override
+                public void negotiationDone(boolean result, boolean dataChange) {
+                }
+
+                @Override
+                public void applyDone(Map<Command, Object> result) {
+                    apply(instanceId);
+                }
+            }));
+
             // boost.
             for (long i = expectConfirmId; i < instanceId; i++) {
-                registerApplyCallback(instanceId - 1, Lists.newArrayList((result, dataChange) -> apply(instanceId)));
-
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     _apply(i);

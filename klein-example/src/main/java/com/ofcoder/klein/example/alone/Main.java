@@ -42,15 +42,15 @@ public class Main {
         KleinCache klein2 = KleinFactory.getInstance().createCache("klein2");
 
         klein1.put("hello", "klein");
-//        LOG.info("======klein1 " + klein1.get("hello"));
-//        LOG.info("======klein2 " + klein2.get("hello"));
-//
-//        klein1.put("hello", "test", 1L, TimeUnit.SECONDS);
-//        LOG.info(klein1.get("hello") + "========");
-//        Thread.sleep(500L);
-//        LOG.info(klein1.get("hello") + "========");
-//        Thread.sleep(500L);
-//        LOG.info(klein1.get("hello") + "========");
+        LOG.info("======klein1 " + klein1.get("hello"));
+        LOG.info("======klein2 " + klein2.get("hello"));
+
+        klein1.put("hello", "test", 1L, TimeUnit.SECONDS);
+        LOG.info(klein1.get("hello") + "========");
+        Thread.sleep(500L);
+        LOG.info(klein1.get("hello") + "========");
+        Thread.sleep(500L);
+        LOG.info(klein1.get("hello") + "========");
         System.in.read();
     }
 }
