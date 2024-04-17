@@ -47,6 +47,7 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -256,6 +257,41 @@ public class LearnerImpl implements Learner {
                 }));
     }
 
+    public void alignData(final NodeState state) {
+        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+        long localApplied = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
+        long localCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
+        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
+            RuntimeAccessor.getDataAligner().snap(target, result -> {
+                if (result) {
+                    alignData(state);
+                }
+            });
+        } else {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
+                long instanceId = i;
+                RuntimeAccessor.getDataAligner().diff(instanceId, target, result -> {
+                    if (result) {
+                        apply(instanceId);
+                    }
+                });
+            }
+        }
+    }
+
     private boolean handleConfirmRequest(final ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
@@ -273,7 +309,7 @@ public class LearnerImpl implements Learner {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                RuntimeAccessor.getDataAligner().learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
+                RuntimeAccessor.getDataAligner().diff(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
                 return false;
             }
 
@@ -286,7 +322,7 @@ public class LearnerImpl implements Learner {
             // check sum
             if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
                 LOG.info("local.checksum: {}, req.checksum: {}", localInstance.getChecksum(), req.getChecksum());
-                RuntimeAccessor.getDataAligner().learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
+                RuntimeAccessor.getDataAligner().diff(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
                 return false;
             }
 
@@ -350,7 +386,7 @@ public class LearnerImpl implements Learner {
                     } else {
                         final Endpoint master = memberConfig.getMaster();
                         if (master != null) {
-                            RuntimeAccessor.getDataAligner().learn(instanceId, master, new ApplyAfterLearnCallback(i));
+                            RuntimeAccessor.getDataAligner().diff(instanceId, master, new ApplyAfterLearnCallback(i));
                         }
                     }
                 }

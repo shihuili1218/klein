@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -26,13 +25,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -42,7 +38,6 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
@@ -96,43 +91,8 @@ public class DataAligner {
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
     }
 
-    /**
-     * Keep the data consistent with target node.
-     * This is a synchronous blocking method.
-     *
-     * @param state target information
-     */
-    public void alignData(final NodeState state) {
-        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
-        if (target == null) {
-            return;
-        }
-
-        final long targetCheckpoint = state.getLastCheckpoint();
-        final long targetApplied = state.getLastAppliedInstanceId();
-        long localApplied = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
-        long localCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
-        if (targetApplied <= localApplied) {
-            // same data
-            return;
-        }
-
-        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
-        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
-
-            learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, result -> {
-                if (result) {
-                    alignData(state);
-                }
-            }));
-
-        } else {
-            for (long i = localApplied + 1; i <= targetApplied; i++) {
-                learnQueue.offer(new Task(i, TaskEnum.DIFF, target, result -> {
-                }));
-            }
-        }
+    void close() {
+        this.shutdown = true;
     }
 
     /**
@@ -142,8 +102,12 @@ public class DataAligner {
      * @param target     learn objective
      * @param callback   Callbacks of learning results
      */
-    public void learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
+    public void diff(final long instanceId, final Endpoint target, final LearnCallback callback) {
         learnQueue.offer(new Task(instanceId, TaskEnum.DIFF, target, callback));
+    }
+
+    public void snap(final Endpoint target, final LearnCallback callback) {
+        learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, callback));
     }
 
     private void _learn(final long instanceId, final Endpoint target, final LearnCallback callback) {
