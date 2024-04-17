@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.ImmutableList;
 import com.ofcoder.klein.common.Holder;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
 import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -43,7 +44,7 @@ public class ProposeContext {
     /**
      * The data on which consensus was reached.
      */
-    private List<Proposal> consensusData;
+    private List<Command> consensusData;
     /**
      * Checksum for ProposeContext#consensusData.
      */
@@ -85,11 +86,11 @@ public class ProposeContext {
         return dataWithCallback;
     }
 
-    public List<Proposal> getConsensusData() {
+    public List<Command> getConsensusData() {
         return consensusData;
     }
 
-    public void setConsensusData(final List<Proposal> consensusData) {
+    public void setConsensusData(final List<Command> consensusData) {
         this.consensusData = consensusData;
     }
 

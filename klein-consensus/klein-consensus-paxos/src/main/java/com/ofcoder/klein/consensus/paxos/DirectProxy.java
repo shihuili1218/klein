@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
@@ -71,7 +72,7 @@ public class DirectProxy implements Proxy {
 
             @Override
             @SuppressWarnings("unchecked")
-            public void applyDone(final Map<Proposal, Object> result) {
+            public void applyDone(final Map<Command, Object> result) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Direct Propose applyDone, result: {}", result);
                 }
@@ -82,7 +83,7 @@ public class DirectProxy implements Proxy {
 
         try {
             if (!completed.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS)) {
-                LOG.warn("******** negotiation timeout ********");
+                LOG.warn("******** negotiation timeout {}, {} ********", completed, proposal);
                 builder.state(Result.State.UNKNOWN);
             }
         } catch (InterruptedException e) {

@@ -37,6 +37,7 @@ import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
@@ -232,7 +233,7 @@ public class MasterImpl implements Master {
                 }
 
                 @Override
-                public void applyDone(final Map<Proposal, Object> r) {
+                public void applyDone(final Map<Command, Object> r) {
                     latch.complete(true);
                 }
             }, false);
@@ -345,7 +346,7 @@ public class MasterImpl implements Master {
             if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                 restartSendHbNow();
 
-                RuntimeAccessor.getProposer().propose(Proposal.NOOP, (noopResult, dataChange) -> {
+                RuntimeAccessor.getProposer().propose(Command.NOOP, (noopResult, dataChange) -> {
                     if (noopResult) {
                         memberConfig.changeMaster(self.getSelf().getId());
                     } else {

@@ -36,7 +36,7 @@ public class LockSM extends AbstractSM {
     private long expire = 0;
 
     @Override
-    protected Object apply(final Object data) {
+    public Object apply(final Object data) {
         if (!(data instanceof LockMessage)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
             return null;
@@ -62,12 +62,12 @@ public class LockSM extends AbstractSM {
     }
 
     @Override
-    protected Object makeImage() {
+    public Object makeImage() {
         return lockState;
     }
 
     @Override
-    protected void loadImage(final Object snap) {
+    public void loadImage(final Object snap) {
         if (!(snap instanceof Byte)) {
             return;
         }

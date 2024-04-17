@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -31,15 +32,14 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.exception.StateMachineException;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMApplier;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -68,7 +68,6 @@ public class LearnerImpl implements Learner {
     private final ConcurrentMap<String, SMApplier> sms = new ConcurrentHashMap<>();
     private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
-    private final Object appliedIdLock = new Object();
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -217,7 +216,7 @@ public class LearnerImpl implements Learner {
     @Override
     public void confirm(final long instanceId, final String checksum, final List<ProposalWithDone> dons) {
         LOG.info("start confirm phase, instanceId: {}", instanceId);
-        applyCallback.putIfAbsent(instanceId, dons.stream().map(ProposalWithDone::getDone).collect(Collectors.toList()));
+        registerApplyCallback(instanceId, dons.stream().map(ProposalWithDone::getDone).collect(Collectors.toList()));
 
         // A proposalNo here does not have to use the proposalNo of the accept phase,
         // because the proposal is already in the confirm phase and it will not change.
@@ -330,22 +329,15 @@ public class LearnerImpl implements Learner {
         if (instanceId > expectConfirmId) {
             // boost.
             for (long i = expectConfirmId; i < instanceId; i++) {
+                registerApplyCallback(instanceId - 1, Lists.newArrayList((result, dataChange) -> apply(instanceId)));
+
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     _apply(i);
                 } else {
                     if (memberConfig.allowBoost()) {
                         LOG.info("try boost instance: {}", instanceId);
-
-                        CountDownLatch latch = new CountDownLatch(1);
-                        RuntimeAccessor.getProposer().tryBoost(i, (result, dataChange) -> latch.countDown());
-                        try {
-                            boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-                            // do nothing for await's result
-                        } catch (InterruptedException e) {
-                            LOG.debug(e.getMessage());
-                        }
-
+                        RuntimeAccessor.getProposer().tryBoost(i, new ProposeDone.FakeProposeDone());
                     } else {
                         final Endpoint master = memberConfig.getMaster();
                         if (master != null) {
@@ -362,30 +354,37 @@ public class LearnerImpl implements Learner {
     }
 
     private void _apply(final long instanceId) {
-
         List<SMApplier> smAppliers = new ArrayList<>(sms.values());
-        CountDownLatch latch = new CountDownLatch(smAppliers.size());
         List<ProposeDone> remove = applyCallback.remove(instanceId);
-        Map<Proposal, Object> applyResult = new ConcurrentHashMap<>();
+        Map<Command, Object> applyResult = new HashMap<>();
 
-        SMApplier.Task applyTask = SMApplier.Task.createApplyTask(instanceId, new SMApplier.TaskCallback() {
-            @Override
-            public void onApply(final Map<Command, Object> result) {
-                result.forEach((k, v) -> applyResult.put((Proposal) k, v));
-                latch.countDown();
+        smAppliers.stream().map(smApplier -> {
+            final CompletableFuture<Map<Command, Object>> complete = new CompletableFuture<>();
+            smApplier.offer(SMApplier.Task.createApplyTask(instanceId, new SMApplier.TaskCallback() {
+                @Override
+                public void onApply(final Map<Command, Object> result) {
+                    complete.complete(result);
+                }
+            }));
+            return complete;
+        }).parallel().map(future -> {
+            try {
+                return future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                LOG.error("apply sm error, instanceId: {}, {}", instanceId, e.getMessage());
+                return new HashMap<Command, Object>();
             }
-        });
-        smAppliers.forEach(it -> it.offer(applyTask));
+        }).collect(Collectors.toList()).forEach(applyResult::putAll);
 
-        try {
-            if (!latch.await(1, TimeUnit.SECONDS)) {
-                LOG.error("apply sm timeout, instanceId: {}", instanceId);
-            }
-            if (remove != null) {
-                remove.forEach(it -> it.applyDone(applyResult));
-            }
-        } catch (InterruptedException e) {
-            throw new StateMachineException(e.getMessage(), e);
+        if (remove != null) {
+            remove.forEach(it -> it.applyDone(applyResult));
+        }
+    }
+
+    private void registerApplyCallback(final long instanceId, final List<ProposeDone> callbacks) {
+        if (applyCallback.putIfAbsent(instanceId, callbacks) != null) {
+            // addAll 存在竞态条件
+            applyCallback.get(instanceId).addAll(callbacks);
         }
     }
 

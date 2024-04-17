@@ -22,6 +22,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
@@ -48,7 +49,7 @@ public class AcceptorImpl implements Acceptor {
 
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
-    private LogManager<Proposal> logManager;
+    private LogManager<Command> logManager;
     private final Object negLock = new Object();
 
     public AcceptorImpl(final PaxosNode self) {
@@ -95,9 +96,9 @@ public class AcceptorImpl implements Acceptor {
             try {
                 logManager.getLock().writeLock().lock();
 
-                Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
+                Instance<Command> localInstance = logManager.getInstance(req.getInstanceId());
                 if (localInstance == null) {
-                    localInstance = Instance.Builder.<Proposal>anInstance()
+                    localInstance = Instance.Builder.<Command>anInstance()
                             .instanceId(req.getInstanceId())
                             .proposalNo(req.getProposalNo())
                             .state(Instance.State.PREPARED)
@@ -123,7 +124,7 @@ public class AcceptorImpl implements Acceptor {
                 }
 
                 // check proposals include change member
-                for (Proposal datum : req.getData()) {
+                for (Command datum : req.getData()) {
                     if (datum.getData() instanceof ChangeMemberOp) {
                         ChangeMemberOp data = (ChangeMemberOp) datum.getData();
                         memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
@@ -176,7 +177,7 @@ public class AcceptorImpl implements Acceptor {
             if (!checkPrepareReqValidity(memberConfiguration, curProposalNo, req, isSelf)) {
                 return res.result(false).instances(new ArrayList<>()).build();
             } else {
-                List<Instance<Proposal>> instances = logManager.getInstanceNoConfirm();
+                List<Instance<Command>> instances = logManager.getInstanceNoConfirm();
                 return res.result(true).instances(instances).build();
             }
         }

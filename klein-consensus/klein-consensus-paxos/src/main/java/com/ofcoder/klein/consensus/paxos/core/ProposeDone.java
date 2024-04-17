@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.Map;
 
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
@@ -43,7 +44,7 @@ public interface ProposeDone {
      *               the key is enter the value of the state machine
      *               the value is state machine output
      */
-    default void applyDone(Map<Proposal, Object> result) {
+    default void applyDone(Map<Command, Object> result) {
         // for subclass
     }
 

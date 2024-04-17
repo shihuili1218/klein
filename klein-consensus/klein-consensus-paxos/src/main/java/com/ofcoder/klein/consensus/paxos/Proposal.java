@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 import com.ofcoder.klein.consensus.facade.Command;

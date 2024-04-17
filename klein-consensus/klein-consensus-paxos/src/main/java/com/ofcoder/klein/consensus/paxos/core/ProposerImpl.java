@@ -50,6 +50,7 @@ import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
@@ -87,7 +88,7 @@ public class ProposerImpl implements Proposer {
     /**
      * The instance of the Prepare phase has been executed.
      */
-    private final ConcurrentMap<Long, Instance<Proposal>> seenInstances = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, Instance<Command>> seenInstances = new ConcurrentHashMap<>();
     private final Set<Long> runningInstance = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private LogManager<Proposal> logManager;
 
@@ -137,10 +138,10 @@ public class ProposerImpl implements Proposer {
      * and process it as {@link ProposeEventHandler}
      *
      * @param data client's data
-     * @param done client's callbck
+     * @param done client's callback
      */
     @Override
-    public void propose(final Proposal data, final ProposeDone done, final boolean now) {
+    public void propose(final Command data, final ProposeDone done, final boolean now) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
@@ -199,7 +200,7 @@ public class ProposerImpl implements Proposer {
         LOG.info("start accept phase, proposalNo: {}, instanceId: {}", grantedProposalNo, ctxt.getInstanceId());
 
         // choose valid proposal, and calculate checksum.
-        List<Proposal> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
+        List<Command> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
         String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
         ctxt.setDataChange(seenInstances.containsKey(ctxt.getInstanceId())
                 && CollectionUtils.isNotEmpty(seenInstances.get(ctxt.getInstanceId()).getGrantedValue())
@@ -287,7 +288,7 @@ public class ProposerImpl implements Proposer {
             protected Long create() {
                 return instanceId;
             }
-        }, Lists.newArrayList(new ProposalWithDone(Proposal.NOOP, done)));
+        }, Lists.newArrayList(new ProposalWithDone(Command.NOOP, done)));
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -406,10 +407,10 @@ public class ProposerImpl implements Proposer {
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
-        for (Instance<Proposal> instance : result.getInstances()) {
+        for (Instance<Command> instance : result.getInstances()) {
             if (seenInstances.putIfAbsent(instance.getInstanceId(), instance) != null) {
                 synchronized (seenInstances) {
-                    Instance<Proposal> prepared = seenInstances.get(instance.getInstanceId());
+                    Instance<Command> prepared = seenInstances.get(instance.getInstanceId());
                     if (instance.getProposalNo() > prepared.getProposalNo()) {
                         seenInstances.put(instance.getInstanceId(), instance);
                     }

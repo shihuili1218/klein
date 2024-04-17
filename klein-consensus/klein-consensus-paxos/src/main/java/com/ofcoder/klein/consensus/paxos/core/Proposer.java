@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.common.Role;
+import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 
@@ -33,7 +34,7 @@ public interface Proposer extends Role<ConsensusProp> {
      * @param done client's callback
      * @param now  execute right now
      */
-    void propose(Proposal data, ProposeDone done, boolean now);
+    void propose(Command data, ProposeDone done, boolean now);
 
     /**
      * Try to boost instance right now.
