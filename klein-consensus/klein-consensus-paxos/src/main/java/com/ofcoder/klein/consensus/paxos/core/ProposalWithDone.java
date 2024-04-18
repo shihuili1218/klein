@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.common.disruptor.DisruptorEvent;
 import com.ofcoder.klein.consensus.facade.Command;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * Proposal and Propose Callback.

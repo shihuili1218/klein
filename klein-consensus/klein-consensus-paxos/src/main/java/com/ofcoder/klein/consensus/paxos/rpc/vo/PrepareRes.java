@@ -20,7 +20,6 @@ import java.io.Serializable;
 import java.util.List;
 
 import com.ofcoder.klein.consensus.facade.Command;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.storage.facade.Instance;
 
 /**

@@ -17,13 +17,10 @@
 package com.ofcoder.klein.consensus.paxos.core;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import org.slf4j.Logger;
@@ -106,6 +103,12 @@ public class DataAligner {
         learnQueue.offer(new Task(instanceId, TaskEnum.DIFF, target, callback));
     }
 
+    /**
+     * Send the snap message to <code>target</code>.
+     *
+     * @param target   learn objective
+     * @param callback Callbacks of learning results
+     */
     public void snap(final Endpoint target, final LearnCallback callback) {
         learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, callback));
     }

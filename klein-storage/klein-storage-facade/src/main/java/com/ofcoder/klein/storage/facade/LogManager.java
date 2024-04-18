@@ -33,6 +33,7 @@ public interface LogManager<P extends Serializable> {
     /**
      * get log lock.
      *
+     * @param instanceId lock object
      * @return ReentrantReadWriteLock
      */
     ReentrantReadWriteLock getLock(long instanceId);

@@ -19,7 +19,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * Proposer Role.

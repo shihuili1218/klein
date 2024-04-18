@@ -266,6 +266,7 @@ public class LearnerImpl implements Learner {
                 }));
     }
 
+    @Override
     public void alignData(final NodeState state) {
         final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
         if (target == null) {
@@ -374,11 +375,11 @@ public class LearnerImpl implements Learner {
         if (instanceId > expectConfirmId) {
             registerApplyCallback(instanceId - 1, Lists.newArrayList(new ProposeDone() {
                 @Override
-                public void negotiationDone(boolean result, boolean dataChange) {
+                public void negotiationDone(final boolean result, final boolean dataChange) {
                 }
 
                 @Override
-                public void applyDone(Map<Command, Object> result) {
+                public void applyDone(final Map<Command, Object> result) {
                     apply(instanceId);
                 }
             }));
@@ -442,6 +443,7 @@ public class LearnerImpl implements Learner {
         }
     }
 
+    @Override
     public LearnRes handleLearnRequest(final LearnReq request) {
         LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
         LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
@@ -478,6 +480,7 @@ public class LearnerImpl implements Learner {
         }
     }
 
+    @Override
     public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
         LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
