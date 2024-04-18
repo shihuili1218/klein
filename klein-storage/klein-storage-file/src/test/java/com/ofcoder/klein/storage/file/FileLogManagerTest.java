@@ -49,9 +49,9 @@ public class FileLogManagerTest {
         instance.setState(Instance.State.PREPARED);
         instance.setGrantedValue(Lists.newArrayList("Zzz"));
 
-        join.getLock().writeLock().lock();
+        join.getLock(instance.getInstanceId()).writeLock().lock();
         join.updateInstance(instance);
-        join.getLock().writeLock().unlock();
+        join.getLock(instance.getInstanceId()).writeLock().unlock();
 
         Instance actual = join.getInstance(1);
 
@@ -78,10 +78,12 @@ public class FileLogManagerTest {
         instance2.setState(Instance.State.CONFIRMED);
         instance2.setGrantedValue(Lists.newArrayList("Zzz"));
 
-        join.getLock().writeLock().lock();
+        join.getLock(instance1.getInstanceId()).writeLock().lock();
         join.updateInstance(instance1);
+        join.getLock(instance1.getInstanceId()).writeLock().unlock();
+        join.getLock(instance2.getInstanceId()).writeLock().lock();
         join.updateInstance(instance2);
-        join.getLock().writeLock().unlock();
+        join.getLock(instance2.getInstanceId()).writeLock().unlock();
 
         List instanceNoConfirm = join.getInstanceNoConfirm();
         Assert.assertNotNull(instanceNoConfirm);

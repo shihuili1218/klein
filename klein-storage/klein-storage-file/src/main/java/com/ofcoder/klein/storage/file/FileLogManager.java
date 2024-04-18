@@ -16,18 +16,6 @@
  */
 package com.ofcoder.klein.storage.file;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-import com.ofcoder.klein.storage.facade.exception.StorageException;
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -41,6 +29,21 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.common.util.StreamUtil;
+import com.ofcoder.klein.common.util.SystemPropertyUtil;
+import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
+import com.ofcoder.klein.storage.facade.exception.StorageException;
+
 /**
  * Jvm LogManager.
  *
@@ -48,13 +51,15 @@ import java.util.stream.Collectors;
  */
 @Join
 public class FileLogManager<P extends Serializable> implements LogManager<P> {
+    private static final Logger LOG = LoggerFactory.getLogger(FileLogManager.class);
+
     private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data");
     private static String selfPath;
     private static String metaPath;
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
-    private ReentrantReadWriteLock lock;
+    private ConcurrentMap<Long, ReentrantReadWriteLock> locks = new ConcurrentHashMap<>();
 
     private MetaData metadata;
 
@@ -62,7 +67,6 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
-        lock = new ReentrantReadWriteLock(true);
 
         selfPath = BASE_PATH + File.separator + op.getId();
         File selfFile = new File(selfPath);
@@ -81,8 +85,9 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public ReentrantReadWriteLock getLock() {
-        return lock;
+    public ReentrantReadWriteLock getLock(final long instanceId) {
+        locks.putIfAbsent(instanceId, new ReentrantReadWriteLock(true));
+        return locks.get(instanceId);
     }
 
     @Override
@@ -108,7 +113,8 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public void updateInstance(final Instance<P> instance) {
-        if (!lock.isWriteLockedByCurrentThread()) {
+        ReentrantReadWriteLock lock = locks.get(instance.getInstanceId());
+        if (lock == null || !lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
         if (instance.getState() == Instance.State.CONFIRMED) {

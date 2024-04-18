@@ -19,7 +19,6 @@ package com.ofcoder.klein.consensus.paxos.rpc.vo;
 import java.util.List;
 
 import com.ofcoder.klein.consensus.facade.Command;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * Accept Msg Data.

@@ -21,7 +21,6 @@ import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
@@ -31,6 +30,8 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
+
+import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
 /**
  * Forward the Proposal request to the Master.
@@ -73,6 +74,9 @@ public class RedirectProxy implements Proxy {
                 .apply(apply)
                 .build();
         RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+        if (res == null) {
+            return builder.state(Result.State.UNKNOWN).build();
+        }
         return (Result<D>) res.getProposeResult();
     }
 }

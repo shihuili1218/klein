@@ -538,7 +538,7 @@ public class ProposerImpl implements Proposer {
 
             ThreadExecutor.execute(() -> {
                 // do learn
-                RuntimeAccessor.getDataAligner().alignData(target);
+                RuntimeAccessor.getLearner().alignData(target);
             });
 
         }

@@ -24,6 +24,11 @@ import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.storage.facade.Snap;
 
 /**
@@ -80,6 +85,14 @@ public interface Learner extends Role<ConsensusProp> {
     void confirm(long instanceId, String checksum, List<ProposalWithDone> dons);
 
     /**
+     * Keep the data consistent with target node.
+     * This is a synchronous blocking method.
+     *
+     * @param state target information
+     */
+    void alignData(NodeState state);
+
+    /**
      * Processing confirm message.
      * The confirm message is used to submit an instance.
      *
@@ -87,5 +100,22 @@ public interface Learner extends Role<ConsensusProp> {
      * @param isSelf from self
      */
     void handleConfirmRequest(ConfirmReq req, boolean isSelf);
+
+    /**
+     * Processing learn message.
+     * Other members learn the specified instance from themselves.
+     *
+     * @param request message
+     * @return handle result
+     */
+    LearnRes handleLearnRequest(LearnReq request);
+
+    /**
+     * Processing Snapshot Synchronization message.
+     *
+     * @param req message
+     * @return handle result
+     */
+    SnapSyncRes handleSnapSyncRequest(SnapSyncReq req);
 
 }

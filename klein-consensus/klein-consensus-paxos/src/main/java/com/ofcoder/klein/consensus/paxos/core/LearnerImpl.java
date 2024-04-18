@@ -47,6 +47,12 @@ import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
+import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -66,12 +72,14 @@ public class LearnerImpl implements Learner {
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
     private final ConcurrentMap<String, SMApplier> sms = new ConcurrentHashMap<>();
+    private final DataAligner dataAligner;
     private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        this.dataAligner = new DataAligner(self);
     }
 
     @Override
@@ -79,12 +87,14 @@ public class LearnerImpl implements Learner {
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.dataAligner.init(op);
     }
 
     @Override
     public void shutdown() {
+        this.dataAligner.close();
         generateSnap();
-        sms.values().forEach(SMApplier::close);
+        this.sms.values().forEach(SMApplier::close);
     }
 
     @Override
@@ -194,7 +204,7 @@ public class LearnerImpl implements Learner {
                 continue;
             }
 
-            SMApplier.Task e = SMApplier.Task.createReplayTask(i, replayData);
+            SMApplier.Task e = SMApplier.Task.createReplayTask(i);
 
             applier.offer(e);
         }
@@ -256,6 +266,42 @@ public class LearnerImpl implements Learner {
                 }));
     }
 
+    @Override
+    public void alignData(final NodeState state) {
+        final Endpoint target = memberConfig.getEndpointById(state.getNodeId());
+        if (target == null) {
+            return;
+        }
+
+        final long targetCheckpoint = state.getLastCheckpoint();
+        final long targetApplied = state.getLastAppliedInstanceId();
+        long localApplied = RuntimeAccessor.getLearner().getLastAppliedInstanceId();
+        long localCheckpoint = RuntimeAccessor.getLearner().getLastCheckpoint();
+        if (targetApplied <= localApplied) {
+            // same data
+            return;
+        }
+
+        LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
+                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
+        if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
+            this.dataAligner.snap(target, result -> {
+                if (result) {
+                    alignData(state);
+                }
+            });
+        } else {
+            for (long i = localApplied + 1; i <= targetApplied; i++) {
+                Instance<Proposal> instance = logManager.getInstance(i);
+                if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+                    this.dataAligner.diff(i, target, new ApplyAfterLearnCallback(i));
+                } else {
+                    apply(i);
+                }
+            }
+        }
+    }
+
     private boolean handleConfirmRequest(final ConfirmReq req) {
         LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
@@ -266,14 +312,14 @@ public class LearnerImpl implements Learner {
         }
 
         try {
-            logManager.getLock().writeLock().lock();
+            logManager.getLock(req.getInstanceId()).writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null || localInstance.getState() == Instance.State.PREPARED) {
                 // the accept message is not received, the confirm message is received.
                 // however, the instance has reached confirm, indicating that it has reached a consensus.
                 LOG.info("confirm message is received, but accept message is not received, instance: {}", req.getInstanceId());
-                RuntimeAccessor.getDataAligner().learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
+                this.dataAligner.diff(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
                 return false;
             }
 
@@ -286,7 +332,7 @@ public class LearnerImpl implements Learner {
             // check sum
             if (!StringUtils.equals(localInstance.getChecksum(), req.getChecksum())) {
                 LOG.info("local.checksum: {}, req.checksum: {}", localInstance.getChecksum(), req.getChecksum());
-                RuntimeAccessor.getDataAligner().learn(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
+                this.dataAligner.diff(req.getInstanceId(), memberConfig.getEndpointById(req.getNodeId()), new ApplyAfterLearnCallback(req.getInstanceId()));
                 return false;
             }
 
@@ -300,7 +346,7 @@ public class LearnerImpl implements Learner {
             throw e;
         } finally {
             self.updateCurInstanceId(req.getInstanceId());
-            logManager.getLock().writeLock().unlock();
+            logManager.getLock(req.getInstanceId()).writeLock().unlock();
         }
     }
 
@@ -329,11 +375,11 @@ public class LearnerImpl implements Learner {
         if (instanceId > expectConfirmId) {
             registerApplyCallback(instanceId - 1, Lists.newArrayList(new ProposeDone() {
                 @Override
-                public void negotiationDone(boolean result, boolean dataChange) {
+                public void negotiationDone(final boolean result, final boolean dataChange) {
                 }
 
                 @Override
-                public void applyDone(Map<Command, Object> result) {
+                public void applyDone(final Map<Command, Object> result) {
                     apply(instanceId);
                 }
             }));
@@ -350,7 +396,7 @@ public class LearnerImpl implements Learner {
                     } else {
                         final Endpoint master = memberConfig.getMaster();
                         if (master != null) {
-                            RuntimeAccessor.getDataAligner().learn(instanceId, master, new ApplyAfterLearnCallback(i));
+                            this.dataAligner.diff(instanceId, master, new ApplyAfterLearnCallback(i));
                         }
                     }
                 }
@@ -395,6 +441,64 @@ public class LearnerImpl implements Learner {
             // addAll 存在竞态条件
             applyCallback.get(instanceId).addAll(callbacks);
         }
+    }
+
+    @Override
+    public LearnRes handleLearnRequest(final LearnReq request) {
+        LOG.info("received a learn message from node[{}] about instance[{}]", request.getNodeId(), request.getInstanceId());
+        LearnRes.Builder res = LearnRes.Builder.aLearnRes().nodeId(self.getSelf().getId());
+
+        if (request.getInstanceId() <= RuntimeAccessor.getLearner().getLastCheckpoint()) {
+            return res.result(Sync.SNAP).build();
+        }
+
+        Instance<Proposal> instance = logManager.getInstance(request.getInstanceId());
+
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
+                    RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
+            if (memberConfig.allowBoost()) {
+                LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
+
+                CountDownLatch latch = new CountDownLatch(1);
+                RuntimeAccessor.getProposer().tryBoost(request.getInstanceId(), (result, dataChange) -> latch.countDown());
+
+                try {
+                    boolean await = latch.await(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
+                    // do nothing for await's result
+                } catch (InterruptedException e) {
+                    LOG.debug(e.getMessage());
+                }
+
+                instance = logManager.getInstance(request.getInstanceId());
+            }
+        }
+        if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+            return res.result(Sync.NO_SUPPORT).instance(instance).build();
+        } else {
+            return res.result(Sync.SINGLE).instance(instance).build();
+        }
+    }
+
+    @Override
+    public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
+        LOG.info("processing the pull snap message from node-{}", req.getNodeId());
+        SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
+                .images(new HashMap<>())
+                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                .build();
+        if (getLastAppliedInstanceId() - getLastCheckpoint() >= 100) {
+            Map<String, Snap> allSnaps = generateSnap();
+            res.getImages().putAll(allSnaps);
+        } else {
+            for (String group : RuntimeAccessor.getLearner().getGroups()) {
+                Snap lastSnap = logManager.getLastSnap(group);
+                if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
+                    res.getImages().put(group, lastSnap);
+                }
+            }
+        }
+        return res;
     }
 
     class ApplyAfterLearnCallback implements DataAligner.LearnCallback {

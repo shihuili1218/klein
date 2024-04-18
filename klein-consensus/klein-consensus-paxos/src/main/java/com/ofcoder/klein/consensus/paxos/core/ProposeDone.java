@@ -19,7 +19,6 @@ package com.ofcoder.klein.consensus.paxos.core;
 import java.util.Map;
 
 import com.ofcoder.klein.consensus.facade.Command;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 
 /**
  * propose callback.

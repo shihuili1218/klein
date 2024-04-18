@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
@@ -94,7 +93,7 @@ public class AcceptorImpl implements Acceptor {
         }
         synchronized (negLock) {
             try {
-                logManager.getLock().writeLock().lock();
+                logManager.getLock(req.getInstanceId()).writeLock().lock();
 
                 Instance<Command> localInstance = logManager.getInstance(req.getInstanceId());
                 if (localInstance == null) {
@@ -155,7 +154,7 @@ public class AcceptorImpl implements Acceptor {
             } finally {
                 self.updateCurInstanceId(req.getInstanceId());
 
-                logManager.getLock().writeLock().unlock();
+                logManager.getLock(req.getInstanceId()).writeLock().unlock();
             }
         }
     }

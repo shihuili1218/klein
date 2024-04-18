@@ -40,7 +40,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PreElectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.PushCompleteDataProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
@@ -111,7 +110,6 @@ public class PaxosConsensus implements Consensus {
         RpcEngine.registerProcessor(new SnapSyncProcessor(this.self));
         RpcEngine.registerProcessor(new NewMasterProcessor(this.self));
         RpcEngine.registerProcessor(new RedirectProcessor(this.self, this.prop));
-        RpcEngine.registerProcessor(new PushCompleteDataProcessor(this.self));
         RpcEngine.registerProcessor(new PreElectProcessor(this.self));
 
     }
