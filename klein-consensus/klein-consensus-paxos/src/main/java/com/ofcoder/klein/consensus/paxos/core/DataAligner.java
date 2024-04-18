@@ -143,13 +143,13 @@ public class DataAligner {
                             .build();
 
                     try {
-                        logManager.getLock().writeLock().lock();
+                        logManager.getLock(instanceId).writeLock().lock();
                         logManager.updateInstance(update);
                         callback.learned(true);
                     } catch (Exception e) {
                         callback.learned(false);
                     } finally {
-                        logManager.getLock().writeLock().unlock();
+                        logManager.getLock(instanceId).writeLock().unlock();
                     }
                 } else {
                     LOG.info("learned instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());

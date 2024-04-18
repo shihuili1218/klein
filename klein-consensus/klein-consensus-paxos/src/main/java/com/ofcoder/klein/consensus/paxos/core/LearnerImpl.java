@@ -311,7 +311,7 @@ public class LearnerImpl implements Learner {
         }
 
         try {
-            logManager.getLock().writeLock().lock();
+            logManager.getLock(req.getInstanceId()).writeLock().lock();
 
             Instance<Proposal> localInstance = logManager.getInstance(req.getInstanceId());
             if (localInstance == null || localInstance.getState() == Instance.State.PREPARED) {
@@ -345,7 +345,7 @@ public class LearnerImpl implements Learner {
             throw e;
         } finally {
             self.updateCurInstanceId(req.getInstanceId());
-            logManager.getLock().writeLock().unlock();
+            logManager.getLock(req.getInstanceId()).writeLock().unlock();
         }
     }
 

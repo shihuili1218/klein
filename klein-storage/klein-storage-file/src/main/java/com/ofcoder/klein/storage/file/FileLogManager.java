@@ -59,7 +59,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
-    private ConcurrentMap<Long, Instance<P>>  locks = new ConcurrentHashMap<>();
+    private ConcurrentMap<Long, ReentrantReadWriteLock> locks = new ConcurrentHashMap<>();
 
     private MetaData metadata;
 
@@ -85,9 +85,9 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
     }
 
     @Override
-    public ReentrantReadWriteLock getLock() {
-        locks.putIfAbsent()
-        return lock;
+    public ReentrantReadWriteLock getLock(final long instanceId) {
+        locks.putIfAbsent(instanceId, new ReentrantReadWriteLock(true));
+        return locks.get(instanceId);
     }
 
     @Override
@@ -113,7 +113,8 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public void updateInstance(final Instance<P> instance) {
-        if (!lock.isWriteLockedByCurrentThread()) {
+        ReentrantReadWriteLock lock = locks.get(instance.getInstanceId());
+        if (lock == null || !lock.isWriteLockedByCurrentThread()) {
             throw new LockException("before calling this method: updateInstance, you need to obtain the lock");
         }
         if (instance.getState() == Instance.State.CONFIRMED) {
