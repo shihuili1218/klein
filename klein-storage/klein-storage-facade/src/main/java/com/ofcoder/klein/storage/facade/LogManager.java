@@ -35,7 +35,7 @@ public interface LogManager<P extends Serializable> {
      *
      * @return ReentrantReadWriteLock
      */
-    ReentrantReadWriteLock getLock();
+    ReentrantReadWriteLock getLock(long instanceId);
 
     /**
      * Persisting the Instance.

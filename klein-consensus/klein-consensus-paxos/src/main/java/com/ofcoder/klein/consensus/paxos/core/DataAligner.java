@@ -123,18 +123,18 @@ public class DataAligner {
         client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
             @Override
             public void error(final Throwable err) {
-                LOG.error("learn instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
+                LOG.error("learned instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
                 callback.learned(false);
             }
 
             @Override
             public void complete(final LearnRes result) {
                 if (result.isResult() == Sync.SNAP) {
-                    LOG.info("learn instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
+                    LOG.info("learned instance[{}] from node-{}, sync.type: SNAP", instanceId, target.getId());
                     learnQueue.offer(new Task(Task.HIGH_PRIORITY, TaskEnum.SNAP, target, callback));
 
                 } else if (result.isResult() == Sync.SINGLE) {
-                    LOG.info("learn instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
+                    LOG.info("learned instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
                             .instanceId(instanceId)
                             .proposalNo(result.getInstance().getProposalNo())
@@ -152,7 +152,7 @@ public class DataAligner {
                         logManager.getLock().writeLock().unlock();
                     }
                 } else {
-                    LOG.info("learn instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());
+                    LOG.info("learned instance[{}] from node-{}, sync.type: NO_SUPPORT", instanceId, target.getId());
                     callback.learned(false);
                 }
             }

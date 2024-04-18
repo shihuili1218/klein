@@ -119,15 +119,15 @@ public class SMApplier {
         final long lastApplyId = this.lastAppliedId;
         final long instanceId = task.priority;
 
-        Instance<Command> instance = logManager.getInstance(instanceId);
-        List<Command> proposals = instance.getGrantedValue().stream()
-                .filter(it -> it != Command.NOOP)
-                .filter(it -> group.equals(it.getGroup()))
-                .collect(Collectors.toList());
-
         Map<Command, Object> applyResult = new HashMap<>();
         if (instanceId > lastApplyId) {
             LOG.debug("doing apply instance[{}]", instanceId);
+            Instance<Command> instance = logManager.getInstance(instanceId);
+            List<Command> proposals = instance.getGrantedValue().stream()
+                    .filter(it -> it != Command.NOOP)
+                    .filter(it -> group.equals(it.getGroup()))
+                    .collect(Collectors.toList());
+
             proposals.forEach(it -> applyResult.put(it, sm.apply(it.getData())));
             this.lastAppliedId = instanceId;
         }
@@ -181,7 +181,6 @@ public class SMApplier {
         private long priority;
         private TaskEnum taskType;
         private TaskCallback callback;
-        private List<? extends Command> proposals;
         private Snap loadSnap;
 
         private Task() {
@@ -236,14 +235,12 @@ public class SMApplier {
          * create task for TaskEnum.REPLAY.
          *
          * @param instanceId apply instance id
-         * @param proposals  apply proposal
          * @return task object
          */
-        public static Task createReplayTask(final long instanceId, final List<? extends Command> proposals) {
+        public static Task createReplayTask(final long instanceId) {
             Task task = new Task();
             task.priority = instanceId;
             task.taskType = TaskEnum.REPLAY;
-            task.proposals = proposals;
             task.callback = Task.FAKE_CALLBACK;
             return task;
         }

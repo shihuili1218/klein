@@ -87,7 +87,7 @@ public class LearnerImpl implements Learner {
         this.prop = op;
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.init(op);
+        this.dataAligner.init(op);
     }
 
     @Override
@@ -204,7 +204,7 @@ public class LearnerImpl implements Learner {
                 continue;
             }
 
-            SMApplier.Task e = SMApplier.Task.createReplayTask(i, replayData);
+            SMApplier.Task e = SMApplier.Task.createReplayTask(i);
 
             applier.offer(e);
         }
@@ -291,12 +291,12 @@ public class LearnerImpl implements Learner {
             });
         } else {
             for (long i = localApplied + 1; i <= targetApplied; i++) {
-                long instanceId = i;
-                this.dataAligner.diff(instanceId, target, result -> {
-                    if (result) {
-                        apply(instanceId);
-                    }
-                });
+                Instance<Proposal> instance = logManager.getInstance(i);
+                if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
+                    this.dataAligner.diff(i, target, new ApplyAfterLearnCallback(i));
+                } else {
+                    apply(i);
+                }
             }
         }
     }
@@ -387,6 +387,7 @@ public class LearnerImpl implements Learner {
             for (long i = expectConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
+                    LOG.debug("instance: {} trigger apply {}: {}", instanceId, i, exceptInstance);
                     _apply(i);
                 } else {
                     if (memberConfig.allowBoost()) {
@@ -484,10 +485,15 @@ public class LearnerImpl implements Learner {
                 .images(new HashMap<>())
                 .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
                 .build();
-        for (String group : RuntimeAccessor.getLearner().getGroups()) {
-            Snap lastSnap = logManager.getLastSnap(group);
-            if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
-                res.getImages().put(group, lastSnap);
+        if (getLastAppliedInstanceId() - getLastCheckpoint() >= 100) {
+            Map<String, Snap> allSnaps = generateSnap();
+            res.getImages().putAll(allSnaps);
+        } else {
+            for (String group : RuntimeAccessor.getLearner().getGroups()) {
+                Snap lastSnap = logManager.getLastSnap(group);
+                if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
+                    res.getImages().put(group, lastSnap);
+                }
             }
         }
         return res;
