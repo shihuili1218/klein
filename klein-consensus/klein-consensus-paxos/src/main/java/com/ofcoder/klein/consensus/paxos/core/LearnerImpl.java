@@ -387,7 +387,6 @@ public class LearnerImpl implements Learner {
             for (long i = expectConfirmId; i < instanceId; i++) {
                 Instance<Proposal> exceptInstance = logManager.getInstance(i);
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
-                    LOG.debug("instance: {} trigger apply {}: {}", instanceId, i, exceptInstance);
                     _apply(i);
                 } else {
                     if (memberConfig.allowBoost()) {
