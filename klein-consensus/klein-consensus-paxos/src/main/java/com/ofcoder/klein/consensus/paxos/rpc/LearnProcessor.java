@@ -54,7 +54,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
                     request.getNodeId());
             return;
         }
-        LearnRes res = RuntimeAccessor.getDataAligner().handleLearnRequest(request);
+        LearnRes res = RuntimeAccessor.getLearner().handleLearnRequest(request);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }
 

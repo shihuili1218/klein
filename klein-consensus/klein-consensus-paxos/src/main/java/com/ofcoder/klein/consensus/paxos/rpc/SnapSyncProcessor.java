@@ -39,7 +39,7 @@ public class SnapSyncProcessor extends AbstractRpcProcessor<SnapSyncReq> {
 
     @Override
     public void handleRequest(final SnapSyncReq request, final RpcContext context) {
-        SnapSyncRes snapSyncRes = RuntimeAccessor.getDataAligner().handleSnapSyncRequest(request);
+        SnapSyncRes snapSyncRes = RuntimeAccessor.getLearner().handleSnapSyncRequest(request);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(snapSyncRes)));
     }
 
