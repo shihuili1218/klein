@@ -17,6 +17,7 @@ public class TracerTest extends TestCase {
         for (int i = 0; i < 50; i++) {
             tracer.trace(i + "zzzzzzzz");
         }
+        tracer.shutdown();
 
         Thread.sleep(500L);
     }
