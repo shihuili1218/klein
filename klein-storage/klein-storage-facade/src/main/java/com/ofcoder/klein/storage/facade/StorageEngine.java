@@ -26,6 +26,7 @@ import com.ofcoder.klein.storage.facade.config.StorageProp;
  */
 public final class StorageEngine {
     private static LogManager logManager;
+    private static TraceManager traceManager;
 
     /**
      * start up.
@@ -35,6 +36,7 @@ public final class StorageEngine {
      */
     public static void startup(final String type, final StorageProp prop) {
         logManager = ExtensionLoader.getExtensionLoader(LogManager.class).register(type, prop);
+        traceManager = ExtensionLoader.getExtensionLoader(TraceManager.class).register(type, prop);
     }
 
     /**
@@ -43,6 +45,9 @@ public final class StorageEngine {
     public static void shutdown() {
         if (logManager != null) {
             logManager.shutdown();
+        }
+        if (traceManager != null) {
+            traceManager.shutdown();
         }
     }
 
