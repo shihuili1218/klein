@@ -1,5 +1,6 @@
 package com.ofcoder.klein.storage.file.trace;
 
+import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.TraceManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
@@ -15,7 +16,8 @@ public class TracerTest extends TestCase {
         ExtensionLoader.getExtensionLoader(TraceManager.class).register("file", prop);
         Tracer tracer = new Tracer(prop);
         for (int i = 0; i < 50; i++) {
-            tracer.trace(i + "zzzzzzzz");
+            int finalI = i;
+            ThreadExecutor.execute(() -> tracer.trace(finalI + "zzzzzzzz"));
         }
         tracer.shutdown();
 
