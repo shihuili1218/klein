@@ -22,6 +22,12 @@ import com.ofcoder.klein.spi.SPI;
 
 @SPI
 public interface TraceManager {
+    /**
+     * save trace record.
+     *
+     * @param name     file name
+     * @param contents trace entry
+     */
     void save(String name, List<String> contents);
 
     /**
