@@ -14,42 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.facade.config;
+package com.ofcoder.klein.storage.facade;
 
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
+import java.util.List;
 
-/**
- * Storage Prop.
- *
- * @author far.liu
- */
-public class StorageProp {
-    private String id = SystemPropertyUtil.get("klein.id", "1");
-    private int traceBlockSize = SystemPropertyUtil.getInt("klein.storage.trace-block", 1024);
+import com.ofcoder.klein.spi.SPI;
+
+@SPI
+public interface TraceManager {
+    void save(String name, List<String> contents);
 
     /**
-     * self id.
-     *
-     * @return node id
+     * Bean shutdown.
      */
-    public String getId() {
-        return id;
-    }
-
-    /**
-     * set self id.
-     *
-     * @param id node id
-     */
-    public void setId(final String id) {
-        this.id = id;
-    }
-
-    public int getTraceBlockSize() {
-        return traceBlockSize;
-    }
-
-    public void setTraceBlockSize(final int traceBlockSize) {
-        this.traceBlockSize = traceBlockSize;
-    }
+    void shutdown();
 }
