@@ -11,16 +11,16 @@ public class TracerTest extends TestCase {
 
     public void testTrace() throws InterruptedException {
         StorageProp prop = new StorageProp();
-        prop.setTraceBlockSize(20);
+        prop.setTraceBlockSize(100);
 
         ExtensionLoader.getExtensionLoader(TraceManager.class).register("file", prop);
-        Tracer tracer = new Tracer(prop);
-        for (int i = 0; i < 50; i++) {
+        Tracer tracer = new Tracer("propose", prop);
+        for (int i = 0; i < 1024; i++) {
             int finalI = i;
             ThreadExecutor.execute(() -> tracer.trace(finalI + "zzzzzzzz"));
         }
+        Thread.sleep(500L);
         tracer.shutdown();
-
         Thread.sleep(500L);
     }
 }

@@ -22,7 +22,7 @@ import com.ofcoder.klein.spi.SPI;
 
 @SPI
 public interface TraceManager {
-    void save(List<String> contents);
+    void save(String name, List<String> contents);
 
     /**
      * Bean shutdown.

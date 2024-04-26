@@ -40,11 +40,11 @@ public class FileTraceManager implements TraceManager {
     }
 
     @Override
-    public void save(final List<String> contents) {
+    public void save(final String name, final List<String> contents) {
         FileOutputStream mateOut = null;
         try {
-            String name = metaPath + File.separator + System.currentTimeMillis() + ThreadLocalRandom.current().nextInt(0, 100);
-            mateOut = new FileOutputStream(name);
+            String path = metaPath + File.separator + name + System.currentTimeMillis() ;
+            mateOut = new FileOutputStream(path);
 
             IOUtils.writeLines(contents, System.lineSeparator(), mateOut, StandardCharsets.UTF_8);
             mateOut.flush();
