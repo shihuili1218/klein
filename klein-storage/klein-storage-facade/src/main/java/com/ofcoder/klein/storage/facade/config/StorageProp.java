@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.storage.facade.config;
 
+import java.io.File;
+
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
@@ -25,6 +27,7 @@ import com.ofcoder.klein.common.util.SystemPropertyUtil;
  */
 public class StorageProp {
     private String id = SystemPropertyUtil.get("klein.id", "1");
+    private String dataPath = SystemPropertyUtil.get("klein.storage.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data") + File.separator + id;
     private int traceBlockSize = SystemPropertyUtil.getInt("klein.storage.trace-block", 1024);
 
     /**
@@ -43,6 +46,14 @@ public class StorageProp {
      */
     public void setId(final String id) {
         this.id = id;
+    }
+
+    public String getDataPath() {
+        return dataPath;
+    }
+
+    public void setDataPath(String dataPath) {
+        this.dataPath = dataPath;
     }
 
     public int getTraceBlockSize() {

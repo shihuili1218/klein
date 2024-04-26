@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 
 import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.TraceManager;
 import com.ofcoder.klein.storage.facade.config.StorageProp;
@@ -37,11 +36,10 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
 @Join
 public class FileTraceManager implements TraceManager {
     private static String selfPath;
-    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data");
     private static String metaPath;
 
     public FileTraceManager(final StorageProp op) {
-        selfPath = BASE_PATH + File.separator + op.getId();
+        selfPath = op.getDataPath();
         File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
             boolean mkdir = selfFile.mkdirs();
