@@ -303,7 +303,7 @@ public class LearnerImpl implements Learner {
     }
 
     private boolean handleConfirmRequest(final ConfirmReq req) {
-        LOG.info("processing the confirm message from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
+        LOG.info("processing the confirm request from node-{}, instance: {}", req.getNodeId(), req.getInstanceId());
 
         if (req.getInstanceId() <= getLastCheckpoint()) {
             // the instance is compressed.
@@ -396,7 +396,7 @@ public class LearnerImpl implements Learner {
                     } else {
                         final Endpoint master = memberConfig.getMaster();
                         if (master != null) {
-                            this.dataAligner.diff(instanceId, master, new ApplyAfterLearnCallback(i));
+                            this.dataAligner.diff(i, master, new ApplyAfterLearnCallback(i));
                         }
                     }
                 }

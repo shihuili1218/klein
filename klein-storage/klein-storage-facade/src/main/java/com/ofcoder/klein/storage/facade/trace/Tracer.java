@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.storage.facade.trace;
 
 import java.util.Arrays;
@@ -39,6 +40,10 @@ public class Tracer {
         this.traceManager = ExtensionLoader.getExtensionLoader(TraceManager.class).getJoin();
     }
 
+    /**
+     * append content into trace container.
+     * @param content content
+     */
     public void trace(final String content) {
         if (!curTracer.get().append(content)) {
             renew();
@@ -55,6 +60,9 @@ public class Tracer {
         }
     }
 
+    /**
+     * save at shutdown.
+     */
     public void shutdown() {
         renew();
     }
@@ -64,7 +72,7 @@ public class Tracer {
         private final String[] trace;
         private final int threshold;
 
-        public Content(final int size) {
+        Content(final int size) {
             if (size < 1) {
                 throw new IllegalArgumentException("Size must be at least 1");
             }

@@ -35,7 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.common.util.SystemPropertyUtil;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -53,7 +52,6 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
 public class FileLogManager<P extends Serializable> implements LogManager<P> {
     private static final Logger LOG = LoggerFactory.getLogger(FileLogManager.class);
 
-    private static final String BASE_PATH = SystemPropertyUtil.get("klein.data-path", SystemPropertyUtil.get("user.dir", "") + File.separator + "data");
     private static String selfPath;
     private static String metaPath;
 
@@ -68,7 +66,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
 
-        selfPath = BASE_PATH + File.separator + op.getId();
+        selfPath = op.getDataPath();
         File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
             boolean mkdir = selfFile.mkdirs();
