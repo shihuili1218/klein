@@ -68,7 +68,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public AcceptRes handleAcceptRequest(final AcceptReq req, final boolean isSelf) {
-        LOG.info("processing the accept message from node-{}, instanceId: {}, proposalNO: {}, checksum: {}", req.getNodeId(), req.getInstanceId(), req.getProposalNo(), req.getChecksum());
+        LOG.info("processing the accept request from node-{}, instanceId: {}, proposalNO: {}, checksum: {}", req.getNodeId(), req.getInstanceId(), req.getProposalNo(), req.getChecksum());
 
         final long selfProposalNo = self.getCurProposalNo();
         final long selfInstanceId = self.getCurInstanceId();
@@ -161,7 +161,7 @@ public class AcceptorImpl implements Acceptor {
 
     @Override
     public PrepareRes handlePrepareRequest(final PrepareReq req, final boolean isSelf) {
-        LOG.info("processing the prepare message from node-{}, isSelf: {}", req.getNodeId(), isSelf);
+        LOG.info("processing the prepare request from node-{}, {}, isSelf: {}", req.getNodeId(), req.getProposalNo(), isSelf);
         synchronized (negLock) {
             final long curProposalNo = self.getCurProposalNo();
             final long curInstanceId = self.getCurInstanceId();
