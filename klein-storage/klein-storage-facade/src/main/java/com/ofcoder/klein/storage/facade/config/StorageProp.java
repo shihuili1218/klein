@@ -52,7 +52,7 @@ public class StorageProp {
         return dataPath;
     }
 
-    public void setDataPath(String dataPath) {
+    public void setDataPath(final String dataPath) {
         this.dataPath = dataPath;
     }
 
