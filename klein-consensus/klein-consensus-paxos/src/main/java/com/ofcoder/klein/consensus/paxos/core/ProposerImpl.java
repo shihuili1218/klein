@@ -84,6 +84,7 @@ public class ProposerImpl implements Proposer {
     private long prepareTimeout;
     private long acceptTimeout;
     private RingBuffer<ProposalWithDone> proposeQueue;
+    private Disruptor<ProposalWithDone> proposeDisruptor;
     private CountDownLatch shutdownLatch;
     /**
      * The instance of the Prepare phase has been executed.
@@ -106,7 +107,7 @@ public class ProposerImpl implements Proposer {
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
 
         // Disruptor to run propose.
-        Disruptor<ProposalWithDone> proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
+        proposeDisruptor = DisruptorBuilder.<ProposalWithDone>newInstance()
                 .setRingBufferSize(RUNNING_BUFFER_SIZE)
                 .setEventFactory(ProposalWithDone::new)
                 .setThreadFactory(KleinThreadFactory.create("paxos-propose-disruptor-", true))
@@ -130,6 +131,8 @@ public class ProposerImpl implements Proposer {
                 throw new ShutdownException(e.getMessage(), e);
             }
         }
+
+        proposeDisruptor.shutdown();
     }
 
     /**

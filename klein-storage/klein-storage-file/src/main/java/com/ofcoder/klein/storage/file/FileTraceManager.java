@@ -35,19 +35,18 @@ import com.ofcoder.klein.storage.facade.exception.StorageException;
  */
 @Join
 public class FileTraceManager implements TraceManager {
-    private static String selfPath;
-    private static String metaPath;
+    private static String tracePath;
 
     public FileTraceManager(final StorageProp op) {
-        selfPath = op.getDataPath();
+        String selfPath = op.getDataPath();
         File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
             boolean mkdir = selfFile.mkdirs();
             // do nothing for mkdir result
         }
 
-        FileTraceManager.metaPath = selfPath + File.separator + "trace";
-        File metaPath = new File(FileTraceManager.metaPath);
+        FileTraceManager.tracePath = selfPath + File.separator + "trace";
+        File metaPath = new File(FileTraceManager.tracePath);
         if (!metaPath.exists()) {
             boolean mkdir = metaPath.mkdirs();
             // do nothing for mkdir result
@@ -58,7 +57,7 @@ public class FileTraceManager implements TraceManager {
     public void save(final String name, final List<String> contents) {
         FileOutputStream mateOut = null;
         try {
-            String path = metaPath + File.separator + name + System.currentTimeMillis();
+            String path = tracePath + File.separator + name + System.currentTimeMillis();
             mateOut = new FileOutputStream(path);
 
             IOUtils.writeLines(contents, System.lineSeparator(), mateOut, StandardCharsets.UTF_8);
