@@ -13,12 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@main
-      - uses: codecov/codecov-action@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 18
+        uses: actions/setup-java@v1
         with:
-          fail_ci_if_error: true # optional (default = false)
-          files: ./coverage1.xml,./coverage2.xml # optional
-          flags: unittests # optional
-          name: codecov-umbrella # optional
-          token: ${{ secrets.CODECOV_TOKEN }} # required
-          verbose: true # optional (default = false)
+          java-version: 18
+      - name: Install dependencies
+        run: mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+      - name: Run tests and collect coverage
+        run: mvn -B test
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_ORG_TOKEN }}
