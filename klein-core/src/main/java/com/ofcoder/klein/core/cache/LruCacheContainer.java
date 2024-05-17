@@ -86,7 +86,7 @@ public class LruCacheContainer extends ClearExpiryCacheContainer {
     }
 
     @Override
-    public synchronized Object _put(final String key, final Object data, final Long expire) {
+    public synchronized Object _put(final String key, final Object data, final long expire) {
         MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
@@ -101,7 +101,7 @@ public class LruCacheContainer extends ClearExpiryCacheContainer {
     }
 
     @Override
-    public synchronized Object _putIfAbsent(final String key, final Object data, final Long expire) {
+    public synchronized Object _putIfAbsent(final String key, final Object data, final long expire) {
         MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);

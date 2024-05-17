@@ -65,16 +65,16 @@ public abstract class ClearExpiryCacheContainer implements CacheContainer {
     }
 
     @Override
-    public Object put(final String key, final Object data, final Long expire) {
+    public Object put(final String key, final Object data, final long expire) {
         Object d = _put(key, data, expire);
         waitClear(expire, key);
         return d;
     }
 
-    protected abstract Object _put(String key, Object data, Long expire);
+    protected abstract Object _put(String key, Object data, long expire);
 
     @Override
-    public Object putIfAbsent(final String key, final Object data, final Long expire) {
+    public Object putIfAbsent(final String key, final Object data, final long expire) {
         Object d = _putIfAbsent(key, data, expire);
         if (d == null) {
             waitClear(expire, key);
@@ -82,7 +82,7 @@ public abstract class ClearExpiryCacheContainer implements CacheContainer {
         return d;
     }
 
-    protected abstract Object _putIfAbsent(String key, Object data, Long expire);
+    protected abstract Object _putIfAbsent(String key, Object data, long expire);
 
     private long roundToNextBucket(final long time) {
         return (time / expirationInterval + 1) * expirationInterval;
