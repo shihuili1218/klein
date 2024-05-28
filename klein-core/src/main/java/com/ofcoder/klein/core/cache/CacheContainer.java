@@ -47,7 +47,7 @@ public interface CacheContainer {
      * @param expire expire
      * @return the previous value associated with key, or null
      */
-    Object put(String key, Object data, Long expire);
+    Object put(String key, Object data, long expire);
 
     /**
      * put element to cache if present, and set expire.
@@ -57,7 +57,7 @@ public interface CacheContainer {
      * @param expire expire
      * @return the previous value associated with key, or null
      */
-    Object putIfAbsent(String key, Object data, Long expire);
+    Object putIfAbsent(String key, Object data, long expire);
 
     /**
      * remove key from cache.

@@ -47,7 +47,7 @@ public class MemoryCacheContainer extends ClearExpiryCacheContainer {
     }
 
     @Override
-    public Object _put(final String key, final Object data, final Long expire) {
+    public Object _put(final String key, final Object data, final long expire) {
         MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
@@ -60,7 +60,7 @@ public class MemoryCacheContainer extends ClearExpiryCacheContainer {
     }
 
     @Override
-    public Object _putIfAbsent(final String key, final Object data, final Long expire) {
+    public Object _putIfAbsent(final String key, final Object data, final long expire) {
         MetaData value = new MetaData();
         value.setExpire(expire);
         value.setData(data);
