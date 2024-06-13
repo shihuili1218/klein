@@ -14,26 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.consensus.paxos.core;
-
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -59,6 +41,22 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * learner implement.
@@ -71,9 +69,9 @@ public class LearnerImpl implements Learner {
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private LogManager<Proposal> logManager;
-    private final ConcurrentMap<String, SMApplier> sms = new ConcurrentHashMap<>();
+    private final Map<String, SMApplier> sms = new ConcurrentHashMap<>();
     private final DataAligner dataAligner;
-    private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
+    private final Map<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
 
     public LearnerImpl(final PaxosNode self) {
@@ -88,27 +86,28 @@ public class LearnerImpl implements Learner {
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.dataAligner.init(op);
+        LearnerSnapshotManager.getInstance().initAndStart(op, this);
     }
 
     @Override
     public void shutdown() {
+        LearnerSnapshotManager.getInstance().shutdown();
         this.dataAligner.close();
-        generateSnap();
         this.sms.values().forEach(SMApplier::close);
     }
 
     @Override
     public long getLastAppliedInstanceId() {
         return sms.values().stream()
-                .mapToLong(SMApplier::getLastAppliedId)
-                .max().orElse(-1L);
+            .mapToLong(SMApplier::getLastAppliedId)
+            .max().orElse(-1L);
     }
 
     @Override
     public long getLastCheckpoint() {
         return sms.values().stream()
-                .mapToLong(SMApplier::getLastCheckpoint)
-                .max().orElse(-1L);
+            .mapToLong(SMApplier::getLastCheckpoint)
+            .max().orElse(-1L);
     }
 
     @Override
@@ -117,31 +116,8 @@ public class LearnerImpl implements Learner {
     }
 
     @Override
-    public Map<String, Snap> generateSnap() {
-        Map<String, SMApplier> sms = new HashMap<>(this.sms);
-        ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
-        CountDownLatch latch = new CountDownLatch(sms.size());
-
-        sms.forEach((group, sm) -> {
-            SMApplier.Task e = SMApplier.Task.createTakeSnapTask(new SMApplier.TaskCallback() {
-                @Override
-                public void onTakeSnap(final Snap snap) {
-                    result.put(group, snap);
-                    latch.countDown();
-                }
-            });
-            sm.offer(e);
-        });
-
-        try {
-            if (!latch.await(1L, TimeUnit.SECONDS)) {
-                LOG.error("generate snapshot timeout. succ: {}, all: {}", result.keySet(), sms.keySet());
-            }
-            return result;
-        } catch (InterruptedException ex) {
-            LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
-            return result;
-        }
+    public Map<String, SMApplier> getSms() {
+        return sms;
     }
 
     @Override
@@ -170,7 +146,7 @@ public class LearnerImpl implements Learner {
             } else {
                 latch.countDown();
                 LOG.warn("load snap failure, group: {}, The state machine is not found."
-                        + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                    + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
             }
         });
 
@@ -198,8 +174,8 @@ public class LearnerImpl implements Learner {
                 break;
             }
             List<Command> replayData = instance.getGrantedValue().stream()
-                    .filter(it -> StringUtils.equals(group, it.getGroup()))
-                    .collect(Collectors.toList());
+                .filter(it -> StringUtils.equals(group, it.getGroup()))
+                .collect(Collectors.toList());
             if (CollectionUtils.isEmpty(replayData)) {
                 continue;
             }
@@ -236,11 +212,11 @@ public class LearnerImpl implements Learner {
         PaxosMemberConfiguration configuration = memberConfig.createRef();
 
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
-                .nodeId(self.getSelf().getId())
-                .proposalNo(curProposalNo)
-                .instanceId(instanceId)
-                .checksum(checksum)
-                .build();
+            .nodeId(self.getSelf().getId())
+            .proposalNo(curProposalNo)
+            .instanceId(instanceId)
+            .checksum(checksum)
+            .build();
 
         // for self
         if (handleConfirmRequest(req)) {
@@ -252,18 +228,18 @@ public class LearnerImpl implements Learner {
 
         // for other members
         configuration.getMembersWithout(self.getSelf().getId())
-                .forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
-                    @Override
-                    public void error(final Throwable err) {
-                        LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
-                        // do nothing
-                    }
+            .forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
+                @Override
+                public void error(final Throwable err) {
+                    LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
+                    // do nothing
+                }
 
-                    @Override
-                    public void complete(final Serializable result) {
-                        // do nothing
-                    }
-                }));
+                @Override
+                public void complete(final Serializable result) {
+                    // do nothing
+                }
+            }));
     }
 
     @Override
@@ -283,7 +259,7 @@ public class LearnerImpl implements Learner {
         }
 
         LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
+            target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
         if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
             this.dataAligner.snap(target, result -> {
                 if (result) {
@@ -434,6 +410,8 @@ public class LearnerImpl implements Learner {
         if (remove != null) {
             remove.forEach(it -> it.applyDone(applyResult));
         }
+
+        LearnerSnapshotManager.getInstance().addReqCount();
     }
 
     private void registerApplyCallback(final long instanceId, final List<ProposeDone> callbacks) {
@@ -456,7 +434,7 @@ public class LearnerImpl implements Learner {
 
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
-                    RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
+                RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
             if (memberConfig.allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
@@ -484,11 +462,11 @@ public class LearnerImpl implements Learner {
     public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
         LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
-                .images(new HashMap<>())
-                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
-                .build();
+            .images(new HashMap<>())
+            .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+            .build();
         if (getLastAppliedInstanceId() - getLastCheckpoint() >= 100) {
-            Map<String, Snap> allSnaps = generateSnap();
+            Map<String, Snap> allSnaps = LearnerSnapshotManager.getInstance().generateSnap();
             res.getImages().putAll(allSnaps);
         } else {
             for (String group : RuntimeAccessor.getLearner().getGroups()) {

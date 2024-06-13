@@ -16,13 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.sm.SM;
+import com.ofcoder.klein.consensus.facade.sm.SMApplier;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
@@ -30,6 +27,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.storage.facade.Snap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Learner Role.
@@ -44,12 +44,7 @@ public interface Learner extends Role<ConsensusProp> {
 
     Set<String> getGroups();
 
-    /**
-     * generate and save snapshot.
-     *
-     * @return snaps
-     */
-    Map<String, Snap> generateSnap();
+    Map<String, SMApplier> getSms();
 
     /**
      * load snap.
