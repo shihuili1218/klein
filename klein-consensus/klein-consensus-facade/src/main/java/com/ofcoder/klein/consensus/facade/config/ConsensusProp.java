@@ -63,6 +63,13 @@ public class ConsensusProp {
      * calculate quorum.
      */
     private String nwr = SystemPropertyUtil.get("klein.consensus.nwr", "majority");
+
+    /**
+     * 快照配置.
+     * default: 1 minute 1w req || 5 minutes 10 req || 30 minutes 1 req.
+     */
+    private String snapshotStrategy = SystemPropertyUtil.get("klein.snapshot", "60 10000 300 10 1800 1");
+
     private PaxosProp paxosProp = new PaxosProp();
 
     private List<Endpoint> parseMember(final String members) {
@@ -141,5 +148,9 @@ public class ConsensusProp {
 
     public void setNwr(final String nwr) {
         this.nwr = nwr;
+    }
+
+    public String getSnapshotStrategy() {
+        return snapshotStrategy;
     }
 }
