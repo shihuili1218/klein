@@ -17,11 +17,22 @@
 package com.ofcoder.klein.consensus.facade.config;
 
 /**
- * snap prop.
- *
- * @author 释慧利
+ * Snapshot Strategy.
  */
-public class SnapProp {
-    private long generateSnapInterval;
+public class SnapshotStrategy {
+    private int second;
+    private int reqCount;
 
+    public SnapshotStrategy(final int second, final int reqCount) {
+        this.second = second;
+        this.reqCount = reqCount;
+    }
+
+    public int getSecond() {
+        return second;
+    }
+
+    public int getReqCount() {
+        return reqCount;
+    }
 }

@@ -21,9 +21,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -31,6 +33,8 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.Command;
+import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.config.SnapshotStrategy;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -48,10 +52,13 @@ public class SMApplier {
     private LogManager<Command> logManager;
     private Long lastAppliedId = 0L;
     private Long lastCheckpoint = 0L;
+    private Long lastSnapTime = System.currentTimeMillis();
+    private final List<SnapshotStrategy> snapshotStrategies;
 
-    public SMApplier(final String group, final SM sm) {
+    public SMApplier(final String group, final SM sm, final ConsensusProp op) {
         this.group = group;
         this.sm = sm;
+        this.snapshotStrategies = op.getSnapshotStrategy();
         this.applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.priority));
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create(this.group + "-apply", true));
@@ -134,6 +141,20 @@ public class SMApplier {
 
         // the instance has been applied.
         task.callback.onApply(applyResult);
+
+        if (task.taskType == TaskEnum.APPLY) {
+            checkAndSnapshot();
+        }
+    }
+
+    private void checkAndSnapshot() {
+        long now = System.currentTimeMillis();
+        long applySize = lastAppliedId - lastCheckpoint;
+        long lastSnapshotInterval = (now - lastSnapTime) / 1000;
+        if (snapshotStrategies.stream().anyMatch(it -> lastSnapshotInterval >= it.getSecond() && applySize >= it.getReqCount())) {
+            offer(Task.createTakeSnapTask(Task.FAKE_CALLBACK));
+        }
+        // else: do nothing
     }
 
     /**
@@ -153,6 +174,22 @@ public class SMApplier {
      * close sm.
      */
     public void close() {
+        CountDownLatch latch = new CountDownLatch(1);
+        offer(Task.createTakeSnapTask(new TaskCallback() {
+            @Override
+            public void onTakeSnap(final Snap snap) {
+                latch.countDown();
+            }
+        }));
+
+        try {
+            if (!latch.await(1L, TimeUnit.SECONDS)) {
+                LOG.error("generate snapshot timeout. lastApplyId: {}, lastCheckpoint: {}", lastAppliedId, lastCheckpoint);
+            }
+        } catch (InterruptedException ex) {
+            LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
+        }
+
         shutdown = true;
         sm.close();
     }
