@@ -37,4 +37,6 @@ public interface Proxy {
      */
     <D extends Serializable> Result<D> propose(Proposal data, boolean apply);
 
+    Result<Long> readIndex(String group);
+
 }

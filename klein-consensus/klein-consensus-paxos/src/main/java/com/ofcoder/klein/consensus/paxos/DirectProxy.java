@@ -91,4 +91,11 @@ public class DirectProxy implements Proxy {
         }
         return builder.build();
     }
+
+    @Override
+    public Result<Long> readIndex(final String group) {
+
+
+        return null;
+    }
 }

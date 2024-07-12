@@ -126,6 +126,11 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
+    public Result<Long> readIndex(final String group) {
+        return proxy.readIndex(group);
+    }
+
+    @Override
     public void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
