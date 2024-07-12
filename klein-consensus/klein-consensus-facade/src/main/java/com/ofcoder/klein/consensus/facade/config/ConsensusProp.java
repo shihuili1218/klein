@@ -21,7 +21,9 @@ import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
+import com.ofcoder.klein.consensus.facade.exception.SnapshotException;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.util.RpcUtil;
 
@@ -68,7 +70,7 @@ public class ConsensusProp {
      * 快照配置.
      * default: 1 minute 1w req || 5 minutes 10 req || 30 minutes 1 req.
      */
-    private String snapshotStrategy = SystemPropertyUtil.get("klein.snapshot", "60 10000 300 10 1800 1");
+    private List<SnapshotStrategy> snapshotStrategy = parseSnapStrategy(SystemPropertyUtil.get("klein.snapshot.generation-policy", "60 10000 300 10 1800 1"));
 
     private PaxosProp paxosProp = new PaxosProp();
 
@@ -84,6 +86,20 @@ public class ConsensusProp {
             endpoints.add(RpcUtil.parseEndpoint(item));
         }
         return endpoints;
+    }
+
+    private List<SnapshotStrategy> parseSnapStrategy(final String prop) {
+        String[] props = prop.split(" ");
+        if (props.length % 2 != 0) {
+            throw new SnapshotException("klein.snapshot.generation-policy config must appear in pairs.");
+        }
+
+        List<SnapshotStrategy> snapshotStrategies = Lists.newArrayList();
+        for (int i = 0; i < props.length;) {
+            SnapshotStrategy snapshotStrategy = new SnapshotStrategy(Integer.parseInt(props[i++]), Integer.parseInt(props[i++]));
+            snapshotStrategies.add(snapshotStrategy);
+        }
+        return snapshotStrategies;
     }
 
     public Endpoint getSelf() {
@@ -150,7 +166,11 @@ public class ConsensusProp {
         this.nwr = nwr;
     }
 
-    public String getSnapshotStrategy() {
+    public void setSnapshotStrategy(final List<SnapshotStrategy> snapshotStrategy) {
+        this.snapshotStrategy = snapshotStrategy;
+    }
+
+    public List<SnapshotStrategy> getSnapshotStrategy() {
         return snapshotStrategy;
     }
 }
