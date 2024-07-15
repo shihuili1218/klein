@@ -93,7 +93,6 @@ public class LearnerImpl implements Learner {
     @Override
     public void shutdown() {
         this.dataAligner.close();
-        generateSnap();
         this.sms.values().forEach(SMApplier::close);
     }
 
@@ -116,8 +115,7 @@ public class LearnerImpl implements Learner {
         return sms.keySet();
     }
 
-    @Override
-    public Map<String, Snap> generateSnap() {
+    private Map<String, Snap> generateSnap() {
         Map<String, SMApplier> sms = new HashMap<>(this.sms);
         ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
         CountDownLatch latch = new CountDownLatch(sms.size());
@@ -142,6 +140,11 @@ public class LearnerImpl implements Learner {
             LOG.error(String.format("generate snapshot occur exception. %s", ex.getMessage()), ex);
             return result;
         }
+    }
+
+    @Override
+    public Map<String, SMApplier> getSms() {
+        return sms;
     }
 
     @Override
@@ -212,7 +215,7 @@ public class LearnerImpl implements Learner {
 
     @Override
     public void loadSM(final String group, final SM sm) {
-        if (sms.putIfAbsent(group, new SMApplier(group, sm)) != null) {
+        if (sms.putIfAbsent(group, new SMApplier(group, sm, prop)) != null) {
             LOG.error("the group[{}] has been loaded with sm.", group);
             return;
         }
