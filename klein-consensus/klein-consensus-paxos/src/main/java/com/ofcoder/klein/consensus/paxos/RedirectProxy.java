@@ -79,4 +79,9 @@ public class RedirectProxy implements Proxy {
         }
         return (Result<D>) res.getProposeResult();
     }
+
+    @Override
+    public Result<Long> readIndex(final String group) {
+        return null;
+    }
 }

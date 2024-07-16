@@ -33,7 +33,7 @@ public interface Consensus extends Cluster {
      * load state machine.
      *
      * @param group group name
-     * @param sm state machine
+     * @param sm    state machine
      */
     void loadSM(String group, SM sm);
 
@@ -58,7 +58,7 @@ public interface Consensus extends Cluster {
      * @param group group name
      * @return instance id
      */
-      Result<Long> readIndex(String group);
+    Result<Long> readIndex(String group);
 
     /**
      * preheating.

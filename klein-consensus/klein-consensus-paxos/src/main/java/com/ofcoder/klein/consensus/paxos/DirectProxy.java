@@ -94,8 +94,6 @@ public class DirectProxy implements Proxy {
 
     @Override
     public Result<Long> readIndex(final String group) {
-
-
         return null;
     }
 }

@@ -74,6 +74,6 @@ public class GroupWrapper {
      * @return whether success
      */
     public <E extends Serializable, D extends Serializable> Result<D> read(final E data) {
-        return this.consensus.read(group, data);
+        return propose(data, true);
     }
 }
