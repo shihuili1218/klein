@@ -5,14 +5,14 @@
     <parent>
         <artifactId>klein</artifactId>
         <groupId>com.ofcoder.klein</groupId>
-        <version>0.0.6</version>
+        <version>0.0.7</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ofcoder.klein.storage</groupId>
     <artifactId>klein-storage</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
 
     <modules>
         <module>klein-storage-facade</module>
