@@ -33,7 +33,7 @@ public interface Consensus extends Cluster {
      * load state machine.
      *
      * @param group group name
-     * @param sm state machine
+     * @param sm    state machine
      */
     void loadSM(String group, SM sm);
 
@@ -52,33 +52,13 @@ public interface Consensus extends Cluster {
     <E extends Serializable, D extends Serializable> Result<D> propose(String group, E data, boolean apply);
 
     /**
-     * propose proposal.
-     *
-     * @param <E>   request type
-     * @param group group name
-     * @param data  Client data, type is Serializable
-     *              e.g. The input value of the state machine
-     * @return whether success
-     * @see Consensus#propose(String, Serializable, boolean)
-     */
-    default <E extends Serializable> Result propose(final String group, final E data) {
-        return propose(group, data, false);
-    }
-
-    /**
-     * W + R ＞ N.
-     * read from local.sm and only check self.lastApplyInstance if W = 1
-     * read from W and only check self.lastApplyInstance if W ＞ 1
+     * Obtain the consensus reached instanceId.
+     * todo: propose apply=true, 需要调用readIndex判断自己是否执行了对应的instanceId，再返回本地数据
      *
      * @param group group name
-     * @param data  message
-     * @param <D>   result type
-     * @param <E>   request type
-     * @return whether success
+     * @return instance id
      */
-    default <E extends Serializable, D extends Serializable> Result<D> read(String group, E data) {
-        return propose(group, data, true);
-    }
+    Result<Long> readIndex(String group);
 
     /**
      * preheating.

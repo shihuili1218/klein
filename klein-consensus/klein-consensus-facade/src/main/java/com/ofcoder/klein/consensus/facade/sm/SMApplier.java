@@ -95,6 +95,7 @@ public class SMApplier {
             lastSnap = new Snap(lastAppliedId, sm.makeImage());
             this.lastCheckpoint = lastAppliedId;
             logManager.saveSnap(group, lastSnap);
+            lastSnapTime = System.currentTimeMillis();
             LOG.info("take snapshot success, group: {}, cp: {}", group, lastSnap.getCheckpoint());
         }
 
