@@ -5,13 +5,13 @@
     <parent>
         <artifactId>klein-storage</artifactId>
         <groupId>com.ofcoder.klein.storage</groupId>
-        <version>0.0.6</version>
+        <version>0.0.7</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.ofcoder.klein.storage.h2</groupId>
     <artifactId>klein-storage-h2</artifactId>
-    <version>0.0.6</version>
+    <version>0.0.7</version>
     <packaging>jar</packaging>
 
     <properties>
