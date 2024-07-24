@@ -17,7 +17,13 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +37,11 @@ import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManagerSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
@@ -133,6 +142,7 @@ public class PaxosConsensus implements Consensus {
     @Override
     public void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+        SMRegistry.register(MemberManagerSM.GROUP, new MemberManagerSM());
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
 
         if (!this.prop.isJoinCluster()) {
@@ -189,19 +199,28 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void addMember(final Endpoint endpoint) {
-        if (getMemberConfig().isValid(endpoint.getId())) {
-            return;
-        }
-        RuntimeAccessor.getMaster().changeMember(Master.ADD, Sets.newHashSet(endpoint));
-    }
+    public boolean changeMember(final List<Endpoint> add, final List<Endpoint> remove) {
+        PaxosMemberConfiguration curConfiguration = MemberRegistry.getInstance().getMemberConfiguration().createRef();
 
-    @Override
-    public void removeMember(final Endpoint endpoint) {
-        if (!getMemberConfig().isValid(endpoint.getId())) {
-            return;
+        Set<Endpoint> newConfig = new HashSet<>(
+                CollectionUtils.isEmpty(curConfiguration.getLastMembers()) ? curConfiguration.getEffectMembers() : curConfiguration.getLastMembers()
+        );
+        if (add != null) {
+            newConfig.addAll(add.stream().filter(it -> !curConfiguration.isValid(it.getId())).collect(Collectors.toList()));
         }
-        RuntimeAccessor.getMaster().changeMember(Master.REMOVE, Sets.newHashSet(endpoint));
+        if (remove != null) {
+            newConfig.removeAll(remove.stream().filter(it -> curConfiguration.isValid(it.getId())).collect(Collectors.toList()));
+        }
+        // It only takes effect in the image
+        int version = curConfiguration.seenNewConfig(newConfig);
+
+        ChangeMemberOp req = new ChangeMemberOp();
+        req.setNodeId(prop.getSelf().getId());
+        req.setNewConfig(newConfig);
+        req.setVersion(version);
+
+        Result<Serializable> propose = propose(MemberManagerSM.GROUP, req, false);
+        return propose.getState() == Result.State.SUCCESS;
     }
 
 }

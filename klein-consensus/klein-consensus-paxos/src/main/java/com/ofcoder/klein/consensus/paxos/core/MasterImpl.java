@@ -187,11 +187,6 @@ public class MasterImpl implements Master {
     }
 
     /**
-     * Change member by Join-Consensus.
-     * e.g. old version = 0, new version = 1
-     * 1. Accept phase → send new config to old quorum, enter Join-Consensus
-     * 2. Copy instance(version = 0, confirmed) to new quorum
-     * 3. Confirm phase → new config take effect
      *
      * @param op       add or remove member
      * @param endpoint target member
@@ -206,9 +201,9 @@ public class MasterImpl implements Master {
             }
 
             PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
-            Set<Endpoint> newConfig = new HashSet<>(CollectionUtils.isEmpty(curConfiguration.getLastMembers())
-                    ? curConfiguration.getEffectMembers()
-                    : curConfiguration.getLastMembers());
+            Set<Endpoint> newConfig = new HashSet<>(
+                CollectionUtils.isEmpty(curConfiguration.getLastMembers()) ? curConfiguration.getEffectMembers() : curConfiguration.getLastMembers()
+            );
             if (op == Master.ADD) {
                 newConfig.addAll(endpoint);
             } else {

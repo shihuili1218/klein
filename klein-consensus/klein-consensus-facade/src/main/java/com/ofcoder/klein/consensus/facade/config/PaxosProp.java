@@ -19,7 +19,11 @@ package com.ofcoder.klein.consensus.facade.config;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
- * paxos property.
+ * Paxos Property.
+ * The role of a master is to:
+ *     1. Member Change.
+ *     2. ReadIndex (only when `writeOnMaster` is enabled)
+ *     3. Heartbeat alignment data
  *
  * @author 释慧利
  */

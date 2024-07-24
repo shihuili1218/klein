@@ -18,6 +18,7 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
@@ -163,6 +164,7 @@ public class PaxosMemberConfiguration extends MemberConfiguration {
     }
 
     public enum ElectState {
+        DISABLE(-2), //todo
         ELECTING(-1),
         FOLLOWING(0),
         LEADING(1);
