@@ -14,46 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.core.lock;
 
-import java.io.Serializable;
+import com.ofcoder.klein.common.util.TrueTime;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Message.
- *
- * @author far.liu
+ * Lock State Machine.
  */
-public class LockMessage implements Serializable {
+public class LockSMSource implements KleinLock {
+    private static final byte UNLOCK_STATE = 0x00;
+    private static final byte LOCKED_STATE = 0x01;
 
-    public static final byte LOCK = 0x01;
-    public static final byte UNLOCK = 0x02;
-    public static final long TTL_PERPETUITY = -1;
+    private Byte lockState = UNLOCK_STATE;
+    private long expire = 0;
 
-    private byte op;
-    private String key;
-    private long expire = TTL_PERPETUITY;
-
-    public byte getOp() {
-        return op;
+    @Override
+    public boolean acquire(final long ttl, final TimeUnit unit) {
+        lockState = LOCKED_STATE;
+        expire = TrueTime.currentTimeMillis() + unit.toMillis(ttl);
+        return true;
     }
 
-    public void setOp(final byte op) {
-        this.op = op;
+    @Override
+    public boolean acquire() {
+        return acquire(0, TimeUnit.MILLISECONDS);
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(final String key) {
-        this.key = key;
-    }
-
-    public long getExpire() {
-        return expire;
-    }
-
-    public void setExpire(final long expire) {
-        this.expire = expire;
+    @Override
+    public void release() {
+        lockState = UNLOCK_STATE;
+        expire = 0;
     }
 }

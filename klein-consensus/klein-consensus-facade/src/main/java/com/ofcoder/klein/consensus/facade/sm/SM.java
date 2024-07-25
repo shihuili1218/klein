@@ -14,14 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.consensus.facade.sm;
+
+import java.io.Serializable;
 
 /**
  * State machine.
  *
  * @author 释慧利
  */
-public interface SM {
+public interface SM extends Serializable {
 
     /**
      * apply instance.
@@ -50,4 +53,5 @@ public interface SM {
      */
     void close();
 
+    String getGroup();
 }

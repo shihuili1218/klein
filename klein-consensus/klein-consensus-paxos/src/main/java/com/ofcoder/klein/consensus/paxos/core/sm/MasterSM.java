@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 
 /**
  * master sm.
  *
  * @author 释慧利
  */
-public class MasterSM extends AbstractSM {
+public class MasterSM implements SM {
     public static final String GROUP = "master";
     private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     private final PaxosMemberConfiguration memberConfig;
@@ -46,6 +46,16 @@ public class MasterSM extends AbstractSM {
             LOG.error("applying MasterSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
         }
         return null;
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public String getGroup() {
+        return GROUP;
     }
 
     private void changeMember(final ChangeMemberOp op) {

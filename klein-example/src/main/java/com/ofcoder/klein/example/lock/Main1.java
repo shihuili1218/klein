@@ -14,20 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.example.lock;
-
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.lock.KleinLock;
+import com.ofcoder.klein.core.lock.LockSMSource;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main: operate cache.
@@ -48,7 +48,7 @@ public class Main1 {
 
         instance1.awaitInit();
 
-        KleinLock klein = KleinFactory.getInstance().createLock("klein");
+        KleinLock klein = KleinFactory.getInstance().createKleinObject("klein", KleinLock.class, new LockSMSource());
 
         long start = System.currentTimeMillis();
         LOG.info("++++++++++first acquire: " + klein.acquire(1, TimeUnit.SECONDS) + ", cost: " + (System.currentTimeMillis() - start));
