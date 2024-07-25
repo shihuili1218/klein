@@ -14,12 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.example.cache;
-
-import java.io.Serializable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
@@ -27,6 +23,9 @@ import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import java.io.Serializable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Main: operate cache.

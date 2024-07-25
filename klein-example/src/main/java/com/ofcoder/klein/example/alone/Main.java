@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.ofcoder.klein.example.alone;
 
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.core.cache.KleinCache;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * single node.
