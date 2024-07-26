@@ -16,20 +16,20 @@
  */
 package com.ofcoder.klein;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
+import com.ofcoder.klein.consensus.paxos.core.MasterState;
+import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.StorageEngine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Klein starter.
@@ -44,23 +44,8 @@ public final class Klein {
     private Klein() {
     }
 
-    /**
-     * sync init.
-     */
-    public void awaitInit() {
-        CountDownLatch latch = new CountDownLatch(1);
-        MemberRegistry.getInstance().getMemberConfiguration().addHealthyListener(healthy -> {
-            if (MemberRegistry.getInstance().getMemberConfiguration().allowPropose()) {
-                LOG.info("=====================klein prepared======================");
-                latch.countDown();
-            }
-        });
-        try {
-            boolean await = latch.await(15000L, TimeUnit.MILLISECONDS);
-            // do nothing for await.result
-        } catch (InterruptedException e) {
-            LOG.warn(e.getMessage(), e);
-        }
+    public void setMasterListener(MasterListener listener) {
+        RuntimeAccessor.getMaster().addListener(listener::onChange);
     }
 
     public void setShutdownHook(final ShutdownHook shutdownHook) {
@@ -116,5 +101,9 @@ public final class Klein {
          * tearingDown.
          */
         void tearingDown();
+    }
+
+    public interface MasterListener {
+        void onChange(MasterState master);
     }
 }

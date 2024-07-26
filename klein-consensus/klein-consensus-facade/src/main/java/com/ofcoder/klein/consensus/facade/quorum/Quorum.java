@@ -40,7 +40,7 @@ public interface Quorum {
      */
     boolean grant(Endpoint node);
 
-    SingleQuorum.GrantResult isGranted();
+    GrantResult isGranted();
 
     enum GrantResult {
         PASS,

@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.example.nwr;
 
+import java.util.concurrent.CountDownLatch;
+
 import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.core.cache.KleinCache;
 import org.slf4j.Logger;
@@ -43,7 +45,13 @@ public class Main1 {
 
         Klein instance1 = Klein.startup();
 
-        instance1.awaitInit();
+        CountDownLatch latch = new CountDownLatch(1);
+        instance1.setMasterListener(master -> {
+            if (master.getElectState().allowPropose()){
+                latch.countDown();
+            }
+        });
+        latch.await();
 
 //        Thread.sleep(15000L);
 

@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.example.lock;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,7 +47,13 @@ public class Main1 {
 
         Klein instance1 = Klein.startup();
 
-        instance1.awaitInit();
+        CountDownLatch latch = new CountDownLatch(1);
+        instance1.setMasterListener(master -> {
+            if (master.getElectState().allowPropose()){
+                latch.countDown();
+            }
+        });
+        latch.await();
 
         KleinLock klein = KleinFactory.getInstance().createLock("klein");
 

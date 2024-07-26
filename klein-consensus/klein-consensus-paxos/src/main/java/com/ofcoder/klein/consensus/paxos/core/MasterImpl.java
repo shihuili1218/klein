@@ -16,9 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -27,25 +26,20 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
-import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
 import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.ElectionOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -57,8 +51,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -70,6 +62,10 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  */
 public class MasterImpl implements Master {
     private static final Logger LOG = LoggerFactory.getLogger(MasterImpl.class);
+    private Endpoint master;
+    private ElectState masterState;
+    private final List<Listener> listeners = new ArrayList<>();
+
     private final PaxosNode self;
     private final PaxosMemberConfiguration memberConfig;
     private RepeatedTimer waitHeartbeatTimer;
@@ -79,12 +75,10 @@ public class MasterImpl implements Master {
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
     private final AtomicBoolean changing = new AtomicBoolean(false);
-    private final Nwr nwr;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
-        this.nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
     }
 
     @Override
@@ -96,25 +90,6 @@ public class MasterImpl implements Master {
             if (sendHeartbeatTimer != null) {
                 sendHeartbeatTimer.destroy();
             }
-            if (prop.isJoinCluster()) {
-                boolean shutdown = false;
-                for (Endpoint member : memberConfig.getMembersWithout(self.getSelf().getId())) {
-                    RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                            .nodeId(self.getSelf().getId())
-                            .redirect(RedirectReq.CHANGE_MEMBER)
-                            .changeOp(Master.REMOVE)
-                            .changeTarget(Sets.newHashSet(self.getSelf()))
-                            .build();
-                    RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
-                    if (changeRes != null && changeRes.isChangeResult()) {
-                        shutdown = true;
-                        break;
-                    }
-                }
-                if (shutdown) {
-                    throw new ShutdownException("shutdown, remove himself an exception occurs.");
-                }
-            }
         } catch (Exception e) {
             LOG.error(e.getMessage(), e);
         }
@@ -124,10 +99,16 @@ public class MasterImpl implements Master {
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        if (!prop.getPaxosProp().isEnableMaster()) {
+            this.master = null;
+            this.masterState = ElectState.DISABLE;
+            return;
+        }
+
         waitHeartbeatTimer = new RepeatedTimer("follower-wait-heartbeat", prop.getPaxosProp().getMasterHeartbeatInterval()) {
             @Override
             protected void onTrigger() {
-                memberConfig.changeMaster(PaxosMemberConfiguration.RESET_MASTER_ID);
+                resetMaster();
                 restartElect();
             }
         };
@@ -154,91 +135,36 @@ public class MasterImpl implements Master {
         };
     }
 
+    private void changeMaster(final String nodeId) {
+        if (memberConfig.isValid(nodeId)) {
+            this.master = memberConfig.getEndpointById(nodeId);
+            this.masterState = self.getSelf() == master ? ElectState.LEADING : ElectState.FOLLOWING;
+            LOG.info("node-{} was promoted to master, version: {}", nodeId, memberConfig.getVersion());
+        }
+        MasterState state = getMaster();
+        listeners.forEach(listener -> listener.onChange(state));
+    }
+
+    private void resetMaster() {
+        this.master = null;
+        this.masterState = ElectState.ELECTING;
+
+        MasterState state = getMaster();
+        listeners.forEach(listener -> listener.onChange(state));
+    }
+
     private int calculateElectionMasterInterval() {
         return ThreadLocalRandom.current().nextInt(prop.getPaxosProp().getMasterElectMinInterval(), prop.getPaxosProp().getMasterElectMaxInterval());
     }
 
     @Override
-    public boolean isSelf() {
-        return self.getSelf().equals(memberConfig.getMaster());
+    public MasterState getMaster() {
+        return new MasterState(master, masterState, self.getSelf() == master);
     }
 
     @Override
-    public boolean changeMember(final byte op, final Set<Endpoint> target) {
-        LOG.info("change member, op: {}, target: {}", op, target);
-
-        if (RuntimeAccessor.getMaster().isSelf()) {
-            return _changeMember(op, target);
-        }
-
-        Endpoint master = memberConfig.getMaster();
-        if (master == null) {
-            return false;
-        }
-        RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                .nodeId(self.getSelf().getId())
-                .redirect(RedirectReq.CHANGE_MEMBER)
-                .changeOp(op)
-                .changeTarget(target)
-                .build();
-        RedirectRes res = client.sendRequestSync(master, req, prop.getRoundTimeout() * prop.getRetry());
-
-        return res != null && res.isChangeResult();
-    }
-
-    /**
-     *
-     * @param op       add or remove member
-     * @param endpoint target member
-     * @return result
-     */
-    private boolean _changeMember(final byte op, final Set<Endpoint> endpoint) {
-
-        try {
-            // It can only be changed once at a time
-            if (!changing.compareAndSet(false, true)) {
-                return false;
-            }
-
-            PaxosMemberConfiguration curConfiguration = memberConfig.createRef();
-            Set<Endpoint> newConfig = new HashSet<>(
-                CollectionUtils.isEmpty(curConfiguration.getLastMembers()) ? curConfiguration.getEffectMembers() : curConfiguration.getLastMembers()
-            );
-            if (op == Master.ADD) {
-                newConfig.addAll(endpoint);
-            } else {
-                endpoint.forEach(newConfig::remove);
-            }
-
-            // It only takes effect in the image
-            int version = curConfiguration.seenNewConfig(newConfig);
-
-            ChangeMemberOp req = new ChangeMemberOp();
-            req.setNodeId(prop.getSelf().getId());
-            req.setNewConfig(newConfig);
-            req.setVersion(version);
-            CompletableFuture<Boolean> latch = new CompletableFuture<>();
-
-            RuntimeAccessor.getProposer().propose(new Proposal(MasterSM.GROUP, req), new ProposeDone() {
-                @Override
-                public void negotiationDone(final boolean result, final boolean changed) {
-                    if (!result || changed) {
-                        latch.complete(false);
-                    }
-                }
-
-                @Override
-                public void applyDone(final Map<Command, Object> r) {
-                    latch.complete(true);
-                }
-            }, false);
-            return latch.get(this.prop.getRoundTimeout() * this.prop.getRetry(), TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
-            // do nothing
-            return false;
-        } finally {
-            changing.compareAndSet(true, false);
-        }
+    public void addListener(final Listener listener) {
+        listeners.add(listener);
     }
 
     @Override
@@ -249,11 +175,10 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .build();
         for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
-            LOG.debug("looking for master, node-{}, connect: {}", it.getId(), client.checkConnection(it));
             PreElectRes res = client.sendRequestSync(it, req);
-            LOG.debug("looking for master, node-{}: {}, connect: {}", it.getId(), res, client.checkConnection(it));
+            LOG.debug("looking for master, node-{}: {}", it.getId(), res);
             if (res != null && res.getMaster() != null) {
-                memberConfig.changeMaster(res.getMaster().getId());
+                changeMaster(res.getMaster().getId());
                 return;
             }
         }
@@ -321,7 +246,7 @@ public class MasterImpl implements Master {
                     @Override
                     public void error(final Throwable err) {
                         quorum.refuse(it);
-                        if (quorum.isGranted() == SingleQuorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
                             latch.countDown();
                         }
                     }
@@ -338,12 +263,12 @@ public class MasterImpl implements Master {
 
         if (result.isGranted()) {
             quorum.grant(it);
-            if (quorum.isGranted() == SingleQuorum.GrantResult.PASS && next.compareAndSet(false, true)) {
+            if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                 restartSendHbNow();
 
                 RuntimeAccessor.getProposer().propose(Command.NOOP, (noopResult, dataChange) -> {
                     if (noopResult) {
-                        memberConfig.changeMaster(self.getSelf().getId());
+                        changeMaster(self.getSelf().getId());
                     } else {
                         restartElect();
                     }
@@ -457,7 +382,7 @@ public class MasterImpl implements Master {
     public NewMasterRes onReceiveNewMaster(final NewMasterReq request, final boolean isSelf) {
         if (request.getMemberConfigurationVersion() >= memberConfig.getVersion()) {
             if (!isSelf) {
-                memberConfig.changeMaster(request.getNodeId());
+                changeMaster(request.getNodeId());
                 restartWaitHb();
             }
             return NewMasterRes.Builder.aNewMasterRes()
@@ -496,5 +421,6 @@ public class MasterImpl implements Master {
         electTimer.stop();
         electTimer.restart(false);
     }
+
 
 }

@@ -17,6 +17,7 @@
 package com.ofcoder.klein.example.lock;
 
 import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +35,7 @@ import com.ofcoder.klein.core.lock.KleinLock;
 public class Main3 {
     private static final Logger LOG = LoggerFactory.getLogger(Main3.class);
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args) throws Exception {
         System.setProperty("klein.id", "3");
         System.setProperty("klein.port", "1220");
         System.setProperty("klein.ip", "127.0.0.1");
@@ -46,7 +47,13 @@ public class Main3 {
 //        prop3.getRpcProp().setPort(1220);
 
         Klein instance3 = Klein.startup();
-        instance3.awaitInit();
+        CountDownLatch latch = new CountDownLatch(1);
+        instance3.setMasterListener(master -> {
+            if (master.getElectState().allowPropose()){
+                latch.countDown();
+            }
+        });
+        latch.await();
 
         KleinLock klein = KleinFactory.getInstance().createLock("klein");
 

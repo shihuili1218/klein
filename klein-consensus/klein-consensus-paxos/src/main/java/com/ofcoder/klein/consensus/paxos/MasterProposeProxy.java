@@ -38,23 +38,23 @@ import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_R
  *
  * @author 释慧利
  */
-public class RedirectProxy implements Proxy {
-    private static final Logger LOG = LoggerFactory.getLogger(RedirectProxy.class);
+public class MasterProposeProxy implements ProposeProxy {
+    private static final Logger LOG = LoggerFactory.getLogger(MasterProposeProxy.class);
     private final RpcClient client;
     private final PaxosNode self;
     private final ConsensusProp prop;
-    private final Proxy directProxy;
+    private final ProposeProxy directProxy;
 
-    public RedirectProxy(final ConsensusProp op, final PaxosNode self) {
+    public MasterProposeProxy(final ConsensusProp op, final PaxosNode self) {
         this.self = self;
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        this.directProxy = new DirectProxy(op);
+        this.directProxy = new UniversalProposeProxy(op);
     }
 
     @Override
     public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
-        if (RuntimeAccessor.getMaster().isSelf()) {
+        if (RuntimeAccessor.getMaster().isSelf() || !prop.getPaxosProp().isEnableMaster()) {
             return this.directProxy.propose(data, apply);
         }
 
