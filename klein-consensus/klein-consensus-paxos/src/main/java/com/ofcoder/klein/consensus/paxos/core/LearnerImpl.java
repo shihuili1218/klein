@@ -393,11 +393,12 @@ public class LearnerImpl implements Learner {
                 if (exceptInstance != null && exceptInstance.getState() == Instance.State.CONFIRMED) {
                     _apply(i);
                 } else {
-                    if (memberConfig.allowBoost()) {
+                    MasterState masterState = RuntimeAccessor.getMaster().getMaster();
+                    if (masterState.getElectState().allowPropose()) {
                         LOG.info("try boost instance: {}", instanceId);
                         RuntimeAccessor.getProposer().tryBoost(i, new ProposeDone.FakeProposeDone());
                     } else {
-                        final Endpoint master = memberConfig.getMaster();
+                        final Endpoint master = masterState.getMaster();
                         if (master != null) {
                             this.dataAligner.diff(i, master, new ApplyAfterLearnCallback(i));
                         }
@@ -460,7 +461,8 @@ public class LearnerImpl implements Learner {
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
-            if (memberConfig.allowBoost()) {
+            MasterState masterState = RuntimeAccessor.getMaster().getMaster();
+            if (masterState.getElectState().allowPropose()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
                 CountDownLatch latch = new CountDownLatch(1);

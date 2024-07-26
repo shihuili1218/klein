@@ -74,7 +74,7 @@ public interface Master extends Role<ConsensusProp> {
     enum ElectState {
         DISABLE(true),
         ELECTING(false),
-        FOLLOWING(true),
+        FOLLOWING(false),
         LEADING(true);
         private final boolean allowPropose;
 

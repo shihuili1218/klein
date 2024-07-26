@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
@@ -54,13 +55,14 @@ public class MasterProposeProxy implements ProposeProxy {
 
     @Override
     public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
-        if (RuntimeAccessor.getMaster().isSelf() || !prop.getPaxosProp().isEnableMaster()) {
+        MasterState masterState = RuntimeAccessor.getMaster().getMaster();
+        if (masterState.isSelf() || !prop.getPaxosProp().isEnableMaster()) {
             return this.directProxy.propose(data, apply);
         }
 
         Result.Builder<D> builder = Result.Builder.aResult();
 
-        Endpoint master = MemberRegistry.getInstance().getMemberConfiguration().getMaster();
+        Endpoint master = masterState.getMaster();
         if (master == null) {
             LOG.warn("redirect propose request failure, because master is null");
             builder.state(Result.State.FAILURE);

@@ -54,6 +54,7 @@ import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
+import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -483,7 +484,10 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (memberConfig.allowPropose() && (this.tasks.size() >= batchSize || endOfBatch)) {
+            if (event.getProposal().getData() instanceof SystemOp ||
+                    (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
+                            && (this.tasks.size() >= batchSize || endOfBatch))
+            ) {
                 handle();
             }
         }
