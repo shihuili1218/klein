@@ -6,14 +6,14 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * Master Info.
  */
 public class MasterState {
-    private Endpoint master;
-    private Master.ElectState electState;
+    private final Endpoint master;
+    private final Master.ElectState electState;
     /**
      * Whether I am a Master. true if I am master.
      */
-    private boolean isSelf;
+    private final boolean isSelf;
 
-    public MasterState(Endpoint master, Master.ElectState electState, boolean isSelf) {
+    public MasterState(final Endpoint master, final Master.ElectState electState, final boolean isSelf) {
         this.master = master;
         this.electState = electState;
         this.isSelf = isSelf;
@@ -29,5 +29,14 @@ public class MasterState {
 
     public boolean isSelf() {
         return isSelf;
+    }
+
+    @Override
+    public String toString() {
+        return "MasterState{" +
+                "master=" + master +
+                ", electState=" + electState +
+                ", isSelf=" + isSelf +
+                '}';
     }
 }

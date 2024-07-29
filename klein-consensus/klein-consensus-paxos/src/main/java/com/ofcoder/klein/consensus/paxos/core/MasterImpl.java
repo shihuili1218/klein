@@ -138,7 +138,7 @@ public class MasterImpl implements Master {
     private void changeMaster(final String nodeId) {
         if (memberConfig.isValid(nodeId)) {
             this.master = memberConfig.getEndpointById(nodeId);
-            this.masterState = self.getSelf() == master ? ElectState.LEADING : ElectState.FOLLOWING;
+            this.masterState = self.getSelf().equals(master) ? ElectState.LEADING : ElectState.FOLLOWING;
             LOG.info("node-{} was promoted to master, version: {}", nodeId, memberConfig.getVersion());
         }
         MasterState state = getMaster();
@@ -159,7 +159,7 @@ public class MasterImpl implements Master {
 
     @Override
     public MasterState getMaster() {
-        return new MasterState(master, masterState, self.getSelf() == master);
+        return new MasterState(master, masterState, self.getSelf().equals(master));
     }
 
     @Override
