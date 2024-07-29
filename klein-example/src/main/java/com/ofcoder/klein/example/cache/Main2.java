@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.example.cache;
 
-import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
@@ -49,7 +48,7 @@ public class Main2 {
         Klein instance2 = Klein.startup();
         CountDownLatch latch = new CountDownLatch(1);
         instance2.setMasterListener(master -> {
-            if (master.getElectState().allowPropose()){
+            if (master.getElectState().allowPropose()) {
                 latch.countDown();
             }
         });

@@ -422,5 +422,4 @@ public class MasterImpl implements Master {
         electTimer.restart(false);
     }
 
-
 }

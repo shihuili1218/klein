@@ -44,7 +44,7 @@ public final class Klein {
     private Klein() {
     }
 
-    public void setMasterListener(MasterListener listener) {
+    public void setMasterListener(final MasterListener listener) {
         RuntimeAccessor.getMaster().addListener(listener::onChange);
     }
 
@@ -104,6 +104,11 @@ public final class Klein {
     }
 
     public interface MasterListener {
+        /**
+         * call when master changed.
+         *
+         * @param master master state
+         */
         void onChange(MasterState master);
     }
 }

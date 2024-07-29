@@ -484,10 +484,9 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (event.getProposal().getData() instanceof SystemOp ||
-                    (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
-                            && (this.tasks.size() >= batchSize || endOfBatch))
-            ) {
+            if (event.getProposal().getData() instanceof SystemOp
+                    || (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
+                    && (this.tasks.size() >= batchSize || endOfBatch))) {
                 handle();
             }
         }

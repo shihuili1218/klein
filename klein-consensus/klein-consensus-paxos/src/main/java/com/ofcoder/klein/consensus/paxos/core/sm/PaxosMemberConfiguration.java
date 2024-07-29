@@ -19,12 +19,10 @@ package com.ofcoder.klein.consensus.paxos.core.sm;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.core.MasterImpl;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**

@@ -27,17 +27,23 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public interface Cluster {
 
+    /**
+     * Get member list.
+     *
+     * @return member list.
+     */
     MemberConfiguration getMemberConfig();
 
     /**
-     * Change member by Join-Consensus.
+     * Change member list by Join-Consensus.
      * e.g. old version = 0, new version = 1
      * 1. Accept phase → send new config to old quorum, enter Join-Consensus
-     * 2. Copy instance(version = 0, confirmed) to new quorum TODO
+     * 2. Copy instance(version = 0, confirmed) to new quorum. (TODO check implementation)
      * 3. Confirm phase → new config take effect
      *
      * @param add    endpoint to the cluster.
      * @param remove endpoint to the cluster.
+     * @return true if success.
      */
     boolean changeMember(List<Endpoint> add, List<Endpoint> remove);
 
