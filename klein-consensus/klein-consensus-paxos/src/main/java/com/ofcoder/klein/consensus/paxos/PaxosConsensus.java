@@ -141,9 +141,10 @@ public class PaxosConsensus implements Consensus {
         SMRegistry.register(MemberManagerSM.GROUP, new MemberManagerSM());
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
 
-        if (!this.prop.isJoinCluster()) {
-            RuntimeAccessor.getMaster().lookMaster();
-        } else {
+        if (prop.getPaxosProp().isEnableMaster()) {
+            RuntimeAccessor.getMaster().searchMaster();
+        }
+        if (this.prop.isJoinCluster()) {
             joinCluster(0);
         }
     }
@@ -218,6 +219,7 @@ public class PaxosConsensus implements Consensus {
         req.setVersion(version);
 
         Result<Serializable> propose = propose(MemberManagerSM.GROUP, req, false);
+        LOG.info("change member, add: {}, remove: {}, result: {}", add, remove, propose.getState());
         return propose.getState() == Result.State.SUCCESS;
     }
 

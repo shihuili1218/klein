@@ -52,7 +52,7 @@ public class KleinServer {
         instance.setMasterListener(new Klein.MasterListener() {
             @Override
             public void onChange(final MasterState master) {
-                if (master.getElectState().allowPropose()) {
+                if (master.getElectState() != null && master.getElectState().allowPropose()) {
                     latch1.countDown();
                 }
             }
@@ -70,7 +70,7 @@ public class KleinServer {
         instance.setMasterListener(new Klein.MasterListener() {
             @Override
             public void onChange(final MasterState master) {
-                if (master.getElectState().allowPropose()) {
+                if (master.getElectState() != null && master.getElectState().allowPropose()) {
                     latch2.countDown();
                 }
             }

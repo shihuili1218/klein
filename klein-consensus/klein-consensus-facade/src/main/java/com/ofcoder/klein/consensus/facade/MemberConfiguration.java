@@ -49,6 +49,7 @@ public class MemberConfiguration implements Serializable {
     private int changeVersion = 0;
 
     public int getVersion() {
+        // todo max(version, changeVersion)?
         return version.get();
     }
 

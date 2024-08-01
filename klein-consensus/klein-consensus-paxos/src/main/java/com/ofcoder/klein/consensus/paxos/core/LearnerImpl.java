@@ -394,7 +394,7 @@ public class LearnerImpl implements Learner {
                     _apply(i);
                 } else {
                     MasterState masterState = RuntimeAccessor.getMaster().getMaster();
-                    if (masterState.getElectState().allowPropose()) {
+                    if (masterState.getElectState().allowBoost()) {
                         LOG.info("try boost instance: {}", instanceId);
                         RuntimeAccessor.getProposer().tryBoost(i, new ProposeDone.FakeProposeDone());
                     } else {
@@ -462,7 +462,7 @@ public class LearnerImpl implements Learner {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
                     RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
             MasterState masterState = RuntimeAccessor.getMaster().getMaster();
-            if (masterState.getElectState().allowPropose()) {
+            if (masterState.getElectState().allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
 
                 CountDownLatch latch = new CountDownLatch(1);

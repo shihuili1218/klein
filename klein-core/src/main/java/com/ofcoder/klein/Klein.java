@@ -105,7 +105,7 @@ public final class Klein {
 
     public interface MasterListener {
         /**
-         * call when master changed.
+         * Call when master changed and will be called immediately upon registration.
          *
          * @param master master state
          */

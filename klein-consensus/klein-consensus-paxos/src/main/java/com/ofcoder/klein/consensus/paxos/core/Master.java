@@ -46,7 +46,7 @@ public interface Master extends Role<ConsensusProp> {
     /**
      * Look for the master in the cluster for member startup.
      */
-    void lookMaster();
+    void searchMaster();
 
     /**
      * Transfer the Master status to another member.
@@ -74,7 +74,7 @@ public interface Master extends Role<ConsensusProp> {
     enum ElectState {
         DISABLE(true),
         ELECTING(false),
-        FOLLOWING(false),
+        FOLLOWING(true),
         LEADING(true);
         private final boolean allowPropose;
 
@@ -84,6 +84,10 @@ public interface Master extends Role<ConsensusProp> {
 
         public boolean allowPropose() {
             return allowPropose;
+        }
+
+        public boolean allowBoost() {
+            return this == DISABLE || this == LEADING;
         }
     }
 

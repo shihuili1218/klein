@@ -48,7 +48,7 @@ public class Main2 {
         Klein instance2 = Klein.startup();
         CountDownLatch latch = new CountDownLatch(1);
         instance2.setMasterListener(master -> {
-            if (master.getElectState().allowPropose()) {
+            if (master.getElectState() != null && master.getElectState().allowPropose()) {
                 latch.countDown();
             }
         });

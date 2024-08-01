@@ -165,10 +165,11 @@ public class MasterImpl implements Master {
     @Override
     public void addListener(final Listener listener) {
         listeners.add(listener);
+        listener.onChange(getMaster());
     }
 
     @Override
-    public void lookMaster() {
+    public void searchMaster() {
         PreElectReq req = PreElectReq.Builder.aPreElectReq()
                 .memberConfigurationVersion(memberConfig.getVersion())
                 .nodeId(self.getSelf().getId())
@@ -178,6 +179,7 @@ public class MasterImpl implements Master {
             PreElectRes res = client.sendRequestSync(it, req);
             LOG.debug("looking for master, node-{}: {}", it.getId(), res);
             if (res != null && res.getMaster() != null) {
+//                restartWaitHb();
                 changeMaster(res.getMaster().getId());
                 return;
             }

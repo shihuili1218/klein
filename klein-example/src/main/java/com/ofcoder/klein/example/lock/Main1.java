@@ -49,7 +49,7 @@ public class Main1 {
 
         CountDownLatch latch = new CountDownLatch(1);
         instance1.setMasterListener(master -> {
-            if (master.getElectState().allowPropose()) {
+            if (master.getElectState() != null && master.getElectState().allowPropose()) {
                 latch.countDown();
             }
         });

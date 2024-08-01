@@ -69,4 +69,11 @@ public class PreElectRes implements Serializable {
             return preElectRes;
         }
     }
+
+    @Override
+    public String toString() {
+        return "PreElectRes{"
+                + "master=" + master
+                + '}';
+    }
 }
