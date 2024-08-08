@@ -30,18 +30,17 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.paxos.core.ProposeDone;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 
 /**
  * Call Proposer directly to initiate a proposal.
  *
  * @author 释慧利
  */
-public class DirectProxy implements Proxy {
-    private static final Logger LOG = LoggerFactory.getLogger(DirectProxy.class);
-    private ConsensusProp prop;
+public class UniversalProposeProxy implements ProposeProxy {
+    private static final Logger LOG = LoggerFactory.getLogger(UniversalProposeProxy.class);
+    private final ConsensusProp prop;
 
-    public DirectProxy(final ConsensusProp prop) {
+    public UniversalProposeProxy(final ConsensusProp prop) {
         this.prop = prop;
     }
 
@@ -51,8 +50,7 @@ public class DirectProxy implements Proxy {
         CountDownLatch completed = new CountDownLatch(1);
         Result.Builder<D> builder = Result.Builder.aResult();
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Direct Propose, outsider: {}, write on master: {}, current master: {}", prop.getSelf().isOutsider(),
-                    prop.getPaxosProp().isWriteOnMaster(), MemberRegistry.getInstance().getMemberConfiguration().getMaster());
+            LOG.debug("Direct Propose, outsider: {}, write on master: {}", prop.getSelf().isOutsider(), prop.getPaxosProp().isEnableMaster());
         }
         RuntimeAccessor.getProposer().propose(proposal, new ProposeDone() {
             @Override
@@ -94,6 +92,7 @@ public class DirectProxy implements Proxy {
 
     @Override
     public Result<Long> readIndex(final String group) {
+        // only for enabled master
         return null;
     }
 }

@@ -17,6 +17,7 @@
 package com.ofcoder.klein.example.cache;
 
 import java.io.Serializable;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,7 +46,14 @@ public class Main1 {
 
         Klein instance1 = Klein.startup();
 
-        instance1.awaitInit();
+        CountDownLatch latch = new CountDownLatch(1);
+        instance1.setMasterListener(master -> {
+            LOG.info("master: {}", master);
+            if (master.getElectState() != null && master.getElectState().allowPropose()) {
+                latch.countDown();
+            }
+        });
+        latch.await();
 
         KleinCache klein = KleinFactory.getInstance().createCache("klein");
 

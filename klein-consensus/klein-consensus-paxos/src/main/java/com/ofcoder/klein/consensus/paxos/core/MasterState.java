@@ -14,66 +14,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.consensus.paxos.rpc.vo;
-
-import java.io.Serializable;
+package com.ofcoder.klein.consensus.paxos.core;
 
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
- * pre elect response.
- *
- * @author 释慧利
+ * Master Info.
  */
-public class PreElectRes implements Serializable {
-    private Endpoint master;
+public class MasterState {
+    private final Endpoint master;
+    private final Master.ElectState electState;
+    /**
+     * Whether I am a Master. true if I am master.
+     */
+    private final boolean isSelf;
+
+    public MasterState(final Endpoint master, final Master.ElectState electState, final boolean isSelf) {
+        this.master = master;
+        this.electState = electState;
+        this.isSelf = isSelf;
+    }
 
     public Endpoint getMaster() {
         return master;
     }
 
-    public static final class Builder {
-        private Endpoint master;
+    public Master.ElectState getElectState() {
+        return electState;
+    }
 
-        private Builder() {
-        }
-
-        /**
-         * aPreElectRes.
-         *
-         * @return Builder
-         */
-        public static Builder aPreElectRes() {
-            return new Builder();
-        }
-
-        /**
-         * master.
-         *
-         * @param master master
-         * @return Builder
-         */
-        public Builder master(final Endpoint master) {
-            this.master = master;
-            return this;
-        }
-
-        /**
-         * build.
-         *
-         * @return PreElectRes
-         */
-        public PreElectRes build() {
-            PreElectRes preElectRes = new PreElectRes();
-            preElectRes.master = this.master;
-            return preElectRes;
-        }
+    public boolean isSelf() {
+        return isSelf;
     }
 
     @Override
     public String toString() {
-        return "PreElectRes{"
+        return "MasterState{"
                 + "master=" + master
+                + ", electState=" + electState
+                + ", isSelf=" + isSelf
                 + '}';
     }
 }

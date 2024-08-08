@@ -25,7 +25,6 @@ import java.util.Objects;
  * @author 释慧利
  */
 public class Endpoint implements Serializable {
-    // not in equals(hashCode)
     private String id;
     private String ip;
     private int port;

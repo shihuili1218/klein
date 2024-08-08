@@ -28,7 +28,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class RedirectReq implements Serializable {
-    public static final byte CHANGE_MEMBER = 0x00;
     public static final byte TRANSACTION_REQUEST = 0x01;
 
     private String nodeId;

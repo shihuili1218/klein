@@ -16,14 +16,11 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.Set;
-
 import com.ofcoder.klein.common.Role;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * Master Role.
@@ -31,30 +28,25 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public interface Master extends Role<ConsensusProp> {
-    byte ADD = 0;
-    byte REMOVE = 1;
 
     /**
-     * Whether I am a Master.
+     * Get master information.
      *
-     * @return true if I am master.
+     * @return master
      */
-    boolean isSelf();
+    MasterState getMaster();
 
     /**
-     * Change Member.
+     * Add a master change listener.
      *
-     * @param op     <code>o</code> is add member: ${@link Master#ADD}
-     *               <code>1</code> is remove member: ${@link Master#REMOVE}
-     * @param target target
-     * @return change result
+     * @param listener lisener
      */
-    boolean changeMember(byte op, Set<Endpoint> target);
+    void addListener(Listener listener);
 
     /**
      * Look for the master in the cluster for member startup.
      */
-    void lookMaster();
+    void searchMaster();
 
     /**
      * Transfer the Master status to another member.
@@ -79,4 +71,27 @@ public interface Master extends Role<ConsensusProp> {
      */
     NewMasterRes onReceiveNewMaster(NewMasterReq request, boolean isSelf);
 
+    enum ElectState {
+        DISABLE(true),
+        ELECTING(false),
+        FOLLOWING(true),
+        LEADING(true);
+        private final boolean allowPropose;
+
+        ElectState(final boolean allowPropose) {
+            this.allowPropose = allowPropose;
+        }
+
+        public boolean allowPropose() {
+            return allowPropose;
+        }
+
+        public boolean allowBoost() {
+            return this == DISABLE || this == LEADING;
+        }
+    }
+
+    interface Listener {
+        void onChange(MasterState master);
+    }
 }

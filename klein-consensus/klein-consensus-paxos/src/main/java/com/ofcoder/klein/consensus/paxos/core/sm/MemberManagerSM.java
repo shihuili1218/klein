@@ -26,28 +26,28 @@ import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
  *
  * @author 释慧利
  */
-public class MasterSM extends AbstractSM {
-    public static final String GROUP = "master";
-    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
+public class MemberManagerSM extends AbstractSM {
+    public static final String GROUP = "member_manager";
+    private static final Logger LOG = LoggerFactory.getLogger(MemberManagerSM.class);
     private final PaxosMemberConfiguration memberConfig;
 
-    public MasterSM() {
+    public MemberManagerSM() {
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override
     public Object apply(final Object data) {
-        LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
-        if (data instanceof ElectionOp) {
-            electMaster((ElectionOp) data);
+        LOG.debug("MemberManagerSM apply, {}", data.getClass().getSimpleName());
+        if (data instanceof ChangeMemberOp) {
+            changeMember((ChangeMemberOp) data);
         } else {
-            LOG.error("applying MasterSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
+            LOG.error("MemberManagerSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
         }
         return null;
     }
 
-    private void electMaster(final ElectionOp op) {
-        // do nothing.
+    private void changeMember(final ChangeMemberOp op) {
+        memberConfig.effectiveNewConfig(op.getVersion(), op.getNewConfig());
     }
 
     @Override

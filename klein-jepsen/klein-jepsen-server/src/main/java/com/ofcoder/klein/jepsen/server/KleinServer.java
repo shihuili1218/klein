@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
+import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.jepsen.server.rpc.ExistsProcessor;
@@ -47,7 +48,17 @@ public class KleinServer {
         LOG.info(OBJECT_MAPPER.writeValueAsString(kleinProp));
 
         final Klein instance = Klein.startup();
-        instance.awaitInit();
+        final CountDownLatch latch1 = new CountDownLatch(1);
+        instance.setMasterListener(new Klein.MasterListener() {
+            @Override
+            public void onChange(final MasterState master) {
+                if (master.getElectState() != null && master.getElectState().allowPropose()) {
+                    latch1.countDown();
+                }
+            }
+        });
+        latch1.await();
+
         KleinCache cache = KleinFactory.getInstance().createCache("klein");
 
         RpcEngine.registerProcessor(new ExistsProcessor(cache));
@@ -55,7 +66,16 @@ public class KleinServer {
         RpcEngine.registerProcessor(new InvalidateProcessor(cache));
         RpcEngine.registerProcessor(new PutProcessor(cache));
 
-        instance.awaitInit();
+        final CountDownLatch latch2 = new CountDownLatch(1);
+        instance.setMasterListener(new Klein.MasterListener() {
+            @Override
+            public void onChange(final MasterState master) {
+                if (master.getElectState() != null && master.getElectState().allowPropose()) {
+                    latch2.countDown();
+                }
+            }
+        });
+        latch2.await();
 
         final CountDownLatch latch = new CountDownLatch(1);
         instance.setShutdownHook(new Klein.ShutdownHook() {

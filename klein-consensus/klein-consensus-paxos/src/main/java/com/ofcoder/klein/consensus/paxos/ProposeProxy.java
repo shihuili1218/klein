@@ -25,7 +25,7 @@ import com.ofcoder.klein.consensus.facade.Result;
  *
  * @author 释慧利
  */
-public interface Proxy {
+public interface ProposeProxy {
     /**
      * propose proposal.
      *
