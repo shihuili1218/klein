@@ -28,9 +28,12 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class ChangeMemberOp implements SystemOp {
+    public static final byte FIRST_PHASE = 0x01;
+    public static final byte SECOND_PHASE = 0x02;
+
     private String nodeId;
     private Set<Endpoint> newConfig;
-    private int version;
+    private byte phase;
 
     public String getNodeId() {
         return nodeId;
@@ -48,28 +51,24 @@ public class ChangeMemberOp implements SystemOp {
         this.nodeId = nodeId;
     }
 
-    public int getVersion() {
-        return version;
+    public byte getPhase() {
+        return phase;
     }
 
-    public void setVersion(final int version) {
-        this.version = version;
+    public void setPhase(byte phase) {
+        this.phase = phase;
     }
 
     @Override
-    public boolean equals(final Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         ChangeMemberOp that = (ChangeMemberOp) o;
-        return version == that.version && Objects.equals(getNodeId(), that.getNodeId()) && Objects.equals(getNewConfig(), that.getNewConfig());
+        return phase == that.phase && Objects.equals(nodeId, that.nodeId) && Objects.equals(newConfig, that.newConfig);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getNodeId(), getNewConfig(), version);
+        return Objects.hash(nodeId, newConfig, phase);
     }
 }

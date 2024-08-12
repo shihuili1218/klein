@@ -17,12 +17,9 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -197,30 +194,32 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public boolean changeMember(final List<Endpoint> add, final List<Endpoint> remove) {
-
         // todo: master in remove, transfer master
-        PaxosMemberConfiguration curConfiguration = MemberRegistry.getInstance().getMemberConfiguration().createRef();
+        PaxosMemberConfiguration curConfiguration = MemberRegistry.getInstance().getMemberConfiguration();
 
-        Set<Endpoint> newConfig = new HashSet<>(
-                CollectionUtils.isEmpty(curConfiguration.getLastMembers()) ? curConfiguration.getEffectMembers() : curConfiguration.getLastMembers()
-        );
-        if (add != null) {
-            newConfig.addAll(add.stream().filter(it -> !curConfiguration.isValid(it.getId())).collect(Collectors.toList()));
-        }
-        if (remove != null) {
-            newConfig.removeAll(remove.stream().filter(it -> curConfiguration.isValid(it.getId())).collect(Collectors.toList()));
-        }
         // It only takes effect in the image
-        int version = curConfiguration.seenNewConfig(newConfig);
+        Set<Endpoint> newConfig = curConfiguration.createRef().startJoinConsensus(add, remove);
 
-        ChangeMemberOp req = new ChangeMemberOp();
-        req.setNodeId(prop.getSelf().getId());
-        req.setNewConfig(newConfig);
-        req.setVersion(version);
+        ChangeMemberOp firstPhase = new ChangeMemberOp();
+        firstPhase.setNodeId(prop.getSelf().getId());
+        firstPhase.setNewConfig(newConfig);
+        firstPhase.setPhase(ChangeMemberOp.FIRST_PHASE);
 
-        Result<Serializable> propose = propose(MemberManagerSM.GROUP, req, false);
-        LOG.info("change member, add: {}, remove: {}, result: {}", add, remove, propose.getState());
-        return propose.getState() == Result.State.SUCCESS;
+        Result<Serializable> first = propose(MemberManagerSM.GROUP, firstPhase, false);
+        LOG.info("change member first phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+
+        if (first.getState() == Result.State.SUCCESS) {
+            ChangeMemberOp secondPhase = new ChangeMemberOp();
+            secondPhase.setNodeId(prop.getSelf().getId());
+            secondPhase.setNewConfig(newConfig);
+            secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
+
+            Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
+            LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+            return second.getState() == Result.State.SUCCESS;
+        } else {
+            return false;
+        }
     }
 
 }

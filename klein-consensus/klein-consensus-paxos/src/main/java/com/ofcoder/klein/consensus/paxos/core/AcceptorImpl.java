@@ -122,14 +122,6 @@ public class AcceptorImpl implements Acceptor {
                     return res;
                 }
 
-                // check proposals include change member
-                for (Command datum : req.getData()) {
-                    if (datum.getData() instanceof ChangeMemberOp) {
-                        ChangeMemberOp data = (ChangeMemberOp) datum.getData();
-                        memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
-                    }
-                }
-
                 AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()
                         .nodeId(self.getSelf().getId())
                         .curInstanceId(selfInstanceId)

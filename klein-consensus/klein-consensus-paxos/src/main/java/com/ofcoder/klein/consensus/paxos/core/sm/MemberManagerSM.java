@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 
 /**
- * master sm.
+ * Member Manager SM.
  *
  * @author 释慧利
  */
@@ -39,15 +39,17 @@ public class MemberManagerSM extends AbstractSM {
     public Object apply(final Object data) {
         LOG.debug("MemberManagerSM apply, {}", data.getClass().getSimpleName());
         if (data instanceof ChangeMemberOp) {
-            changeMember((ChangeMemberOp) data);
+            ChangeMemberOp op = (ChangeMemberOp) data;
+            if (op.getPhase() == ChangeMemberOp.FIRST_PHASE) {
+                memberConfig.seenNewConfig(op.getNewConfig());
+            } else if (op.getPhase() == ChangeMemberOp.SECOND_PHASE) {
+                memberConfig.commitNewConfig(op.getNewConfig());
+            }
+            // else ignore.
         } else {
             LOG.error("MemberManagerSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
         }
         return null;
-    }
-
-    private void changeMember(final ChangeMemberOp op) {
-        memberConfig.effectiveNewConfig(op.getVersion(), op.getNewConfig());
     }
 
     @Override

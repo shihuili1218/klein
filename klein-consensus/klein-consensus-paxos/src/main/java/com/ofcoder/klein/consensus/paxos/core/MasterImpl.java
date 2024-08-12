@@ -99,7 +99,7 @@ public class MasterImpl implements Master {
     public void init(final ConsensusProp op) {
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
-        if (!prop.getPaxosProp().isEnableMaster()) {
+        if (!prop.getPaxosProp().isEnableMaster() || prop.getSelf().isOutsider()) {
             this.master = null;
             this.masterState = ElectState.DISABLE;
             return;

@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.common.exception.StartupException;
+import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
@@ -87,9 +88,9 @@ public final class Klein {
         return kl;
     }
 
-    public MemberConfiguration getClusterInfo() {
+    public Cluster getClusterInfo() {
         Consensus consensus = ExtensionLoader.getExtensionLoader(Consensus.class).getJoin();
-        return consensus.getMemberConfig();
+        return consensus;
     }
 
     private static class KleinHolder {
