@@ -160,8 +160,6 @@ public class LearnerImpl implements Learner {
                 SMApplier.Task e = SMApplier.Task.createLoadSnapTask(snap, new SMApplier.TaskCallback() {
                     @Override
                     public void onLoadSnap(final long checkpoint) {
-                        LOG.info("load snap success, group: {}, checkpoint: {}", group, checkpoint);
-
                         self.updateCurInstanceId(snap.getCheckpoint());
 
                         applyCallback.keySet().removeIf(it -> it <= checkpoint);

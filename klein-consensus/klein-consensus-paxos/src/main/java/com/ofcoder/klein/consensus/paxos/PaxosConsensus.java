@@ -28,6 +28,7 @@ import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
@@ -159,9 +160,9 @@ public class PaxosConsensus implements Consensus {
 
     private void exitCluster(final int times) {
         int cur = times + 1;
-//        if (cur >= 3) {
-//            throw new ChangeMemberException("members change failed after trying many times");
-//        }
+        if (cur >= 3) {
+            throw new ChangeMemberException("members change failed after trying many times");
+        }
         // remove member
         if (!changeMember(Lists.newArrayList(), Lists.newArrayList(self.getSelf()))) {
             exitCluster(cur);

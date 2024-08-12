@@ -56,10 +56,9 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
 
     @Override
     public void handleRequest(final RedirectReq request, final RpcContext context) {
-        LOG.info("receive redirect msg, redirect: {}", request.getRedirect());
+        LOG.info("receive redirect msg, redirect: {}", RedirectReq.fmtRedirect(request.getRedirect()));
         switch (request.getRedirect()) {
             case RedirectReq.TRANSACTION_REQUEST:
-                LOG.info("receive transfer request, apply: {}", request.isApply());
                 Result<Serializable> proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
                 LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder

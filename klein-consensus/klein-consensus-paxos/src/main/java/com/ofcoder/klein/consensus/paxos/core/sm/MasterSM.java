@@ -57,10 +57,10 @@ public class MasterSM extends AbstractSM {
 
     @Override
     public void loadImage(final Object snap) {
-        LOG.info("LOAD SNAP: {}", snap);
-        if (!(snap instanceof PaxosMemberConfiguration)) {
-            return;
-        }
-        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
+//        LOG.info("LOAD SNAP: {}", snap);
+//        if (!(snap instanceof PaxosMemberConfiguration)) {
+//            return;
+//        }
+//        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
     }
 }

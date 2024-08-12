@@ -110,7 +110,7 @@ public class SMApplier {
         } else if (localSnap != null && localSnap.getCheckpoint() > task.loadSnap.getCheckpoint()) {
             LOG.warn("load snap skip, group: {}, local.checkpoint: {}, snap.checkpoint: {}", group, localSnap.getCheckpoint(), task.loadSnap.getCheckpoint());
         } else {
-            sm.loadImage(task.loadSnap);
+            sm.loadImage(task.loadSnap.getSnap());
             logManager.saveSnap(group, task.loadSnap);
             lastCheckpoint = task.loadSnap.getCheckpoint();
             lastAppliedId = task.loadSnap.getCheckpoint();

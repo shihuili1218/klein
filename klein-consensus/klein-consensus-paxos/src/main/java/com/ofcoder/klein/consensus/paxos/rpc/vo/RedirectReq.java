@@ -30,6 +30,14 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 public class RedirectReq implements Serializable {
     public static final byte TRANSACTION_REQUEST = 0x01;
 
+    public static final String fmtRedirect(byte redirect) {
+        if (redirect == TRANSACTION_REQUEST) {
+            return "TRANSACTION_REQUEST";
+        } else {
+            return "UNKNOWN";
+        }
+    }
+
     private String nodeId;
     private byte redirect;
     // propose
