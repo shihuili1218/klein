@@ -39,7 +39,7 @@ public class Main3 {
         SystemPropertyUtil.setProperty("klein.id", "3");
         SystemPropertyUtil.setProperty("klein.port", "1220");
         SystemPropertyUtil.setProperty("klein.ip", "127.0.0.1");
-        SystemPropertyUtil.setProperty("klein.consensus.join-cluster", "false");
+        SystemPropertyUtil.setProperty("klein.consensus.elastic", "false");
 
         KleinProp prop3 = KleinProp.loadIfPresent();
 

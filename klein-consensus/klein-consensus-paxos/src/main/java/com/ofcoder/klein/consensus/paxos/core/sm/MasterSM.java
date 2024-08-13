@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import java.io.Serializable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +43,7 @@ public class MasterSM extends AbstractSM {
         if (data instanceof ElectionOp) {
             electMaster((ElectionOp) data);
         } else {
-            LOG.error("applying MasterSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
+            throw new IllegalArgumentException("Unknown data type: " + data.getClass().getSimpleName());
         }
         return null;
     }
@@ -52,15 +54,16 @@ public class MasterSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return MemberRegistry.getInstance().getMemberConfiguration().createRef();
+        return new Image();
     }
 
     @Override
     public void loadImage(final Object snap) {
-//        LOG.info("LOAD SNAP: {}", snap);
-//        if (!(snap instanceof PaxosMemberConfiguration)) {
-//            return;
-//        }
-//        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
+        // do nothing.
     }
+
+    /**
+     * Fake image.
+     */
+    public static class Image implements Serializable { }
 }

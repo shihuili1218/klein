@@ -47,7 +47,7 @@ public class ConsensusProp {
      * The node is not included in the cluster.
      * When it starts, it will actively join the cluster, and when it shuts down, it will actively exit the cluster.
      */
-    private boolean joinCluster = SystemPropertyUtil.getBoolean("klein.consensus.join-cluster", false);
+    private boolean elastic = SystemPropertyUtil.getBoolean("klein.consensus.elastic", false);
     /**
      * timeout for single round.
      */
@@ -118,12 +118,12 @@ public class ConsensusProp {
         this.members = members;
     }
 
-    public boolean isJoinCluster() {
-        return joinCluster;
+    public boolean isElastic() {
+        return elastic;
     }
 
-    public void setJoinCluster(final boolean joinCluster) {
-        this.joinCluster = joinCluster;
+    public void setElastic(final boolean elastic) {
+        this.elastic = elastic;
     }
 
     public long getRoundTimeout() {
