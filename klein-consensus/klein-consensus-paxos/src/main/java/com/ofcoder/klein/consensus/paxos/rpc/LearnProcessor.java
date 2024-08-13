@@ -49,11 +49,6 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
 
     @Override
     public void handleRequest(final LearnReq request, final RpcContext context) {
-        if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
-            LOG.error("msg type: learn, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
-                    request.getNodeId());
-            return;
-        }
         LearnRes res = RuntimeAccessor.getLearner().handleLearnRequest(request);
         context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
     }

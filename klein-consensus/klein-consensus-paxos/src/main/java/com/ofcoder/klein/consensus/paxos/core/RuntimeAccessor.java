@@ -33,7 +33,6 @@ public class RuntimeAccessor {
     private static Acceptor acceptor;
     private static Learner learner;
     private static Master master;
-    private static DataAligner dataAligner;
     private static Boolean initialized = false;
 
     public static AtomicReference<ProposerImpl.PrepareState> getSkipPrepare() {
@@ -68,13 +67,6 @@ public class RuntimeAccessor {
         return master;
     }
 
-    public static DataAligner getDataAligner() {
-        if (!initialized) {
-            throw new ConsensusException("Consensus Engine not started");
-        }
-        return dataAligner;
-    }
-
     /**
      * create master, learner, acceptor, proposer.
      *
@@ -86,13 +78,7 @@ public class RuntimeAccessor {
         initLearner(prop, self);
         initAcceptor(prop, self);
         initProposer(prop, self);
-        initDataAligner(prop, self);
         initialized = true;
-    }
-
-    private static void initDataAligner(final ConsensusProp prop, final PaxosNode self) {
-        dataAligner = new DataAligner(self);
-        dataAligner.init(prop);
     }
 
     private static void initMaster(final ConsensusProp prop, final PaxosNode self) {
