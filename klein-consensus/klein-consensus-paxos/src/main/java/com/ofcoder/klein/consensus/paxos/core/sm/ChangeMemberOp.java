@@ -55,14 +55,18 @@ public class ChangeMemberOp implements SystemOp {
         return phase;
     }
 
-    public void setPhase(byte phase) {
+    public void setPhase(final byte phase) {
         this.phase = phase;
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         ChangeMemberOp that = (ChangeMemberOp) o;
         return phase == that.phase && Objects.equals(nodeId, that.nodeId) && Objects.equals(newConfig, that.newConfig);
     }

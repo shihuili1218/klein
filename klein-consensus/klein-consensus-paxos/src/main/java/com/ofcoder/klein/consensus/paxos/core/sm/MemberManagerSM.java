@@ -47,7 +47,7 @@ public class MemberManagerSM extends AbstractSM {
             }
             // else ignore.
         } else {
-            LOG.error("MemberManagerSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
+            throw new IllegalArgumentException("Unknown data type: " + data.getClass().getSimpleName());
         }
         return null;
     }

@@ -149,7 +149,7 @@ public class ProposerImpl implements Proposer {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
         }
-        if (!memberConfig.isValid(self.getSelf().getId())){
+        if (!memberConfig.isValid(self.getSelf().getId())) {
             throw new ConsensusException(String.format("i'm no longer in the cluster. %s", memberConfig.getAllMembers()));
         }
 
@@ -290,7 +290,7 @@ public class ProposerImpl implements Proposer {
 
     @Override
     public void tryBoost(final Long instanceId, final ProposeDone done) {
-        if (!memberConfig.isValid(self.getSelf().getId())){
+        if (!memberConfig.isValid(self.getSelf().getId())) {
             throw new ConsensusException(String.format("i'm no longer in the cluster. %s", memberConfig.getAllMembers()));
         }
 

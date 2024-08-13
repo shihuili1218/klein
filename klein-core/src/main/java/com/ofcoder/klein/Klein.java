@@ -25,7 +25,6 @@ import com.ofcoder.klein.common.exception.StartupException;
 import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.ConsensusEngine;
-import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;

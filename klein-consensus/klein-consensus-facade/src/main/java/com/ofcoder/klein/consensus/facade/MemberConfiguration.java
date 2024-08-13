@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.facade;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +37,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
  * MemberConfiguration.
- * <p>
- * 如果所有成员都支持成员变更，那必定不支持并行成员变更
- * 初始状态{A, B, C}, version = 1
- * A 变更为 {A, B, C, D} version = 2，AB达成共识
- * B 变更为 {A, B, C, E} version = 2，重试后，ABC达成共识，那么D消失了
  *
  * @author far.liu
  */
@@ -59,18 +55,19 @@ public class MemberConfiguration implements Serializable {
     /**
      * Start joint consensus changes, a replica should be used to call this method, which will not take effect on the current configuration.
      *
+     * @param add    add members
+     * @param remove remove members
      * @return new config
      */
     public Set<Endpoint> startJoinConsensus(final List<Endpoint> add, final List<Endpoint> remove) {
         Set<Endpoint> newConfig = new HashSet<>(getLastMembers());
         newConfig.addAll(getEffectMembers());
 
-        if (add != null) {
-            newConfig.addAll(add.stream().filter(it -> !isValid(it.getId())).collect(Collectors.toList()));
-        }
-        if (remove != null) {
-            newConfig.removeAll(remove.stream().filter(it -> isValid(it.getId())).collect(Collectors.toList()));
-        }
+        List<Endpoint> addList = add != null ? add : Collections.emptyList();
+        List<Endpoint> removeList = remove != null ? remove : Collections.emptyList();
+
+        newConfig.addAll(addList.stream().filter(it -> !isValid(it.getId())).collect(Collectors.toList()));
+        newConfig.removeAll(removeList.stream().filter(it -> isValid(it.getId())).collect(Collectors.toList()));
 
         return newConfig;
     }
