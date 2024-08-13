@@ -82,7 +82,7 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void seenNewConfig(final Set<Endpoint> newConfig) {
-        LOG.debug("see a new configuration, in.version: {}, newConfig: {}, lastMembers: {}", version, newConfig, lastMembers);
+        LOG.debug("see a new configuration, local.version: {}, old: {}, new: {}, lastMembers: {}", version, effectMembers, newConfig, lastMembers);
 
         this.lastMembers.clear();
         this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
@@ -96,7 +96,7 @@ public class MemberConfiguration implements Serializable {
      * @param newConfig new configuration
      */
     public void commitNewConfig(final Set<Endpoint> newConfig) {
-        LOG.debug("commit a new configuration, in.version: {}, in.newConfig: {}, lastMembers: {} ", version, newConfig, lastMembers);
+        LOG.debug("commit a new configuration, local.version: {}, new: {}, lastMembers: {} ", version, newConfig, lastMembers);
 
         this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
         this.lastMembers.clear();

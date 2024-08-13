@@ -129,6 +129,10 @@ public class Endpoint implements Serializable {
 
     @Override
     public String toString() {
-        return id + ":" + ip + ":" + port + ":" + outsider;
+        if (outsider) {
+            return id + ":" + ip + ":" + port + "[outsider]";
+        } else {
+            return id + ":" + ip + ":" + port;
+        }
     }
 }
