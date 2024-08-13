@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
+import java.util.List;
+
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -25,19 +27,24 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public interface Cluster {
 
+    /**
+     * Get member list.
+     *
+     * @return member list.
+     */
     MemberConfiguration getMemberConfig();
 
     /**
-     * Change member, add endpoint to the cluster.
+     * Change member list by Join-Consensus.
+     * e.g. old version = 0, new version = 1
+     * 1. Accept phase → send new config to old quorum, enter Join-Consensus
+     * 2. Copy instance(version = 0, confirmed) to new quorum. (TODO check implementation)
+     * 3. Confirm phase → new config take effect
      *
-     * @param endpoint new member
+     * @param add    endpoint to the cluster.
+     * @param remove endpoint to the cluster.
+     * @return true if success.
      */
-    void addMember(Endpoint endpoint);
+    boolean changeMember(List<Endpoint> add, List<Endpoint> remove);
 
-    /**
-     * Change member, remove endpoint from cluster.
-     *
-     * @param endpoint delete member
-     */
-    void removeMember(Endpoint endpoint);
 }

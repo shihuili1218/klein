@@ -16,14 +16,16 @@
  */
 package com.ofcoder.klein.example.alone;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.core.cache.KleinCache;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * single node.
@@ -37,7 +39,15 @@ public class Main {
         KleinProp prop = KleinProp.loadIfPresent();
 
         Klein instance = Klein.startup();
-        instance.awaitInit();
+        CountDownLatch latch = new CountDownLatch(1);
+        instance.setMasterListener(master -> {
+            LOG.info("master: " + master);
+            if (master.getElectState() != null && master.getElectState().allowPropose()) {
+                latch.countDown();
+            }
+        });
+        latch.await();
+
         KleinCache klein1 = KleinFactory.getInstance().createCache("klein1");
         KleinCache klein2 = KleinFactory.getInstance().createCache("klein2");
 

@@ -26,15 +26,11 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.DirectProxy;
+import com.ofcoder.klein.consensus.paxos.UniversalProposeProxy;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.Proxy;
-import com.ofcoder.klein.consensus.paxos.core.Master;
-import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
+import com.ofcoder.klein.consensus.paxos.ProposeProxy;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
-import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
@@ -46,13 +42,11 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     private static final Logger LOG = LoggerFactory.getLogger(RedirectProcessor.class);
 
     private ConsensusProp prop;
-    private long takeMasterTimeout;
-    private Proxy directProxy;
+    private ProposeProxy directProposeProxy;
 
     public RedirectProcessor(final PaxosNode self, final ConsensusProp prop) {
         this.prop = prop;
-        this.takeMasterTimeout = this.prop.getRoundTimeout() * this.prop.getRetry() + this.prop.getPaxosProp().getMasterElectMaxInterval();
-        this.directProxy = new DirectProxy(prop);
+        this.directProposeProxy = new UniversalProposeProxy(prop);
     }
 
     @Override
@@ -60,30 +54,12 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
         return RedirectReq.class.getSimpleName();
     }
 
-    private boolean takeMaster() {
-        RuntimeAccessor.getMaster().transferMaster();
-        return true;
-    }
-
     @Override
     public void handleRequest(final RedirectReq request, final RpcContext context) {
-        LOG.info("receive redirect msg, redirect: {}", request.getRedirect());
+        LOG.info("receive redirect msg, redirect: {}", RedirectReq.fmtRedirect(request.getRedirect()));
         switch (request.getRedirect()) {
-            case RedirectReq.CHANGE_MEMBER:
-                LOG.info("receive change member, changeOp: {}, changeTarget: {}", request.getChangeOp(), request.getChangeTarget());
-                Endpoint master = MemberRegistry.getInstance().getMemberConfiguration().getMaster();
-                if (request.getChangeOp() == Master.REMOVE && request.getChangeTarget().contains(master)
-                        && !takeMaster()) {
-                    LOG.warn("remove member, taking the master failure.");
-                    context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(false).build())));
-                    return;
-                }
-                boolean result = RuntimeAccessor.getMaster().changeMember(request.getChangeOp(), request.getChangeTarget());
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder.aRedirectResp().changeResult(result).build())));
-                break;
             case RedirectReq.TRANSACTION_REQUEST:
-                LOG.info("receive transfer request, apply: {}", request.isApply());
-                Result<Serializable> proposeResult = directProxy.propose(request.getProposal(), request.isApply());
+                Result<Serializable> proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
                 LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
                 context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder
                         .aRedirectResp()

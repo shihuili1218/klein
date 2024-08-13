@@ -28,7 +28,6 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  * @author 释慧利
  */
 public class RedirectReq implements Serializable {
-    public static final byte CHANGE_MEMBER = 0x00;
     public static final byte TRANSACTION_REQUEST = 0x01;
 
     private String nodeId;
@@ -62,6 +61,20 @@ public class RedirectReq implements Serializable {
 
     public Set<Endpoint> getChangeTarget() {
         return changeTarget;
+    }
+
+    /**
+     * format redirect byte.
+     *
+     * @param redirect 0x01: transaction request.
+     * @return 0x01: transaction request.
+     */
+    public static String fmtRedirect(final byte redirect) {
+        if (redirect == TRANSACTION_REQUEST) {
+            return "TRANSACTION_REQUEST";
+        } else {
+            return "UNKNOWN";
+        }
     }
 
     public static final class Builder {
@@ -166,4 +179,5 @@ public class RedirectReq implements Serializable {
             return redirectReq;
         }
     }
+
 }

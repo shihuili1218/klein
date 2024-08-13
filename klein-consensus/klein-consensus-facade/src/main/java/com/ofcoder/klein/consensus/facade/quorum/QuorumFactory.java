@@ -45,7 +45,7 @@ public final class QuorumFactory {
     public static Quorum createWriteQuorum(final MemberConfiguration memberConfiguration) {
         Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
         if (LOG.isDebugEnabled()) {
-            LOG.debug("create write quorum, nwr: {}", nwr.getClass());
+            LOG.debug("create write quorum, nwr: {}", nwr.getClass().getSimpleName());
         }
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
             Set<Endpoint> participants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());
@@ -67,7 +67,7 @@ public final class QuorumFactory {
      */
     public static Quorum createReadQuorum(final MemberConfiguration memberConfiguration) {
         Nwr nwr = ExtensionLoader.getExtensionLoader(Nwr.class).getJoin();
-        LOG.debug("create read quorum, nwr: {}", nwr.getClass());
+        LOG.debug("create read quorum, nwr: {}", nwr.getClass().getSimpleName());
 
         if (CollectionUtils.isEmpty(memberConfiguration.getLastMembers())) {
             Set<Endpoint> participants = memberConfiguration.getEffectMembers().stream().filter(endpoint -> !endpoint.isOutsider()).collect(Collectors.toSet());

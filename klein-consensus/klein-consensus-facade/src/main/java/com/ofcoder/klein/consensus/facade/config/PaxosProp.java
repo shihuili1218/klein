@@ -19,7 +19,10 @@ package com.ofcoder.klein.consensus.facade.config;
 import com.ofcoder.klein.common.util.SystemPropertyUtil;
 
 /**
- * paxos property.
+ * Paxos Property.
+ * The role of a master is to:
+ *     2. ReadIndex
+ *     3. Heartbeat alignment data
  *
  * @author 释慧利
  */
@@ -30,7 +33,7 @@ public class PaxosProp {
     /**
      * Only write on master.
      */
-    private boolean writeOnMaster = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.write-on-master", true);
+    private boolean enableMaster = SystemPropertyUtil.getBoolean("klein.consensus.paxos.master.enable", true);
 
     public int getMasterHeartbeatInterval() {
         return masterHeartbeatInterval;
@@ -56,12 +59,12 @@ public class PaxosProp {
         this.masterElectMaxInterval = masterElectMaxInterval;
     }
 
-    public boolean isWriteOnMaster() {
-        return writeOnMaster;
+    public boolean isEnableMaster() {
+        return enableMaster;
     }
 
-    public void setWriteOnMaster(final boolean writeOnMaster) {
-        this.writeOnMaster = writeOnMaster;
+    public void setEnableMaster(final boolean enableMaster) {
+        this.enableMaster = enableMaster;
     }
 
 }

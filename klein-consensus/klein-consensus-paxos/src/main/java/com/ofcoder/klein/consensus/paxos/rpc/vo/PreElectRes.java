@@ -32,6 +32,13 @@ public class PreElectRes implements Serializable {
         return master;
     }
 
+    @Override
+    public String toString() {
+        return "PreElectRes{"
+                + "master=" + master
+                + '}';
+    }
+
     public static final class Builder {
         private Endpoint master;
 
@@ -69,4 +76,5 @@ public class PreElectRes implements Serializable {
             return preElectRes;
         }
     }
+
 }

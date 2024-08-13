@@ -54,6 +54,7 @@ import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
+import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.Proposal;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
@@ -147,6 +148,9 @@ public class ProposerImpl implements Proposer {
     public void propose(final Command data, final ProposeDone done, final boolean now) {
         if (this.shutdownLatch != null) {
             throw new ConsensusException("klein is shutting down.");
+        }
+        if (!memberConfig.isValid(self.getSelf().getId())) {
+            throw new ConsensusException(String.format("i'm no longer in the cluster. %s", memberConfig.getAllMembers()));
         }
 
         if (now) {
@@ -254,8 +258,8 @@ public class ProposerImpl implements Proposer {
 
     private void handleAcceptResponse(final ProposeContext ctxt, final PhaseCallback.AcceptPhaseCallback callback,
                                       final AcceptRes result, final Endpoint it) {
-        LOG.info("handling node-{}'s accept response, local.proposalNo: {}, instanceId: {}, remote.proposalNo: {}, result: {}",
-                result.getNodeId(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getCurProposalNo(), result.getResult());
+        LOG.info("handling node-{}'s accept response, result: {}, local.proposalNo: {}, instanceId: {}, remote.proposalNo: {}",
+                result.getNodeId(), result.getResult(), ctxt.getGrantedProposalNo(), ctxt.getInstanceId(), result.getCurProposalNo());
         self.updateCurProposalNo(result.getCurProposalNo());
         self.updateCurInstanceId(result.getCurInstanceId());
 
@@ -286,6 +290,10 @@ public class ProposerImpl implements Proposer {
 
     @Override
     public void tryBoost(final Long instanceId, final ProposeDone done) {
+        if (!memberConfig.isValid(self.getSelf().getId())) {
+            throw new ConsensusException(String.format("i'm no longer in the cluster. %s", memberConfig.getAllMembers()));
+        }
+
         ProposeContext ctxt = new ProposeContext(memberConfig.createRef(), new Holder<Long>() {
             @Override
             protected Long create() {
@@ -483,7 +491,9 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (memberConfig.allowPropose() && (this.tasks.size() >= batchSize || endOfBatch)) {
+            if (event.getProposal().getData() instanceof SystemOp
+                    || (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
+                    && (this.tasks.size() >= batchSize || endOfBatch))) {
                 handle();
             }
         }

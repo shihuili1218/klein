@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
@@ -120,14 +119,6 @@ public class AcceptorImpl implements Acceptor {
                             .build();
                     logManager.updateInstance(localInstance);
                     return res;
-                }
-
-                // check proposals include change member
-                for (Command datum : req.getData()) {
-                    if (datum.getData() instanceof ChangeMemberOp) {
-                        ChangeMemberOp data = (ChangeMemberOp) datum.getData();
-                        memberConfig.seenNewConfig(data.getVersion(), data.getNewConfig());
-                    }
                 }
 
                 AcceptRes.Builder resBuilder = AcceptRes.Builder.anAcceptRes()

@@ -17,22 +17,27 @@
 package com.ofcoder.klein.consensus.paxos;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
-import com.ofcoder.klein.consensus.paxos.core.Master;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
+import com.ofcoder.klein.consensus.paxos.core.sm.MemberManagerSM;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
+import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
 import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
@@ -42,8 +47,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.PreElectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
 import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
-import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
@@ -62,7 +65,7 @@ public class PaxosConsensus implements Consensus {
     private final PaxosNode self;
     private final ConsensusProp prop;
     private final RpcClient client;
-    private final Proxy proxy;
+    private final ProposeProxy proposeProxy;
 
     public PaxosConsensus(final ConsensusProp prop) {
         this.prop = prop;
@@ -81,10 +84,10 @@ public class PaxosConsensus implements Consensus {
 
         initEngine();
 
-        if (self.getSelf().isOutsider() || prop.getPaxosProp().isWriteOnMaster()) {
-            this.proxy = new RedirectProxy(this.prop, this.self);
+        if (self.getSelf().isOutsider() || prop.getPaxosProp().isEnableMaster()) {
+            this.proposeProxy = new MasterProposeProxy(this.prop, this.self);
         } else {
-            this.proxy = new DirectProxy(this.prop);
+            this.proposeProxy = new UniversalProposeProxy(this.prop);
         }
     }
 
@@ -122,22 +125,24 @@ public class PaxosConsensus implements Consensus {
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
         Proposal proposal = new Proposal(group, data);
-        return proxy.propose(proposal, apply);
+        return proposeProxy.propose(proposal, apply);
     }
 
     @Override
     public Result<Long> readIndex(final String group) {
-        return proxy.readIndex(group);
+        return proposeProxy.readIndex(group);
     }
 
     @Override
     public void preheating() {
 //        propose(Proposal.Noop.GROUP, Proposal.Noop.DEFAULT, true);
+        SMRegistry.register(MemberManagerSM.GROUP, new MemberManagerSM());
         SMRegistry.register(MasterSM.GROUP, new MasterSM());
 
-        if (!this.prop.isJoinCluster()) {
-            RuntimeAccessor.getMaster().lookMaster();
-        } else {
+        if (prop.getPaxosProp().isEnableMaster()) {
+            RuntimeAccessor.getMaster().searchMaster();
+        }
+        if (this.prop.isJoinCluster()) {
             joinCluster(0);
         }
     }
@@ -148,27 +153,27 @@ public class PaxosConsensus implements Consensus {
 //            throw new ChangeMemberException("members change failed after trying many times");
 //        }
         // add member
-        boolean result = false;
-        for (Endpoint member : MemberRegistry.getInstance().getMemberConfiguration().getMembersWithout(self.getSelf().getId())) {
-            RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                    .nodeId(self.getSelf().getId())
-                    .redirect(RedirectReq.CHANGE_MEMBER)
-                    .changeOp(Master.ADD)
-                    .changeTarget(Sets.newHashSet(self.getSelf()))
-                    .build();
-            RedirectRes changeRes = this.client.sendRequestSync(member, req, 2000);
-            if (changeRes != null && changeRes.isChangeResult()) {
-                result = true;
-                break;
-            }
-        }
-        if (!result) {
+        if (!changeMember(Lists.newArrayList(self.getSelf()), Lists.newArrayList())) {
             joinCluster(cur);
+        }
+    }
+
+    private void exitCluster(final int times) {
+        int cur = times + 1;
+        if (cur >= 3) {
+            throw new ChangeMemberException("members change failed after trying many times");
+        }
+        // remove member
+        if (!changeMember(Lists.newArrayList(), Lists.newArrayList(self.getSelf()))) {
+            exitCluster(cur);
         }
     }
 
     @Override
     public void shutdown() {
+        if (prop.isJoinCluster()) {
+            exitCluster(0);
+        }
         if (RuntimeAccessor.getProposer() != null) {
             RuntimeAccessor.getProposer().shutdown();
         }
@@ -189,19 +194,33 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public void addMember(final Endpoint endpoint) {
-        if (getMemberConfig().isValid(endpoint.getId())) {
-            return;
-        }
-        RuntimeAccessor.getMaster().changeMember(Master.ADD, Sets.newHashSet(endpoint));
-    }
+    public boolean changeMember(final List<Endpoint> add, final List<Endpoint> remove) {
+        // todo: master in remove, transfer master
+        PaxosMemberConfiguration curConfiguration = MemberRegistry.getInstance().getMemberConfiguration();
 
-    @Override
-    public void removeMember(final Endpoint endpoint) {
-        if (!getMemberConfig().isValid(endpoint.getId())) {
-            return;
+        // It only takes effect in the image
+        Set<Endpoint> newConfig = curConfiguration.createRef().startJoinConsensus(add, remove);
+
+        ChangeMemberOp firstPhase = new ChangeMemberOp();
+        firstPhase.setNodeId(prop.getSelf().getId());
+        firstPhase.setNewConfig(newConfig);
+        firstPhase.setPhase(ChangeMemberOp.FIRST_PHASE);
+
+        Result<Serializable> first = propose(MemberManagerSM.GROUP, firstPhase, false);
+        LOG.info("change member first phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+
+        if (first.getState() == Result.State.SUCCESS) {
+            ChangeMemberOp secondPhase = new ChangeMemberOp();
+            secondPhase.setNodeId(prop.getSelf().getId());
+            secondPhase.setNewConfig(newConfig);
+            secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
+
+            Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
+            LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+            return second.getState() == Result.State.SUCCESS;
+        } else {
+            return false;
         }
-        RuntimeAccessor.getMaster().changeMember(Master.REMOVE, Sets.newHashSet(endpoint));
     }
 
 }

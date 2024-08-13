@@ -17,6 +17,7 @@
 package com.ofcoder.klein.consensus.facade;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +28,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.consensus.facade.exception.ChangeMemberException;
+import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -42,63 +42,61 @@ import com.ofcoder.klein.rpc.facade.Endpoint;
  */
 public class MemberConfiguration implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(MemberConfiguration.class);
+    private static final Object CHANGE_LOCK = new Object();
     protected AtomicInteger version = new AtomicInteger(0);
     protected Map<String, Endpoint> effectMembers = new ConcurrentHashMap<>();
     protected Map<String, Endpoint> lastMembers = new ConcurrentHashMap<>();
     protected Endpoint self;
-    private int changeVersion = 0;
 
     public int getVersion() {
         return version.get();
     }
 
     /**
-     * Set the last seen configuration.
+     * Start joint consensus changes, a replica should be used to call this method, which will not take effect on the current configuration.
      *
-     * @param newConfig new configuration
-     * @return version
+     * @param add    add members
+     * @param remove remove members
+     * @return new config
      */
-    public int seenNewConfig(final Set<Endpoint> newConfig) {
-        if (MapUtils.isNotEmpty(lastMembers)) {
-            throw new ChangeMemberException(String.format("lastMembers is not empty, lastMembers: %s, newConfig: %s", lastMembers, newConfig));
-        }
-        this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
-        return this.version.get();
+    public Set<Endpoint> startJoinConsensus(final List<Endpoint> add, final List<Endpoint> remove) {
+        Set<Endpoint> newConfig = new HashSet<>(getLastMembers());
+        newConfig.addAll(getEffectMembers());
+
+        List<Endpoint> addList = add != null ? add : Collections.emptyList();
+        List<Endpoint> removeList = remove != null ? remove : Collections.emptyList();
+
+        newConfig.addAll(addList.stream().filter(it -> !isValid(it.getId())).collect(Collectors.toList()));
+        newConfig.removeAll(removeList.stream().filter(it -> isValid(it.getId())).collect(Collectors.toList()));
+
+        return newConfig;
     }
 
     /**
      * Set the last seen configuration.
+     * Call the method by {@link SM} after the first phase of the joint consensus, and increment {@link MemberConfiguration#version}.
      *
-     * @param version   new config version
      * @param newConfig new configuration
      */
-    public void seenNewConfig(final int version, final Set<Endpoint> newConfig) {
-        LOG.info("see a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
-        int selfVersion = this.version.get();
-        if (version <= selfVersion || version <= changeVersion) {
-            return;
-        }
-        this.changeVersion = version;
-        seenNewConfig(newConfig);
+    public void seenNewConfig(final Set<Endpoint> newConfig) {
+        LOG.debug("see a new configuration, local.version: {}, old: {}, new: {}, lastMembers: {}", version, effectMembers, newConfig, lastMembers);
+
+        this.lastMembers.clear();
+        this.lastMembers.putAll(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
+        this.version.incrementAndGet();
     }
 
     /**
      * Commit the last seen configuration.
+     * Call the method by {@link SM} after the second phase of the joint consensus.
      *
-     * @param version   config version
      * @param newConfig new configuration
      */
-    public void effectiveNewConfig(final int version, final Set<Endpoint> newConfig) {
-        LOG.info("commit a new configuration, in.version: {}, in.newConfig: {}, changeVersion: {}, lastMembers: {} ", version, newConfig, changeVersion, lastMembers);
+    public void commitNewConfig(final Set<Endpoint> newConfig) {
+        LOG.debug("commit a new configuration, local.version: {}, new: {}, lastMembers: {} ", version, newConfig, lastMembers);
 
-        int selfVersion = this.version.get();
-        if (version < selfVersion || version < changeVersion) {
-            return;
-        }
         this.effectMembers = new ConcurrentHashMap<>(newConfig.stream().collect(Collectors.toMap(Endpoint::getId, Function.identity())));
-        this.lastMembers = new ConcurrentHashMap<>();
-        this.version.incrementAndGet();
-        this.changeVersion = version;
+        this.lastMembers.clear();
     }
 
     /**

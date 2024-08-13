@@ -52,7 +52,7 @@ public class Main0 {
         );
 
         Klein instance = Klein.startup();
-        MemberConfiguration clusterInfo = instance.getClusterInfo();
+        MemberConfiguration clusterInfo = instance.getClusterInfo().getMemberConfig();
         LOG.info("==============" + clusterInfo.toString());
 
         System.in.read();

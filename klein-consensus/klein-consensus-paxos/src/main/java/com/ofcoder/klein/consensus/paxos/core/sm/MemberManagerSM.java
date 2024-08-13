@@ -22,32 +22,34 @@ import org.slf4j.LoggerFactory;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 
 /**
- * master sm.
+ * Member Manager SM.
  *
  * @author 释慧利
  */
-public class MasterSM extends AbstractSM {
-    public static final String GROUP = "master";
-    private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
+public class MemberManagerSM extends AbstractSM {
+    public static final String GROUP = "member_manager";
+    private static final Logger LOG = LoggerFactory.getLogger(MemberManagerSM.class);
     private final PaxosMemberConfiguration memberConfig;
 
-    public MasterSM() {
+    public MemberManagerSM() {
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
     }
 
     @Override
     public Object apply(final Object data) {
-        LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
-        if (data instanceof ElectionOp) {
-            electMaster((ElectionOp) data);
+        LOG.debug("MemberManagerSM apply, {}", data.getClass().getSimpleName());
+        if (data instanceof ChangeMemberOp) {
+            ChangeMemberOp op = (ChangeMemberOp) data;
+            if (op.getPhase() == ChangeMemberOp.FIRST_PHASE) {
+                memberConfig.seenNewConfig(op.getNewConfig());
+            } else if (op.getPhase() == ChangeMemberOp.SECOND_PHASE) {
+                memberConfig.commitNewConfig(op.getNewConfig());
+            }
+            // else ignore.
         } else {
-            LOG.error("applying MasterSM, found unknown parameter types, data.type: {}", data.getClass().getSimpleName());
+            throw new IllegalArgumentException("Unknown data type: " + data.getClass().getSimpleName());
         }
         return null;
-    }
-
-    private void electMaster(final ElectionOp op) {
-        // do nothing.
     }
 
     @Override
@@ -57,10 +59,10 @@ public class MasterSM extends AbstractSM {
 
     @Override
     public void loadImage(final Object snap) {
-//        LOG.info("LOAD SNAP: {}", snap);
-//        if (!(snap instanceof PaxosMemberConfiguration)) {
-//            return;
-//        }
-//        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
+        LOG.info("LOAD SNAP: {}", snap);
+        if (!(snap instanceof PaxosMemberConfiguration)) {
+            return;
+        }
+        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
     }
 }

@@ -148,7 +148,7 @@ public class MemberConfigurationTest extends TestCase {
         assertEquals(configuration.getEffectMembers().size(), nodes.size() - 1);
     }
 
-    public void testEffectiveNewConfig() {
+    public void testCommitNewConfig() {
         List<Endpoint> nodes = new ArrayList<>();
         Endpoint effect = RpcUtil.parseEndpoint("1:127.0.0.1:1218:false");
         nodes.add(effect);
@@ -160,8 +160,9 @@ public class MemberConfigurationTest extends TestCase {
 
         Endpoint last = RpcUtil.parseEndpoint("4:127.0.0.1:1221:false");
         nodes.add(last);
-        int version = configuration.seenNewConfig(new HashSet<>(nodes));
-        configuration.effectiveNewConfig(version, new HashSet<>(nodes));
+        int version = configuration.getVersion();
+        configuration.seenNewConfig(new HashSet<>(nodes));
+        configuration.commitNewConfig(new HashSet<>(nodes));
 
         assertEquals(configuration.getEffectMembers().size(), nodes.size());
         assertEquals(configuration.getLastMembers().size(), 0);

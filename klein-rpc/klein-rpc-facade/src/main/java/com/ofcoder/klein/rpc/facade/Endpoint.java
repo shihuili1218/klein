@@ -25,7 +25,6 @@ import java.util.Objects;
  * @author 释慧利
  */
 public class Endpoint implements Serializable {
-    // not in equals(hashCode)
     private String id;
     private String ip;
     private int port;
@@ -130,6 +129,10 @@ public class Endpoint implements Serializable {
 
     @Override
     public String toString() {
-        return id + ":" + ip + ":" + port + ":" + outsider;
+        if (outsider) {
+            return id + ":" + ip + ":" + port + "[outsider]";
+        } else {
+            return id + ":" + ip + ":" + port;
+        }
     }
 }
