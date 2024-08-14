@@ -24,7 +24,7 @@ jobs:
           gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
 
       - name: Build with Maven
-        run: mvn clean deploy --batch-mode -DskipTests -Pdeploy -B -U -e
+        run: mvn clean deploy --batch-mode -DskipTests -Dgpg.skip=true -Pdeploy -B -U -e
         env:
           MAVEN_USERNAME: ${{ secrets.OSSRH_USER }}
           MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
