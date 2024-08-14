@@ -20,8 +20,8 @@ jobs:
           server-id: ossrh
           server-username: ${{ secrets.OSSRH_USER }}
           server-password: ${{ secrets.OSSRH_PASSWORD }}
-          gpg-private-key: ${{ secrets.GPG_SECRET }} # Value of the GPG private key to import
-          gpg-passphrase: ${{ secrets.GPG_PASSWORD }} # env variable for GPG private key passphrase
+          gpg-private-key: ${{ secrets.GPG_SECRET }}
+          gpg-passphrase: ${{ secrets.GPG_PASSWORD }}
 
       - name: Build with Maven
         run: mvn clean deploy --batch-mode -DskipTests -Pdeploy -B -U -e
