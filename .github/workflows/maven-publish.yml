@@ -1,8 +1,10 @@
-name: Maven Central Repo Deployment
+name: Maven Publish
 
 on:
   release:
     types: [created]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   publish:
@@ -11,15 +13,19 @@ jobs:
       - name: Checkout Git Repo
         uses: actions/checkout@v2
 
-      - name: Install Java and Maven
+      - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
+          server-id: ossrh
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_SECRET }} # Value of the GPG private key to import
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE # env variable for GPG private key passphrase
 
-      - name: Release Maven package
-        uses: samuelmeuli/action-maven-publish@v1
-        with:
-          gpg_private_key: ${{ secrets.GPG_SECRET }}
-          gpg_passphrase: ${{ secrets.GPG_PASSWORD }}
-          nexus_username: ${{ secrets.OSSRH_USER }}
-          nexus_password: ${{ secrets.OSSRH_PASSWORD }}
+      - name: Build with Maven
+        run: mvn clean deploy --batch-mode -DskipTests -Dgpg.skip=true -Pdeploy -B -U -e
+        env:
+          MAVEN_USERNAME: ${{ secrets.OSSRH_USER }}
+          MAVEN_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSWORD }}
