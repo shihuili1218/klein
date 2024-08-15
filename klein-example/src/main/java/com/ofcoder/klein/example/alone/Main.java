@@ -23,9 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.core.cache.KleinCacheImpl;
 
 /**
  * single node.
@@ -48,8 +48,8 @@ public class Main {
         });
         latch.await();
 
-        KleinCache klein1 = KleinFactory.getInstance().createCache("klein1");
-        KleinCache klein2 = KleinFactory.getInstance().createCache("klein2");
+        KleinCache klein1 = new KleinCacheImpl("klein1");
+        KleinCache klein2 = new KleinCacheImpl("klein2");
 
         klein1.put("hello", "klein");
         LOG.info("======klein1 " + klein1.get("hello"));

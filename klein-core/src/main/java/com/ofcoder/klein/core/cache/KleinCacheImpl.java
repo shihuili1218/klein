@@ -19,6 +19,7 @@ package com.ofcoder.klein.core.cache;
 import com.ofcoder.klein.common.exception.KleinException;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.core.GroupWrapper;
 
 import java.io.Serializable;
@@ -32,7 +33,14 @@ import java.util.concurrent.TimeUnit;
 public class KleinCacheImpl implements KleinCache {
     protected GroupWrapper consensus;
 
-    public KleinCacheImpl(final String group) {
+    /**
+     * Return a new cache container.
+     *
+     * @param cacheName cacheName
+     */
+    public KleinCacheImpl(final String cacheName) {
+        String group = CacheSM.GROUP_PREFIX + "_" + cacheName;
+        SMRegistry.register(group, new CacheSM(CacheProp.loadIfPresent()));
         this.consensus = new GroupWrapper(group);
     }
 

@@ -22,9 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.core.lock.KleinLock;
+import com.ofcoder.klein.core.lock.KleinLockImpl;
 
 /**
  * Main3: cluster member.
@@ -54,7 +54,7 @@ public class Main3 {
         });
         latch.await();
 
-        KleinLock klein = KleinFactory.getInstance().createLock("klein");
+        KleinLock klein = new KleinLockImpl("klein");
 
         System.in.read();
     }

@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.core.lock;
 
+import java.io.Serializable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,13 +29,9 @@ import com.ofcoder.klein.core.cache.CacheSM;
  * Lock State Machine.
  */
 public class LockSM extends AbstractSM {
-    public static final String GROUP = "lock";
-    private static final byte UNLOCK_STATE = 0x00;
-    private static final byte LOCKED_STATE = 0x01;
-
+    public static final String GROUP_PREFIX = "lock";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private Byte lockState = UNLOCK_STATE;
-    private long expire = 0;
+    private final LockInstance instance = new LockInstance();
 
     @Override
     public Object apply(final Object data) {
@@ -44,16 +42,16 @@ public class LockSM extends AbstractSM {
         LockMessage message = (LockMessage) data;
         switch (message.getOp()) {
             case LockMessage.LOCK:
-                if (lockState == UNLOCK_STATE || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
-                    lockState = LOCKED_STATE;
-                    expire = message.getExpire();
+                if (instance.lockState == LockInstance.UNLOCK_STATE || (instance.expire != LockMessage.TTL_PERPETUITY && instance.expire < TrueTime.currentTimeMillis())) {
+                    instance.lockState = LockInstance.LOCKED_STATE;
+                    instance.expire = message.getExpire();
                     return true;
                 } else {
                     return false;
                 }
             case LockMessage.UNLOCK:
-                lockState = UNLOCK_STATE;
-                expire = 0;
+                instance.lockState = LockInstance.UNLOCK_STATE;
+                instance.expire = 0;
                 break;
             default:
                 break;
@@ -63,14 +61,39 @@ public class LockSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return lockState;
+        return instance;
     }
 
     @Override
     public void loadImage(final Object snap) {
-        if (!(snap instanceof Byte)) {
+        if (!(snap instanceof LockInstance)) {
             return;
         }
-        lockState = (Byte) snap;
+        LockInstance snapInstance = (LockInstance) snap;
+        instance.lockState = snapInstance.lockState;
+        instance.expire = snapInstance.expire;
+    }
+
+    static class LockInstance implements Serializable {
+        private static final byte UNLOCK_STATE = 0x00;
+        private static final byte LOCKED_STATE = 0x01;
+        private Byte lockState = UNLOCK_STATE;
+        private long expire = 0;
+
+        public Byte getLockState() {
+            return lockState;
+        }
+
+        public void setLockState(final Byte lockState) {
+            this.lockState = lockState;
+        }
+
+        public long getExpire() {
+            return expire;
+        }
+
+        public void setExpire(final long expire) {
+            this.expire = expire;
+        }
     }
 }

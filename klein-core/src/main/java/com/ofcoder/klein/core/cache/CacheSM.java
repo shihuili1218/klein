@@ -30,7 +30,7 @@ import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
  * @author 释慧利
  */
 public class CacheSM extends AbstractSM {
-    public static final String GROUP = "cache";
+    public static final String GROUP_PREFIX = "cache";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
     private final CacheContainer container;
