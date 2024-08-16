@@ -16,6 +16,10 @@
  */
 package com.ofcoder.klein.core.lock;
 
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,12 +32,8 @@ import com.ofcoder.klein.core.cache.CacheSM;
  */
 public class LockSM extends AbstractSM {
     public static final String GROUP = "lock";
-    private static final byte UNLOCK_STATE = 0x00;
-    private static final byte LOCKED_STATE = 0x01;
-
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private Byte lockState = UNLOCK_STATE;
-    private long expire = 0;
+    private final Map<String, LockInstance> locks = new HashMap<>();
 
     @Override
     public Object apply(final Object data) {
@@ -42,18 +42,21 @@ public class LockSM extends AbstractSM {
             return null;
         }
         LockMessage message = (LockMessage) data;
+        locks.putIfAbsent(message.getKey(), new LockInstance());
+        LockInstance instance = locks.get(message.getKey());
+
         switch (message.getOp()) {
             case LockMessage.LOCK:
-                if (lockState == UNLOCK_STATE || (expire != LockMessage.TTL_PERPETUITY && expire < TrueTime.currentTimeMillis())) {
-                    lockState = LOCKED_STATE;
-                    expire = message.getExpire();
+                if (instance.lockState == LockInstance.UNLOCK_STATE || (instance.expire != LockMessage.TTL_PERPETUITY && instance.expire < TrueTime.currentTimeMillis())) {
+                    instance.lockState = LockInstance.LOCKED_STATE;
+                    instance.expire = message.getExpire();
                     return true;
                 } else {
                     return false;
                 }
             case LockMessage.UNLOCK:
-                lockState = UNLOCK_STATE;
-                expire = 0;
+                instance.lockState = LockInstance.UNLOCK_STATE;
+                instance.expire = 0;
                 break;
             default:
                 break;
@@ -63,14 +66,40 @@ public class LockSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return lockState;
+        return locks;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void loadImage(final Object snap) {
-        if (!(snap instanceof Byte)) {
+        if (!(snap instanceof Map)) {
             return;
         }
-        lockState = (Byte) snap;
+        Map<String, LockInstance> snapInstance = (Map<String, LockInstance>) snap;
+        locks.clear();
+        locks.putAll(snapInstance);
+    }
+
+    static class LockInstance implements Serializable {
+        private static final byte UNLOCK_STATE = 0x00;
+        private static final byte LOCKED_STATE = 0x01;
+        private Byte lockState = UNLOCK_STATE;
+        private long expire = 0;
+
+        public Byte getLockState() {
+            return lockState;
+        }
+
+        public void setLockState(final Byte lockState) {
+            this.lockState = lockState;
+        }
+
+        public long getExpire() {
+            return expire;
+        }
+
+        public void setExpire(final long expire) {
+            this.expire = expire;
+        }
     }
 }

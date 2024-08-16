@@ -23,10 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.core.cache.KleinCacheImpl;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -55,7 +55,7 @@ public class Main1 {
         });
         latch.await();
 
-        KleinCache klein = KleinFactory.getInstance().createCache("klein");
+        KleinCache klein = new KleinCacheImpl("klein");
 
         long start = System.currentTimeMillis();
         LOG.info("++++++++++first put: " + klein.put("hello1", "klein1") + ", cost: " + (System.currentTimeMillis() - start));

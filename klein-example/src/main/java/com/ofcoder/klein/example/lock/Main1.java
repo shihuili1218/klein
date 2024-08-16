@@ -24,10 +24,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinFactory;
 import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.core.lock.KleinLock;
+import com.ofcoder.klein.core.lock.KleinLockImpl;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -55,7 +55,7 @@ public class Main1 {
         });
         latch.await();
 
-        KleinLock klein = KleinFactory.getInstance().createLock("klein");
+        KleinLock klein = new KleinLockImpl("klein");
 
         long start = System.currentTimeMillis();
         LOG.info("++++++++++first acquire: " + klein.acquire(1, TimeUnit.SECONDS) + ", cost: " + (System.currentTimeMillis() - start));

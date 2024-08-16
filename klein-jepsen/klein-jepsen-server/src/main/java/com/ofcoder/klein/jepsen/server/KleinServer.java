@@ -16,22 +16,23 @@
  */
 package com.ofcoder.klein.jepsen.server;
 
+import java.util.concurrent.CountDownLatch;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.Klein;
-import com.ofcoder.klein.KleinFactory;
+import com.ofcoder.klein.KleinProp;
 import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.core.cache.KleinCacheImpl;
 import com.ofcoder.klein.jepsen.server.rpc.ExistsProcessor;
 import com.ofcoder.klein.jepsen.server.rpc.GetProcessor;
 import com.ofcoder.klein.jepsen.server.rpc.InvalidateProcessor;
 import com.ofcoder.klein.jepsen.server.rpc.PutProcessor;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.CountDownLatch;
 
 /**
  * KleinServer for deploy klein.
@@ -59,7 +60,7 @@ public class KleinServer {
         });
         latch1.await();
 
-        KleinCache cache = KleinFactory.getInstance().createCache("klein");
+        KleinCache cache = new KleinCacheImpl("klein");
 
         RpcEngine.registerProcessor(new ExistsProcessor(cache));
         RpcEngine.registerProcessor(new GetProcessor(cache));

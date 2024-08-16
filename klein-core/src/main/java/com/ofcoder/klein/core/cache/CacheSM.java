@@ -17,6 +17,7 @@
 package com.ofcoder.klein.core.cache;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -33,23 +34,28 @@ public class CacheSM extends AbstractSM {
     public static final String GROUP = "cache";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
 
-    private final CacheContainer container;
+    private final Map<String, CacheContainer> containers = new HashMap<>();
     private final CacheProp cacheProp;
+    private final String temp;
 
     public CacheSM(final CacheProp cacheProp) {
         this.cacheProp = cacheProp;
-        String temp = this.cacheProp.getDataPath() + File.separator + cacheProp.getId() + File.separator + "temp";
+        this.temp = this.cacheProp.getDataPath() + File.separator + cacheProp.getId() + File.separator + "temp";
         File file = new File(temp);
         if (!file.exists()) {
             boolean mkdirs = file.mkdirs();
             // do nothing for mkdir result.
         }
+    }
+
+    private CacheContainer getCacheContainer(final String cacheName) {
         if (cacheProp.getLru()) {
-            this.container = new LruCacheContainer(cacheProp.getMemorySize(),
-                    temp + File.separator + "klein-cache.mdb" + "." + System.currentTimeMillis());
+            containers.putIfAbsent(cacheName, new LruCacheContainer(cacheProp.getMemorySize(),
+                    temp + File.separator + "klein-cache.mdb" + "." + System.currentTimeMillis()));
         } else {
-            this.container = new MemoryCacheContainer();
+            containers.putIfAbsent(cacheName, new MemoryCacheContainer());
         }
+        return containers.get(cacheName);
     }
 
     @Override
@@ -59,6 +65,7 @@ public class CacheSM extends AbstractSM {
             return null;
         }
         CacheMessage message = (CacheMessage) data;
+        CacheContainer container = getCacheContainer(message.getCacheName());
         switch (message.getOp()) {
             case CacheMessage.PUT:
                 container.put(message.getKey(), message.getData(), message.getExpire());
@@ -85,20 +92,24 @@ public class CacheSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return container.makeImage();
+        Map<String, CacheSnap> result = new HashMap<>();
+        containers.forEach((cacheName, container) -> result.put(cacheName, container.makeImage()));
+        return result;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void loadImage(final Object snap) {
         if (!(snap instanceof Map)) {
             return;
         }
-        container.clear();
-        container.loadImage((CacheSnap) snap);
+        Map<String, CacheSnap> snapCaches = (Map<String, CacheSnap>) snap;
+        containers.clear();
+        snapCaches.forEach((cacheName, cacheSnap) -> getCacheContainer(cacheName).loadImage(cacheSnap));
     }
 
     @Override
     public void close() {
-        container.close();
+        containers.values().forEach(CacheContainer::close);
     }
 }

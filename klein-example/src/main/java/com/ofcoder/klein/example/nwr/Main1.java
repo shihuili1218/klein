@@ -18,13 +18,13 @@ package com.ofcoder.klein.example.nwr;
 
 import java.util.concurrent.CountDownLatch;
 
-import com.ofcoder.klein.KleinFactory;
-import com.ofcoder.klein.core.cache.KleinCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ofcoder.klein.Klein;
 import com.ofcoder.klein.KleinProp;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.core.cache.KleinCacheImpl;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 
 /**
@@ -59,7 +59,7 @@ public class Main1 {
         String value = "klein";
         long start = System.currentTimeMillis();
 
-        KleinCache klein = KleinFactory.getInstance().createCache("klein");
+        KleinCache klein = new KleinCacheImpl("klein");
 
         klein.put("hello1", "klein1");
         LOG.info("++++++++++first put: " + (System.currentTimeMillis() - start));

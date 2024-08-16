@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.core.GroupWrapper;
 
 /**
@@ -29,11 +30,17 @@ import com.ofcoder.klein.core.GroupWrapper;
  */
 public class KleinLockImpl implements KleinLock {
     protected GroupWrapper consensus;
-    private String key;
+    private final String key;
 
-    public KleinLockImpl(final String group) {
-        this.key = group;
-        this.consensus = new GroupWrapper(group);
+    /**
+     * Return a new lock instance.
+     *
+     * @param key lock name
+     */
+    public KleinLockImpl(final String key) {
+        this.key = key;
+        SMRegistry.register(LockSM.GROUP, new LockSM());
+        this.consensus = new GroupWrapper(LockSM.GROUP);
     }
 
     @Override
