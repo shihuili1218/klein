@@ -1,6 +1,8 @@
 package com.ofcoder.klein.core.cache;
 
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -34,15 +36,19 @@ public class CacheSMTest {
             }
         };
 
-        Field containerField = CacheSM.class.getDeclaredField("container");
+        Map<String, CacheContainer> containers = new HashMap<>();
+        containers.put("test", mockContainer);
+
+        Field containerField = CacheSM.class.getDeclaredField("containers");
         containerField.setAccessible(true);
-        containerField.set(cacheSM, mockContainer);
+        containerField.set(cacheSM, containers);
     }
 
     @Test
     public void testApplyWithPutOperation() {
         CacheMessage message = new CacheMessage();
         message.setOp(CacheMessage.PUT);
+        message.setCacheName("test");
         message.setKey("key");
         message.setData("data");
         message.setExpire(1000L);
@@ -54,6 +60,7 @@ public class CacheSMTest {
     @Test
     public void testApplyWithGetOperation() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName("test");
         message.setOp(CacheMessage.GET);
         message.setKey("key");
 
@@ -65,6 +72,7 @@ public class CacheSMTest {
     @Test
     public void testApplyWithInvalidateOperation() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName("test");
         message.setOp(CacheMessage.INVALIDATE);
         message.setKey("key");
 
@@ -75,6 +83,7 @@ public class CacheSMTest {
     @Test
     public void testApplyWithInvalidateAllOperation() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName("test");
         message.setOp(CacheMessage.INVALIDATEALL);
 
         cacheSM.apply(message);
@@ -84,6 +93,7 @@ public class CacheSMTest {
     @Test
     public void testApplyWithPutIfPresentOperation() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName("test");
         message.setOp(CacheMessage.PUTIFPRESENT);
         message.setKey("key");
         message.setData("data");
@@ -97,6 +107,7 @@ public class CacheSMTest {
     @Test
     public void testApplyWithExistOperation() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName("test");
         message.setOp(CacheMessage.EXIST);
         message.setKey("key");
 
