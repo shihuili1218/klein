@@ -17,6 +17,8 @@
 package com.ofcoder.klein.core.lock;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +31,9 @@ import com.ofcoder.klein.core.cache.CacheSM;
  * Lock State Machine.
  */
 public class LockSM extends AbstractSM {
-    public static final String GROUP_PREFIX = "lock";
+    public static final String GROUP = "lock";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
-    private final LockInstance instance = new LockInstance();
+    private final Map<String, LockInstance> locks = new HashMap<>();
 
     @Override
     public Object apply(final Object data) {
@@ -40,6 +42,9 @@ public class LockSM extends AbstractSM {
             return null;
         }
         LockMessage message = (LockMessage) data;
+        locks.putIfAbsent(message.getKey(), new LockInstance());
+        LockInstance instance = locks.get(message.getKey());
+
         switch (message.getOp()) {
             case LockMessage.LOCK:
                 if (instance.lockState == LockInstance.UNLOCK_STATE || (instance.expire != LockMessage.TTL_PERPETUITY && instance.expire < TrueTime.currentTimeMillis())) {
@@ -61,17 +66,18 @@ public class LockSM extends AbstractSM {
 
     @Override
     public Object makeImage() {
-        return instance;
+        return locks;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void loadImage(final Object snap) {
-        if (!(snap instanceof LockInstance)) {
+        if (!(snap instanceof Map)) {
             return;
         }
-        LockInstance snapInstance = (LockInstance) snap;
-        instance.lockState = snapInstance.lockState;
-        instance.expire = snapInstance.expire;
+        Map<String, LockInstance> snapInstance = (Map<String, LockInstance>) snap;
+        locks.clear();
+        locks.putAll(snapInstance);
     }
 
     static class LockInstance implements Serializable {

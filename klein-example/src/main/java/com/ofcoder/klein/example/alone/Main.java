@@ -61,6 +61,5 @@ public class Main {
         LOG.info(klein1.get("hello") + "========");
         Thread.sleep(500L);
         LOG.info(klein1.get("hello") + "========");
-        System.in.read();
     }
 }

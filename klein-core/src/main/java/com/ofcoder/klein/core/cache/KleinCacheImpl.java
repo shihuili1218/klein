@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class KleinCacheImpl implements KleinCache {
     protected GroupWrapper consensus;
+    private final String cacheName;
 
     /**
      * Return a new cache container.
@@ -39,14 +40,15 @@ public class KleinCacheImpl implements KleinCache {
      * @param cacheName cacheName
      */
     public KleinCacheImpl(final String cacheName) {
-        String group = CacheSM.GROUP_PREFIX + "_" + cacheName;
-        SMRegistry.register(group, new CacheSM(CacheProp.loadIfPresent()));
-        this.consensus = new GroupWrapper(group);
+        this.cacheName = cacheName;
+        SMRegistry.register(CacheSM.GROUP, new CacheSM(CacheProp.loadIfPresent()));
+        this.consensus = new GroupWrapper(CacheSM.GROUP);
     }
 
     @Override
     public boolean exist(final String key) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.EXIST);
         Result<Boolean> result = consensus.read(message);
@@ -60,6 +62,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> boolean put(final String key, final D data) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUT);
@@ -70,6 +73,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> boolean put(final String key, final D data, final boolean apply) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUT);
@@ -80,6 +84,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> boolean put(final String key, final D data, final Long ttl, final TimeUnit unit) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUT);
@@ -92,6 +97,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> D putIfPresent(final String key, final D data) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUTIFPRESENT);
@@ -105,6 +111,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> D putIfPresent(final String key, final D data, final Long ttl, final TimeUnit unit) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUTIFPRESENT);
@@ -120,6 +127,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public <D extends Serializable> D get(final String key) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.GET);
         Result<D> result = consensus.read(message);
@@ -133,6 +141,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public void invalidate(final String key) {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.INVALIDATE);
         Result result = consensus.propose(message);
@@ -141,6 +150,7 @@ public class KleinCacheImpl implements KleinCache {
     @Override
     public void invalidateAll() {
         CacheMessage message = new CacheMessage();
+        message.setCacheName(cacheName);
         message.setOp(CacheMessage.INVALIDATEALL);
         Result result = consensus.propose(message);
     }

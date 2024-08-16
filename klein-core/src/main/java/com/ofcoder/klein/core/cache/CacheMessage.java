@@ -34,6 +34,7 @@ public class CacheMessage implements Serializable {
     public static final long TTL_PERPETUITY = -1;
 
     private byte op;
+    private String cacheName;
     private String key;
     private Serializable data;
     private long expire = TTL_PERPETUITY;
@@ -44,6 +45,14 @@ public class CacheMessage implements Serializable {
 
     public void setOp(final byte op) {
         this.op = op;
+    }
+
+    public String getCacheName() {
+        return cacheName;
+    }
+
+    public void setCacheName(final String cacheName) {
+        this.cacheName = cacheName;
     }
 
     public String getKey() {
@@ -74,6 +83,7 @@ public class CacheMessage implements Serializable {
     public String toString() {
         return "Message{"
                 + "op=" + op
+                + ", cacheName=" + cacheName
                 + ", key=" + key
                 + ", data=" + data
                 + ", ttl=" + expire

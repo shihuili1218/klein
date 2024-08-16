@@ -38,9 +38,9 @@ public class KleinLockImpl implements KleinLock {
      * @param key lock name
      */
     public KleinLockImpl(final String key) {
-        this.key = LockSM.GROUP_PREFIX + "_" + key;
-        SMRegistry.register(this.key, new LockSM());
-        this.consensus = new GroupWrapper(this.key);
+        this.key = key;
+        SMRegistry.register(LockSM.GROUP, new LockSM());
+        this.consensus = new GroupWrapper(LockSM.GROUP);
     }
 
     @Override
