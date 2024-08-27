@@ -72,7 +72,7 @@ public class RpcUtil {
                 throw new IllegalArgumentException(String.format("parse Endpoint, address: %s, error: %s.", s, e.getMessage()), e);
             }
         }
-        throw new IllegalArgumentException(String.format("parse Endpoint, but address: %s is invalid, e.g. id:ip:port or ip:port", s));
+        throw new IllegalArgumentException(String.format("parse Endpoint, but address: %s is invalid, e.g. id:ip:port:outsider or ip:port", s));
     }
 
 }
