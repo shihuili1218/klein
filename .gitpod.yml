@@ -5,6 +5,7 @@
 # Learn more from ready-to-use templates: https://www.gitpod.io/docs/introduction/getting-started/quickstart
 
 tasks:
+  - before: mvn clean && docker && docker ps -aq | xargs docker rm && docker rmi shihuili1218/klein-jepsen-control shihuili1218/klein-jepsen-node
   - init: mvn clean install -DskipTests=true && chmod -R +x klein-jepsen/docker && klein-jepsen/docker/bin/up
 
 
