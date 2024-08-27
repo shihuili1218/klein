@@ -44,7 +44,7 @@ services:
     networks:
       - jepsen
     volumes:
-      - ./klein-server.jar:/jepsen/klein-server.jar
-      - "jepsen-shared:/var/jepsen/shared"
-      - ./klein-jepsen-test:/jepsen/klein
+      - ./klein-server.jar:/jepsen/klein-server.jar:rw
+      - "jepsen-shared:/var/jepsen/shared:rw"
+      - ./klein-jepsen-test:/jepsen/klein:rw
 %%DBS%%
