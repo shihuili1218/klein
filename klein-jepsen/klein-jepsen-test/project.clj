@@ -15,6 +15,8 @@
                  [cider/cider-nrepl "0.17.0-SNAPSHOT"]
                  [org.clojure/tools.nrepl "0.2.13" :exclusions [org.clojure/clojure]]
                  [net.java.dev.jna/jna "4.5.1"]
+                 [javax.xml.bind/jaxb-api "2.3.1"]
+                 [org.glassfish.jaxb/jaxb-runtime "2.3.1"]
                  [com.ofcoder.klein.jepsen.server/klein-jepsen-server "0.0.1"]
                  ]
   )
