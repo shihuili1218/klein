@@ -166,18 +166,20 @@
                       {:perf     (checker/perf)
                        :timeline (timeline/html)
                        :linear   (checker/linearizable)})
-          :generator (->>
-                      (gen/mix [r w])
-                      (gen/stagger 1/10)
-                      (gen/delay 1/10)
-                      (gen/nemesis
-                       (gen/seq
-                        (cycle
-                         [(gen/sleep 10)
-                          {:type :info, :f :start}
-                          (gen/sleep 5)
-                          {:type :info, :f :stop}])))
-                      (gen/time-limit (:time-limit opts)))}
+          :generator (->> (independent/concurrent-generator
+                           (:concurrency opts 5)
+                           (range)
+                           (fn [k]
+                             (->> (gen/mix [r w])
+                                  (gen/stagger 1/10)
+                                  )))
+                           (gen/nemesis
+                             (gen/seq (cycle [(gen/sleep 5)
+                                            {:type :info, :f :start}
+                                            (gen/sleep 5)
+                                            {:type :info, :f :stop}])))
+                           (gen/time-limit (:time-limit opts)))
+          }
          opts))
 
 (defn -main
