@@ -17,7 +17,6 @@
 package com.ofcoder.klein.jepsen.server.rpc;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 
 import com.ofcoder.klein.consensus.facade.Result;
 import org.slf4j.Logger;
