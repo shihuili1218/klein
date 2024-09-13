@@ -100,7 +100,7 @@
       (catch Exception e
         (let [^String msg (.getMessage e)]
           (cond
-           (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
+           (and msg (.contains msg "UNKNOWN")) (assoc op :type :fail, :error :timeout)
            :else
            (assoc op :type :fail :error (.getMessage e)))))))
 

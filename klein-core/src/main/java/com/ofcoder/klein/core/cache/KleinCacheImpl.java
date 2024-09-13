@@ -71,14 +71,17 @@ public class KleinCacheImpl implements KleinCache {
     }
 
     @Override
-    public <D extends Serializable> boolean put(final String key, final D data, final boolean apply) {
+    public <D extends Serializable> Result.State put(final String key, final D data, final boolean apply, final Long ttl, final TimeUnit unit) {
         CacheMessage message = new CacheMessage();
         message.setCacheName(cacheName);
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUT);
+        if (ttl > 0) {
+            message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
+        }
         Result result = consensus.propose(message, apply);
-        return Result.State.SUCCESS.equals(result.getState());
+        return result.getState();
     }
 
     @Override

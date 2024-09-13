@@ -26,8 +26,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class PutReq extends BaseReq {
     private Serializable data;
-    private long ttl;
-    private TimeUnit unit;
+    private long ttl = -1;
+    private TimeUnit unit = TimeUnit.SECONDS;
 
     public Serializable getData() {
         return data;
