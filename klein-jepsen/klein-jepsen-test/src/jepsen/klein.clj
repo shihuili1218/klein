@@ -133,8 +133,15 @@
   "A nemesis that crashes a random subset of nodes."
   (nemesis/node-start-stopper
    mostly-small-nonempty-subset
-   (fn start [test node] (stop! node) [:killed node])
-   (fn stop [test node] (start! node) [:restarted node])))
+   (fn start [test node]
+     (stop! node)
+     (Thread/sleep 10000)  ; 确保节点停止后，给点时间
+     {:type :info, :status :killed, :node node})
+   (fn stop [test node]
+     (start! node)
+     (Thread/sleep 10000)  ; 确保节点启动后，给点时间
+     {:type :info, :status :restarted, :node node})))
+
 
 (defn recover
   "A generator which stops the nemesis and allows some time for recovery."
@@ -155,32 +162,34 @@
   [opts]
   (info "opts: " opts)
   (merge tests/noop-test
-         {:name      "klein"
-          :os        os/noop
-          :db        (db "0.0.1")
-          :client    (Client. nil)
-          :ssh       {:dummy? true}
-          :model     (model/register 0)
+         {:name           "klein"
+          :os             os/noop
+          :db             (db "0.0.1")
+          :client         (Client. nil)
+          :ssh            {:dummy? true}
+          :steady-state   15
+          :bootstrap-time 20
+          :model          (model/register 0)
           ;          :nemesis   (nemesis/partition-random-halves)
-          :checker   (checker/compose
-                      {:perf     (checker/perf)
-                       :timeline (timeline/html)
-                       :linear   (checker/linearizable)})
-          :generator (->>
-                      (gen/mix [r w])
-                      (gen/stagger 1/10)
-                      (gen/delay 1/10)
-                      (gen/nemesis
-                       (gen/seq
-                        (cycle
-                         [(gen/sleep 10)
-                          {:type :info, :f :start}
-                          (gen/sleep 5)
-                          {:type :info, :f :stop}])))
-                      ;(gen/time-limit (:time-limit opts))
-                      (gen/time-limit 60)
-                      )
-          }
+          :checker        (checker/compose
+                           {:perf     (checker/perf)
+                            :timeline (timeline/html)
+                            :linear   (checker/linearizable
+                                       {:model     (model/cas-register)
+                                        :algorithm :linear})})
+          :generator      (->>
+                           (gen/mix [r w])
+                           (gen/stagger 1/10)
+                           (gen/delay 1/10)
+                           (gen/nemesis
+                            (gen/seq
+                             (cycle
+                              [(gen/sleep 10)
+                               {:type :info, :f :start}
+                               (gen/sleep 5)
+                               {:type :info, :f :stop}])))
+                           ;(gen/time-limit (:time-limit opts))
+                           (gen/time-limit 60))}
          opts))
 
 (defn -main
