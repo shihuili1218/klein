@@ -135,11 +135,11 @@
    mostly-small-nonempty-subset
    (fn start [test node]
      (stop! node)
-     (Thread/sleep 10000)  ; 确保节点停止后，给点时间
+     (Thread/sleep 10000) ; 确保节点停止后，给点时间
      {:type :info, :status :killed, :node node})
    (fn stop [test node]
      (start! node)
-     (Thread/sleep 10000)  ; 确保节点启动后，给点时间
+     (Thread/sleep 10000) ; 确保节点启动后，给点时间
      {:type :info, :status :restarted, :node node})))
 
 
@@ -175,8 +175,7 @@
                            {:perf     (checker/perf)
                             :timeline (timeline/html)
                             :linear   (checker/linearizable
-                                       {:model     (model/cas-register)
-                                        :algorithm :linear})})
+                                       {:model (model/cas-register)})})
           :generator      (->>
                            (gen/mix [r w])
                            (gen/stagger 1/10)
