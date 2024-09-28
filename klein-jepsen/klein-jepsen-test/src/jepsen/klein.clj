@@ -202,8 +202,3 @@
      {:test-fn klein-test})
     (cli/serve-cmd))
    args))
-
-;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --nodes 1:172.22.0.79:1218,2:172.22.0.80:1218,3:172.22.0.90:1218,4:172.22.0.91:1218,5:172.22.0.96:1218 --username root --password 123456
-;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456
-;lein run test --time-limit 40 --concurrency 10 --test-count 10 --ssh-private-key /root/.ssh/id_rsa
-;lein run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456
