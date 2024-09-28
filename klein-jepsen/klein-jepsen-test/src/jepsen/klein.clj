@@ -42,7 +42,7 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-stop))
-    (Thread/sleep 5000)
+    (Thread/sleep 10000)
     (c/exec :rm :-rf "/data")
     (catch Exception e
       (info "Stop node occur exception " (.getMessage e)))))
@@ -53,12 +53,11 @@
   (reify
    db/DB
    (setup! [_ test node]
-           ;           (start! node)
-           )
+           (start! node))
 
    (teardown! [_ test node]
-              ;              (stop! node)
-              )))
+              (stop! node))
+   ))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
@@ -100,7 +99,7 @@
       (catch Exception e
         (let [^String msg (.getMessage e)]
           (cond
-           (and msg (.contains msg "UNKNOWN")) (assoc op :type :fail, :error :timeout)
+           (and msg (.contains msg "UNKNOWN")) (assoc op :type :info, :error :timeout)
            :else
            (assoc op :type :fail :error (.getMessage e)))))))
 
@@ -135,13 +134,11 @@
    mostly-small-nonempty-subset
    (fn start [test node]
      (stop! node)
-     (Thread/sleep 10000) ; 确保节点停止后，给点时间
-     {:type :info, :status :killed, :node node})
-   (fn stop [test node]
      (start! node)
-     (Thread/sleep 10000) ; 确保节点启动后，给点时间
-     {:type :info, :status :restarted, :node node})))
-
+     {:type :info, :status :restarted, :node node})
+   (fn stop [test node]
+     (stop! node)
+     {:type :info, :status :killed, :node node})))
 
 (defn recover
   "A generator which stops the nemesis and allows some time for recovery."
