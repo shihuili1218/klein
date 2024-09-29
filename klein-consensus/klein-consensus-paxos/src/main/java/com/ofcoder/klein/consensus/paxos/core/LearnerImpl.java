@@ -110,11 +110,6 @@ public class LearnerImpl implements Learner {
                 .max().orElse(-1L);
     }
 
-    @Override
-    public Set<String> getGroups() {
-        return sms.keySet();
-    }
-
     private Map<String, Snap> generateSnap() {
         Map<String, SMApplier> sms = new HashMap<>(this.sms);
         ConcurrentMap<String, Snap> result = new ConcurrentHashMap<>();
@@ -494,7 +489,7 @@ public class LearnerImpl implements Learner {
             Map<String, Snap> allSnaps = generateSnap();
             res.getImages().putAll(allSnaps);
         } else {
-            for (String group : RuntimeAccessor.getLearner().getGroups()) {
+            for (String group : sms.keySet()) {
                 Snap lastSnap = logManager.getLastSnap(group);
                 if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
                     res.getImages().put(group, lastSnap);

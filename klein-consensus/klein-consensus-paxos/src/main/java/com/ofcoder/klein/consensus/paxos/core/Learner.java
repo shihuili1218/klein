@@ -42,8 +42,6 @@ public interface Learner extends Role<ConsensusProp> {
 
     long getLastCheckpoint();
 
-    Set<String> getGroups();
-
     Map<String, SMApplier> getSms();
 
     /**
