@@ -83,16 +83,17 @@ public class JepsenClient {
 
         try {
             LOG.info("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
-            boolean o = client.sendRequestSync(endpoint, param, 3000);
-            LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), o);
-            if (!o) {
-                throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", occur proposal conflict");
+            // see: com.ofcoder.klein.consensus.facade.Result.State
+            String result = client.sendRequestSync(endpoint, param, 3000);
+            LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), result);
+            if (!"SUCCESS".equals(result)) {
+                throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", " + result);
             }
             return true;
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", result: err");
+            throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", result: UNKNOWN");
         }
     }
 

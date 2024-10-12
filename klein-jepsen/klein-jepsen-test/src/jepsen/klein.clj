@@ -42,7 +42,7 @@
   (try
     (c/cd (clojure.string/join "/" [klein-path ""])
           (c/exec :sh klein-stop))
-    (Thread/sleep 5000)
+    (Thread/sleep 10000)
     (c/exec :rm :-rf "/data")
     (catch Exception e
       (info "Stop node occur exception " (.getMessage e)))))
@@ -53,12 +53,11 @@
   (reify
    db/DB
    (setup! [_ test node]
-           ;           (start! node)
-           )
+           (start! node))
 
    (teardown! [_ test node]
-              ;              (stop! node)
-              )))
+              (stop! node))
+   ))
 
 ;client
 (defn r [_ _] {:type :invoke, :f :read, :value nil})
@@ -100,7 +99,7 @@
       (catch Exception e
         (let [^String msg (.getMessage e)]
           (cond
-           (and msg (.contains msg "TIMEOUT")) (assoc op :type :fail, :error :timeout)
+           (and msg (.contains msg "UNKNOWN")) (assoc op :type :info, :error :timeout)
            :else
            (assoc op :type :fail :error (.getMessage e)))))))
 
@@ -133,8 +132,13 @@
   "A nemesis that crashes a random subset of nodes."
   (nemesis/node-start-stopper
    mostly-small-nonempty-subset
-   (fn start [test node] (stop! node) [:killed node])
-   (fn stop [test node] (start! node) [:restarted node])))
+   (fn start [test node]
+     (stop! node)
+     (start! node)
+     {:type :info, :status :restarted, :node node})
+   (fn stop [test node]
+     (stop! node)
+     {:type :info, :status :killed, :node node})))
 
 (defn recover
   "A generator which stops the nemesis and allows some time for recovery."
@@ -155,29 +159,33 @@
   [opts]
   (info "opts: " opts)
   (merge tests/noop-test
-         {:name      "klein"
-          :os        os/noop
-          :db        (db "0.0.1")
-          :client    (Client. nil)
-          :ssh       {:dummy? true}
-          :model     (model/register 0)
+         {:name           "klein"
+          :os             os/noop
+          :db             (db "0.0.1")
+          :client         (Client. nil)
+          :ssh            {:dummy? true}
+          :steady-state   15
+          :bootstrap-time 20
+          :model          (model/register 0)
           ;          :nemesis   (nemesis/partition-random-halves)
-          :checker   (checker/compose
-                      {:perf     (checker/perf)
-                       :timeline (timeline/html)
-                       :linear   (checker/linearizable)})
-          :generator (->>
-                      (gen/mix [r w])
-                      (gen/stagger 1/10)
-                      (gen/delay 1/10)
-                      (gen/nemesis
-                       (gen/seq
-                        (cycle
-                         [(gen/sleep 10)
-                          {:type :info, :f :start}
-                          (gen/sleep 5)
-                          {:type :info, :f :stop}])))
-                      (gen/time-limit (:time-limit opts)))}
+          :checker        (checker/compose
+                           {:perf     (checker/perf)
+                            :timeline (timeline/html)
+                            :linear   (checker/linearizable
+                                       {:model (model/cas-register)})})
+          :generator      (->>
+                           (gen/mix [r w])
+                           (gen/stagger 1/10)
+                           (gen/delay 1/10)
+                           (gen/nemesis
+                            (gen/seq
+                             (cycle
+                              [(gen/sleep 10)
+                               {:type :info, :f :start}
+                               (gen/sleep 5)
+                               {:type :info, :f :stop}])))
+                           ;(gen/time-limit (:time-limit opts))
+                           (gen/time-limit 60))}
          opts))
 
 (defn -main
@@ -191,8 +199,3 @@
      {:test-fn klein-test})
     (cli/serve-cmd))
    args))
-
-;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --nodes 1:172.22.0.79:1218,2:172.22.0.80:1218,3:172.22.0.90:1218,4:172.22.0.91:1218,5:172.22.0.96:1218 --username root --password 123456
-;d:/lein.bat run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456
-;lein run test --time-limit 40 --concurrency 10 --test-count 10 --ssh-private-key /root/.ssh/id_rsa
-;lein run test --time-limit 40 --concurrency 10 --test-count 10 --username root --password 123456

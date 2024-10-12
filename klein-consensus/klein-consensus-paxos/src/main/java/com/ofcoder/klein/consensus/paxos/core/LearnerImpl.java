@@ -21,7 +21,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -108,11 +107,6 @@ public class LearnerImpl implements Learner {
         return sms.values().stream()
                 .mapToLong(SMApplier::getLastCheckpoint)
                 .max().orElse(-1L);
-    }
-
-    @Override
-    public Set<String> getGroups() {
-        return sms.keySet();
     }
 
     private Map<String, Snap> generateSnap() {
@@ -494,7 +488,7 @@ public class LearnerImpl implements Learner {
             Map<String, Snap> allSnaps = generateSnap();
             res.getImages().putAll(allSnaps);
         } else {
-            for (String group : RuntimeAccessor.getLearner().getGroups()) {
+            for (String group : sms.keySet()) {
                 Snap lastSnap = logManager.getLastSnap(group);
                 if (lastSnap != null && lastSnap.getCheckpoint() > req.getCheckpoint()) {
                     res.getImages().put(group, lastSnap);

@@ -6,3 +6,7 @@ then
     kill $pid
 fi
 echo "Done!"
+
+rm -rf /data
+
+echo "Cleanup!"

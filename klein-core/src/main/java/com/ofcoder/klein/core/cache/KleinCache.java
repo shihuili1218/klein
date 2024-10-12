@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 import com.ofcoder.klein.common.OnlyForTest;
+import com.ofcoder.klein.consensus.facade.Result;
 
 /**
  * Klein Cache.
@@ -52,10 +53,12 @@ public interface KleinCache {
      * @param data  cache value
      * @param <D>   cache value type
      * @param apply if ture, wait sm apply before return
+     * @param ttl  expire
+     * @param unit expire unit
      * @return put result
      */
     @OnlyForTest("for jepsen")
-    <D extends Serializable> boolean put(String key, D data, boolean apply);
+    <D extends Serializable> Result.State put(String key, D data, boolean apply, Long ttl, TimeUnit unit);
 
     /**
      * put element to cache and set expire.

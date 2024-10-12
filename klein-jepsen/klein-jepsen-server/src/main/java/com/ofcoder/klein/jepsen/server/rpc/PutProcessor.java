@@ -18,6 +18,7 @@ package com.ofcoder.klein.jepsen.server.rpc;
 
 import java.nio.ByteBuffer;
 
+import com.ofcoder.klein.consensus.facade.Result;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,21 +42,15 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
 
     @Override
     public void handleRequest(final PutReq request, final RpcContext context) {
-        if (request.getTtl() <= 0) {
-            try {
-                LOG.info("put operator, begin, seq: {}", request.getSeq());
-                boolean put = cache.put(request.getKey(), request.getData(), true);
-                LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
-            } catch (Exception e) {
-                LOG.error(e.getMessage());
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(false)));
-                LOG.info("put operator, err, seq: {}, result: err", request.getSeq());
-            }
-        } else {
-            boolean put = cache.put(request.getKey(), request.getData(), request.getTtl(), request.getUnit());
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(put)));
-            LOG.info("put operator, err, seq: {}", request.getSeq());
+        try {
+            LOG.info("put operator, begin, seq: {}", request.getSeq());
+            Result.State put = cache.put(request.getKey(), request.getData(), false, request.getTtl(), request.getUnit());
+            LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(put.name())));
+        } catch (Exception e) {
+            LOG.error(e.getMessage());
+            context.response(ByteBuffer.wrap(Hessian2Util.serialize(Result.State.UNKNOWN.name())));
+            LOG.info("put operator, err, seq: {}, result: err", request.getSeq());
         }
     }
 
