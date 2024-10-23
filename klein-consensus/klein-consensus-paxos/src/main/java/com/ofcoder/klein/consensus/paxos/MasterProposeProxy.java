@@ -16,11 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.core.MasterState;
@@ -29,7 +24,12 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
 
 import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
@@ -74,11 +74,17 @@ public class MasterProposeProxy implements ProposeProxy {
                 .proposal(data)
                 .apply(apply)
                 .build();
-        RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
-        if (res == null) {
-            return builder.state(Result.State.UNKNOWN).build();
+        try {
+            RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+            return (Result<D>) res.getProposeResult();
+        } catch (Exception e) {
+            if (e instanceof ConnectionException) {
+                return builder.state(Result.State.FAILURE).build();
+            } else {
+                LOG.error("redirect request fail, {}: {}", e.getClass().getName(), e.getMessage());
+                return builder.state(Result.State.UNKNOWN).build();
+            }
         }
-        return (Result<D>) res.getProposeResult();
     }
 
     @Override

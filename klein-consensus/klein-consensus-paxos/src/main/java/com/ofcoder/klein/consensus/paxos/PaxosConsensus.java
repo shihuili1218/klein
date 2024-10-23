@@ -16,13 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -54,6 +47,12 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Paxos Consensus.
@@ -155,9 +154,13 @@ public class PaxosConsensus implements Consensus {
         req.setOp(ElasticReq.LAUNCH);
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
-            ElasticRes res = client.sendRequestSync(endpoint, req);
-            if (res != null && res.isResult()) {
-                return;
+            try {
+                ElasticRes res = client.sendRequestSync(endpoint, req);
+                if (res.isResult()) {
+                    return;
+                }
+            } catch (Exception e) {
+                LOG.warn("join cluster fail, {}", e.getMessage());
             }
         }
     }
@@ -169,9 +172,13 @@ public class PaxosConsensus implements Consensus {
         req.setOp(ElasticReq.SHUTDOWN);
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
-            ElasticRes res = client.sendRequestSync(endpoint, req);
-            if (res.isResult()) {
-                return;
+            try {
+                ElasticRes res = client.sendRequestSync(endpoint, req);
+                if (res.isResult()) {
+                    return;
+                }
+            } catch (Exception e) {
+                LOG.warn("exit cluster fail, {}", e.getMessage());
             }
         }
     }

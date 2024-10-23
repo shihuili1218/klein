@@ -360,13 +360,13 @@ public class LearnerImpl implements Learner {
 
         final long lastApplyId = getLastAppliedInstanceId();
         final long expectConfirmId = lastApplyId + 1;
-        LOG.debug("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, getLastAppliedInstanceId(), getLastCheckpoint());
 
         if (instanceId <= lastApplyId) {
             // the instance has been applied.
             return;
         }
 
+        LOG.debug("start apply, instanceId: {}, curAppliedInstanceId: {}, lastCheckpoint: {}", instanceId, getLastAppliedInstanceId(), getLastCheckpoint());
         if (instanceId > expectConfirmId) {
             registerApplyCallback(instanceId - 1, Lists.newArrayList(new ProposeDone() {
                 @Override

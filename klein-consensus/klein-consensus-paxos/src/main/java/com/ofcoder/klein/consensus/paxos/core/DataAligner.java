@@ -16,16 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.Comparator;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.function.Predicate;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -44,6 +34,15 @@ import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Comparator;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.function.Predicate;
 
 public class DataAligner {
     private static final Logger LOG = LoggerFactory.getLogger(DataAligner.class);
@@ -176,18 +175,17 @@ public class DataAligner {
                     .build();
             SnapSyncRes res = client.sendRequestSync(target, req, 1000);
 
-            if (res != null) {
-                RuntimeAccessor.getLearner().loadSnapSync(res.getImages());
-                checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
+            RuntimeAccessor.getLearner().loadSnapSync(res.getImages());
+            checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();
 
-                long finalCheckpoint = checkpoint;
-                Predicate<Task> successPredicate = it -> it.priority != Task.HIGH_PRIORITY && it.priority < finalCheckpoint;
-                this.learnQueue.stream().filter(successPredicate).forEach(it -> it.callback.learned(true));
-                this.learnQueue.removeIf(successPredicate);
-                result = true;
-            }
+            long finalCheckpoint = checkpoint;
+            Predicate<Task> successPredicate = it -> it.priority != Task.HIGH_PRIORITY && it.priority < finalCheckpoint;
+            this.learnQueue.stream().filter(successPredicate).forEach(it -> it.callback.learned(true));
+            this.learnQueue.removeIf(successPredicate);
+            result = true;
+
         } catch (Throwable e) {
-            LOG.error(e.getMessage(), e);
+            LOG.error("pull snap from {} fail. {}", target, e.getMessage());
         } finally {
             callback.learned(result);
         }

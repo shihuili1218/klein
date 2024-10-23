@@ -16,16 +16,6 @@
  */
 package com.ofcoder.klein.rpc.grpc;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.protobuf.DynamicMessage;
 import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
@@ -38,7 +28,6 @@ import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
 import com.ofcoder.klein.spi.Join;
-
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ConnectivityState;
@@ -47,6 +36,16 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Grpc Client.
@@ -154,6 +153,12 @@ public class GrpcClient implements RpcClient {
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof ConnectionException) {
+                throw new ConnectionException(e.getMessage());
+            } else {
+                throw new RpcException(e.getMessage(), e);
+            }
         } catch (final Throwable t) {
             future.cancel(true);
             throw new RpcException(t.getMessage(), t);
@@ -188,9 +193,8 @@ public class GrpcClient implements RpcClient {
     private void invokeAsync(final Endpoint endpoint, final InvokeParam invokeParam, final InvokeCallback callback, final long timeoutMs) {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
-            ThreadExecutor.execute(() -> {
-                callback.error(new ConnectionException(String.format("connection not available, %s", endpoint)));
-            });
+            ThreadExecutor.execute(() ->
+                    callback.error(new ConnectionException(String.format("connection not available, %s", endpoint))));
             return;
         }
 
