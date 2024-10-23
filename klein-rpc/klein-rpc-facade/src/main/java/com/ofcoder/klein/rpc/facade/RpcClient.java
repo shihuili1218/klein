@@ -130,12 +130,7 @@ public interface RpcClient {
                 .service(request.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
                 .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
-        try {
-            return sendRequestSync(target, param, timeoutMs);
-        } catch (Exception e) {
-            LOG.warn(e.getMessage());
-            return null;
-        }
+        return sendRequestSync(target, param, timeoutMs);
     }
 
     /**

@@ -176,12 +176,16 @@ public class MasterImpl implements Master {
                 .proposalNo(self.getCurProposalNo())
                 .build();
         for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
-            PreElectRes res = client.sendRequestSync(it, req);
-            LOG.debug("looking for master, node-{}: {}", it.getId(), res);
-            if (res != null && res.getMaster() != null) {
+            try {
+                PreElectRes res = client.sendRequestSync(it, req);
+                LOG.debug("looking for master, node-{}: {}", it.getId(), res);
+                if (res != null && res.getMaster() != null) {
 //                restartWaitHb();
-                changeMaster(res.getMaster().getId());
-                return;
+                    changeMaster(res.getMaster().getId());
+                    return;
+                }
+            } catch (Exception e) {
+                LOG.warn("looking for master fail, {}", e.getMessage());
             }
         }
         // there is no master in the cluster, do elect.

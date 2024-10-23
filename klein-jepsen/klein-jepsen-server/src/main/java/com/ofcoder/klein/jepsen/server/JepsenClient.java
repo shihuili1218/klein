@@ -19,6 +19,7 @@ package com.ofcoder.klein.jepsen.server;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 
+import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -90,7 +91,7 @@ public class JepsenClient {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", " + result);
             }
             return true;
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | ConnectionException e) {
             throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", result: UNKNOWN");

@@ -16,13 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -31,21 +24,8 @@ import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
-import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
-import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberManagerSM;
-import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
-import com.ofcoder.klein.consensus.paxos.core.sm.PaxosMemberConfiguration;
-import com.ofcoder.klein.consensus.paxos.rpc.AcceptProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.ConfirmProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.ElasticProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.HeartbeatProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.LearnProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.NewMasterProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.PreElectProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.PrepareProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.RedirectProcessor;
-import com.ofcoder.klein.consensus.paxos.rpc.SnapSyncProcessor;
+import com.ofcoder.klein.consensus.paxos.core.sm.*;
+import com.ofcoder.klein.consensus.paxos.rpc.*;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
@@ -54,6 +34,12 @@ import com.ofcoder.klein.rpc.facade.RpcEngine;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Paxos Consensus.
@@ -155,9 +141,13 @@ public class PaxosConsensus implements Consensus {
         req.setOp(ElasticReq.LAUNCH);
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
-            ElasticRes res = client.sendRequestSync(endpoint, req);
-            if (res != null && res.isResult()) {
-                return;
+            try {
+                ElasticRes res = client.sendRequestSync(endpoint, req);
+                if (res.isResult()) {
+                    return;
+                }
+            } catch (Exception e) {
+                LOG.warn("join cluster fail, {}", e.getMessage());
             }
         }
     }
@@ -169,9 +159,13 @@ public class PaxosConsensus implements Consensus {
         req.setOp(ElasticReq.SHUTDOWN);
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
-            ElasticRes res = client.sendRequestSync(endpoint, req);
-            if (res.isResult()) {
-                return;
+            try {
+                ElasticRes res = client.sendRequestSync(endpoint, req);
+                if (res.isResult()) {
+                    return;
+                }
+            } catch (Exception e) {
+                LOG.warn("exit cluster fail, {}", e.getMessage());
             }
         }
     }
