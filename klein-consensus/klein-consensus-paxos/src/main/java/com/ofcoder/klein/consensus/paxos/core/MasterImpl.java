@@ -16,24 +16,12 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
-import com.ofcoder.klein.consensus.facade.Command;
+import com.ofcoder.klein.consensus.facade.NoopCommand;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
 import com.ofcoder.klein.consensus.facade.quorum.QuorumFactory;
@@ -54,6 +42,17 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Master implement.
@@ -209,7 +208,7 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            Proposal proposal = new Proposal(MasterSM.GROUP, req);
+            Proposal proposal = new Proposal(MasterSM.GROUP, Hessian2Util.serialize(req));
 
             RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
                 if (result && !changed) {
@@ -272,7 +271,7 @@ public class MasterImpl implements Master {
             if (quorum.isGranted() == Quorum.GrantResult.PASS && next.compareAndSet(false, true)) {
                 restartSendHbNow();
 
-                RuntimeAccessor.getProposer().propose(Command.NOOP, (noopResult, dataChange) -> {
+                RuntimeAccessor.getProposer().propose(NoopCommand.NOOP, (noopResult, dataChange) -> {
                     if (noopResult) {
                         changeMaster(self.getSelf().getId());
                     } else {

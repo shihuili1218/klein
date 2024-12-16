@@ -35,6 +35,10 @@
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.databind.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+            <artifactId>klein-serializer-hessian2</artifactId>
+        </dependency>
     </dependencies>
 
 

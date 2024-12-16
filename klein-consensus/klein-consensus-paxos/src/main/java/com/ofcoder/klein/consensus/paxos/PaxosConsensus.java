@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -124,7 +125,7 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        Proposal proposal = new Proposal(group, data);
+        Proposal proposal = new Proposal(group, Hessian2Util.serialize(data));
         return proposeProxy.propose(proposal, apply);
     }
 
@@ -229,7 +230,7 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setNewConfig(newConfig);
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
-            Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
+            Result<Serializable> second = propose(MemberManagerSM.GROUP, Hessian2Util.serialize(secondPhase), false);
             LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
             return second.getState() == Result.State.SUCCESS;
         } else {

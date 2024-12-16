@@ -18,7 +18,7 @@ package com.ofcoder.klein.consensus.facade;
 
 import java.nio.ByteBuffer;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
 
 /**

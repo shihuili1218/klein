@@ -16,9 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.Objects;
-
 import com.ofcoder.klein.consensus.facade.Command;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Proposal.
@@ -27,14 +27,19 @@ import com.ofcoder.klein.consensus.facade.Command;
  */
 public class Proposal implements Command {
     private String group;
-    private Object data;
+    private byte[] data;
 
     public Proposal() {
     }
 
-    public Proposal(final String group, final Object data) {
+    public Proposal(final String group, final byte[] data) {
         this.group = group;
         this.data = data;
+    }
+
+    @Override
+    public boolean ifNoop() {
+        return false;
     }
 
     @Override
@@ -47,11 +52,11 @@ public class Proposal implements Command {
     }
 
     @Override
-    public Object getData() {
+    public byte[] getData() {
         return data;
     }
 
-    public void setData(final Object data) {
+    public void setData(final byte[] data) {
         this.data = data;
     }
 
@@ -64,20 +69,11 @@ public class Proposal implements Command {
             return false;
         }
         Proposal proposal = (Proposal) o;
-        return Objects.equals(getGroup(), proposal.getGroup()) && Objects.equals(getData(), proposal.getData());
+        return Objects.equals(group, proposal.group) && Objects.deepEquals(data, proposal.data);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getGroup(), getData());
+        return Objects.hash(group, Arrays.hashCode(data));
     }
-
-    @Override
-    public String toString() {
-        return "Proposal{"
-                + "group='" + group + '\''
-                + ", data=" + data
-                + '}';
-    }
-
 }

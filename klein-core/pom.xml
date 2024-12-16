@@ -34,6 +34,10 @@
             <artifactId>klein-storage-file</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+            <artifactId>klein-serializer-hessian2</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.mapdb</groupId>
             <artifactId>mapdb</artifactId>
         </dependency>

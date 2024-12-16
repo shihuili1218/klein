@@ -16,23 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
-import java.util.Vector;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.lmax.disruptor.BlockingWaitStrategy;
@@ -45,12 +28,13 @@ import com.ofcoder.klein.common.Holder;
 import com.ofcoder.klein.common.disruptor.DisruptorBuilder;
 import com.ofcoder.klein.common.disruptor.DisruptorExceptionHandler;
 import com.ofcoder.klein.common.exception.ShutdownException;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
+import com.ofcoder.klein.consensus.facade.NoopCommand;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.exception.ConsensusException;
 import com.ofcoder.klein.consensus.facade.quorum.SingleQuorum;
@@ -69,6 +53,21 @@ import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
+import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Proposer implement.
@@ -299,7 +298,7 @@ public class ProposerImpl implements Proposer {
             protected Long create() {
                 return instanceId;
             }
-        }, Lists.newArrayList(new ProposalWithDone(Command.NOOP, done)));
+        }, Lists.newArrayList(new ProposalWithDone(NoopCommand.NOOP, done)));
         prepare(ctxt, new PrepareCallback());
     }
 
@@ -491,7 +490,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (event.getProposal().getData() instanceof SystemOp
+            if (Hessian2Util.deserialize(event.getProposal().getData()) instanceof SystemOp
                     || (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
                     && (this.tasks.size() >= batchSize || endOfBatch))) {
                 handle();

@@ -64,7 +64,10 @@
             <groupId>com.ofcoder.klein.rpc.facade</groupId>
             <artifactId>klein-rpc-facade</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+            <artifactId>klein-serializer-hessian2</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.google.protobuf</groupId>

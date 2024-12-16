@@ -21,6 +21,9 @@
     </properties>
 
     <dependencies>
-
+        <dependency>
+            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+            <artifactId>klein-serializer-hessian2</artifactId>
+        </dependency>
     </dependencies>
 </project>

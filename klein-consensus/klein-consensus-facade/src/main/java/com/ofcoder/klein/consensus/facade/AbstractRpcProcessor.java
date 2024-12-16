@@ -20,7 +20,7 @@ import java.nio.ByteBuffer;
 
 import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 
 /**
  * rpc processor.

@@ -17,7 +17,7 @@
 package com.ofcoder.klein.rpc.grpc;
 
 import com.google.protobuf.DynamicMessage;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;

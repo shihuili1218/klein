@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;

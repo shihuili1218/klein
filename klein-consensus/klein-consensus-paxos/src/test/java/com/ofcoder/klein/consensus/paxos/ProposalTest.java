@@ -1,5 +1,6 @@
 package com.ofcoder.klein.consensus.paxos;
 
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import junit.framework.TestCase;
 
 public class ProposalTest extends TestCase {
@@ -8,7 +9,7 @@ public class ProposalTest extends TestCase {
         Proposal proposal = new Proposal();
         assertNull(proposal.getGroup());
 
-        proposal = new Proposal("group1", "data1");
+        proposal = new Proposal("group1", Hessian2Util.serialize("data1"));
         assertEquals("group1", proposal.getGroup());
 
         proposal.setGroup("group2");

@@ -29,7 +29,7 @@ import org.mapdb.DataInput2;
 import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 
 /**
  * lru cache.

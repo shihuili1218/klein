@@ -22,19 +22,12 @@ import java.io.Serializable;
  * consensus content.
  */
 public interface Command extends Serializable {
-
-    Command NOOP = new Command() {
-
-        @Override
-        public String getGroup() {
-            return Noop.GROUP;
-        }
-
-        @Override
-        public Object getData() {
-            return Noop.DEFAULT;
-        }
-    };
+    /**
+     * if noop command.
+     *
+     * @return noop command
+     */
+    boolean ifNoop();
 
     String getGroup();
 
@@ -43,13 +36,5 @@ public interface Command extends Serializable {
      *
      * @return data
      */
-    Object getData();
-
-    /**
-     * No operation proposal.
-     */
-    class Noop implements Serializable {
-        public static final Noop DEFAULT = new Noop();
-        public static final String GROUP = "NOOP";
-    }
+    byte[] getData();
 }

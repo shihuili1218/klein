@@ -132,7 +132,7 @@ public class SMApplier {
             LOG.debug("doing apply instance[{}]", instanceId);
             Instance<Command> instance = logManager.getInstance(instanceId);
             List<Command> proposals = instance.getGrantedValue().stream()
-                    .filter(it -> it != Command.NOOP)
+                    .filter(Command::ifNoop)
                     .filter(it -> group.equals(it.getGroup()))
                     .collect(Collectors.toList());
 

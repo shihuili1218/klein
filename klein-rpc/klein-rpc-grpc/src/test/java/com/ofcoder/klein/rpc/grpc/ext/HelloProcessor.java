@@ -2,7 +2,7 @@ package com.ofcoder.klein.rpc.grpc.ext;
 
 import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
