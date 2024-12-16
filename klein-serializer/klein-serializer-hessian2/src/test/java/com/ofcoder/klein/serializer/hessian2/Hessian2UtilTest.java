@@ -1,4 +1,4 @@
-package serialization;
+package com.ofcoder.klein.serializer.hessian2;
 
 import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
