@@ -244,7 +244,8 @@ public class PaxosConsensus implements Consensus {
                 LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
                 return second.getState() == Result.State.SUCCESS;
             } catch (Exception e) {
-                LOG.error("Failed to serialize second phase data", e);
+                LOG.error("Failed to serialize second phase data. Phase: {}, NodeId: {}, NewConfig: {}",
+                    secondPhase.getPhase(), secondPhase.getNodeId(), secondPhase.getNewConfig(), e);
                 return false;
             }
         } else {

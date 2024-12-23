@@ -18,6 +18,9 @@ package com.ofcoder.klein.consensus.facade;
 
 /**
  * noop command.
+ * A no-operation command implementation that represents a null operation in the consensus system.
+ * This command is typically used as a placeholder in the consensus protocol when there are no actual
+ * commands to process, helping maintain the consensus mechanism's continuity.
  */
 public enum NoopCommand implements Command {
     NOOP;

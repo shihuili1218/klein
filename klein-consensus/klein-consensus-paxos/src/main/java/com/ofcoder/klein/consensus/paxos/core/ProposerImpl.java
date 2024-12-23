@@ -489,7 +489,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (event.getProposal() instanceof Proposal && ((Proposal) event.getProposal()).getIfSyetemOp()
+            if (event.getProposal() instanceof Proposal && ((Proposal) event.getProposal()).getIfSystemOp()
                     || (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
                     && (this.tasks.size() >= batchSize || endOfBatch))) {
                 handle();

@@ -44,7 +44,7 @@ public class Proposal implements Command {
         return false;
     }
 
-    public boolean getIfSyetemOp() {
+    public boolean getIfSystemOp() {
         return ifSystemOp;
     }
 
@@ -79,11 +79,13 @@ public class Proposal implements Command {
             return false;
         }
         Proposal proposal = (Proposal) o;
-        return Objects.equals(group, proposal.group) && Arrays.equals(data, proposal.data);
+        return Objects.equals(group, proposal.group)
+            && Arrays.equals(data, proposal.data)
+            && Objects.equals(ifSystemOp, proposal.ifSystemOp);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(group, Arrays.hashCode(data));
+        return Objects.hash(group, Arrays.hashCode(data), ifSystemOp);
     }
 }
