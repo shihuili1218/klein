@@ -9,7 +9,7 @@ import junit.framework.TestCase;
 public class Hessian2UtilTest extends TestCase {
 
     public void testSerialize() {
-        Serializer hessian2 = ExtensionLoader.getExtensionLoader(Serializer.class).getJoin("hessian2");
+        Serializer hessian2 = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
 
         String resource = "Hello Klein";
         byte[] serialize = hessian2.serialize(resource);
