@@ -16,14 +16,12 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.SPI;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.spi.SPI;
 
 /**
  * grpc client for send request.
@@ -33,6 +31,12 @@ import com.ofcoder.klein.spi.SPI;
 @SPI
 public interface RpcClient {
     Logger LOG = LoggerFactory.getLogger(RpcClient.class);
+
+    /**
+     * rpc serializer.
+     * @return serializer
+     */
+    Serializer getSerializer();
 
     /**
      * get rpc timeout.
@@ -91,7 +95,7 @@ public interface RpcClient {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(request.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
+                .data(ByteBuffer.wrap(getSerializer().serialize(request))).build();
         sendRequestAsync(target, param, callback, timeoutMs);
     }
 
@@ -129,7 +133,7 @@ public interface RpcClient {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(request.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
+                .data(ByteBuffer.wrap(getSerializer().serialize(request))).build();
         return sendRequestSync(target, param, timeoutMs);
     }
 

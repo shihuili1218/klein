@@ -16,14 +16,14 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.nio.ByteBuffer;
-
 /**
  * message processor.
  *
+ * @param <A> request type
+ * @param <R> response type
  * @author 释慧利
  */
-public interface RpcProcessor {
+public interface RpcProcessor<A, R> {
 
     String KLEIN = "klein";
 
@@ -47,8 +47,9 @@ public interface RpcProcessor {
      * handle request.
      *
      * @param request request param
-     * @param context rpc context
+     *
+     * @return response
      */
-    void handleRequest(ByteBuffer request, RpcContext context);
+    R handleRequest(A request);
 
 }

@@ -16,31 +16,26 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 /**
  * NewMaster Request Processor.
  *
  * @author 释慧利
  */
-public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
+public class NewMasterProcessor implements RpcProcessor<NewMasterReq, NewMasterRes> {
 
     public NewMasterProcessor(final PaxosNode self) {
         // do nothing.
     }
 
     @Override
-    public void handleRequest(final NewMasterReq request, final RpcContext context) {
-        NewMasterRes newMasterRes = RuntimeAccessor.getMaster().onReceiveNewMaster(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(newMasterRes)));
+    public NewMasterRes handleRequest(final NewMasterReq request) {
+        return RuntimeAccessor.getMaster().onReceiveNewMaster(request, false);
     }
 
     @Override

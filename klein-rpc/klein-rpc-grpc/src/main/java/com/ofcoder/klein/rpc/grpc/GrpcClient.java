@@ -17,7 +17,6 @@
 package com.ofcoder.klein.rpc.grpc;
 
 import com.google.protobuf.DynamicMessage;
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
@@ -27,6 +26,8 @@ import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -36,9 +37,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +44,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Grpc Client.
@@ -57,9 +57,16 @@ public class GrpcClient implements RpcClient {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
     private final RpcProp prop;
+    private final Serializer rpcSerializer;
 
     public GrpcClient(final RpcProp op) {
         this.prop = op;
+        rpcSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
+    }
+
+    @Override
+    public Serializer getSerializer() {
+        return rpcSerializer;
     }
 
     @Override
@@ -135,7 +142,7 @@ public class GrpcClient implements RpcClient {
     public <R> R sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
         final CompletableFuture<ByteBuffer> future = new CompletableFuture<>();
 
-        invokeAsync(target, request, new InvokeCallback() {
+        invokeAsync(target, request, new InvokeCallback<ByteBuffer>() {
             @Override
             public void error(final Throwable err) {
                 future.completeExceptionally(err);
@@ -149,7 +156,7 @@ public class GrpcClient implements RpcClient {
 
         try {
             ByteBuffer result = future.get(timeoutMs, TimeUnit.MILLISECONDS);
-            return Hessian2Util.deserialize(result.array());
+            return (R) getSerializer().deserialize(result.array());
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
@@ -212,7 +219,9 @@ public class GrpcClient implements RpcClient {
             @Override
             public void onNext(final DynamicMessage value) {
                 ByteBuffer respData = MessageHelper.getDataFromDynamicMessage(value);
-                ThreadExecutor.execute(() -> callback.complete(respData));
+                ThreadExecutor.execute(() -> {
+                    callback.complete(getSerializer().deserialize(respData.array()));
+                });
             }
 
             @Override

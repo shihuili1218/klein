@@ -16,24 +16,19 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
+import com.ofcoder.klein.common.exception.KleinException;
+import com.ofcoder.klein.core.cache.KleinCache;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.exception.KleinException;
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * cache get request processor.
  *
  * @author 释慧利
  */
-public class GetProcessor extends AbstractRpcProcessor<GetReq> {
+public class GetProcessor implements RpcProcessor<GetReq, Resp> {
     private static final Logger LOG = LoggerFactory.getLogger(GetProcessor.class);
 
     private KleinCache cache;
@@ -43,16 +38,16 @@ public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     }
 
     @Override
-    public void handleRequest(final GetReq request, final RpcContext context) {
+    public Resp handleRequest(final GetReq request) {
         try {
             LOG.info("get operator, begin, seq: {}", request.getSeq());
             Serializable javaBean = cache.get(request.getKey());
             LOG.info("get operator, end, seq: {}, result: {}", request.getSeq(), javaBean);
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Resp(true, javaBean))));
+            return new Resp(true, javaBean);
         } catch (KleinException e) {
             LOG.error(e.getMessage());
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Resp(false, null))));
             LOG.info("get operator, end, seq: {}, result: err", request.getSeq());
+            return new Resp(false, null);
         }
 
     }

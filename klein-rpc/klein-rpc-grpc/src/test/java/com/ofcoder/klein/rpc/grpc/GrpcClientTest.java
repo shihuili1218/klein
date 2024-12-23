@@ -1,15 +1,5 @@
 package com.ofcoder.klein.rpc.grpc;
 
-import java.nio.ByteBuffer;
-import java.util.concurrent.CountDownLatch;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
@@ -18,7 +8,15 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.rpc.grpc.ext.HelloProcessor;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import java.nio.ByteBuffer;
+import java.util.concurrent.CountDownLatch;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author 释慧利
@@ -53,7 +51,7 @@ public class GrpcClientTest {
 
 
         CountDownLatch latch = new CountDownLatch(2);
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback<String>() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
@@ -61,15 +59,15 @@ public class GrpcClientTest {
             }
 
             @Override
-            public void complete(ByteBuffer result) {
-                LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
+            public void complete(String result) {
+                LOG.info("receive server message: {}", result);
                 latch.countDown();
             }
         }, 5000);
 
         Thread.sleep(500);
 
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback<String>() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
@@ -77,8 +75,8 @@ public class GrpcClientTest {
             }
 
             @Override
-            public void complete(ByteBuffer result) {
-                LOG.info("receive server message: {}", (Object) Hessian2Util.deserialize(result.array()));
+            public void complete(String result) {
+                LOG.info("receive server message: {}", result);
                 latch.countDown();
             }
         }, 5000);

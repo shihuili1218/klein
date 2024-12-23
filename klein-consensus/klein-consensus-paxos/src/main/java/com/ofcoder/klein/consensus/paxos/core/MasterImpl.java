@@ -16,11 +16,9 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
-import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.NoopCommand;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
@@ -40,7 +38,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,11 +73,12 @@ public class MasterImpl implements Master {
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
-    private final AtomicBoolean changing = new AtomicBoolean(false);
+    private final Serializer proposalValueSerializer;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -208,7 +209,7 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            Proposal proposal = new Proposal(MasterSM.GROUP, Hessian2Util.serialize(req), true);
+            Proposal proposal = new Proposal(MasterSM.GROUP, proposalValueSerializer.serialize(req), true);
 
             RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
                 if (result && !changed) {
@@ -247,7 +248,7 @@ public class MasterImpl implements Master {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
-                client.sendRequestAsync(it, req, new AbstractInvokeCallback<NewMasterRes>() {
+                client.sendRequestAsync(it, req, new InvokeCallback<NewMasterRes>() {
                     @Override
                     public void error(final Throwable err) {
                         quorum.refuse(it);
@@ -325,7 +326,7 @@ public class MasterImpl implements Master {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new AbstractInvokeCallback<Pong>() {
+            client.sendRequestAsync(it, req, new InvokeCallback<Pong>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());

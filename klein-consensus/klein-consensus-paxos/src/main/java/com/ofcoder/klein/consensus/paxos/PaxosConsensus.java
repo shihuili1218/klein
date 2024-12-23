@@ -45,7 +45,7 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -67,10 +67,12 @@ public class PaxosConsensus implements Consensus {
     private final ConsensusProp prop;
     private final RpcClient client;
     private final ProposeProxy proposeProxy;
+    private final Serializer proposalValueSerializer;
 
     public PaxosConsensus(final ConsensusProp prop) {
         this.prop = prop;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         ExtensionLoader.getExtensionLoader(Nwr.class).register(this.prop.getNwr());
 
         // reload self information from storage.
@@ -126,7 +128,7 @@ public class PaxosConsensus implements Consensus {
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
         try {
-            byte[] serializedData = Hessian2Util.serialize(data);
+            byte[] serializedData = proposalValueSerializer.serialize(data);
             Proposal proposal = new Proposal(group, serializedData, data instanceof SystemOp);
             return proposeProxy.propose(proposal, apply);
         } catch (Exception e) {
@@ -239,8 +241,7 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
             try {
-                byte[] serializedData = Hessian2Util.serialize(secondPhase);
-                Result<Serializable> second = propose(MemberManagerSM.GROUP, serializedData, false);
+                Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
                 LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
                 return second.getState() == Result.State.SUCCESS;
             } catch (Exception e) {

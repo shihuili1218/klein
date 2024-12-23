@@ -16,19 +16,15 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcContext;
-
-import java.nio.ByteBuffer;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 /**
  * cache exists request processor.
  *
  * @author 释慧利
  */
-public class ExistsProcessor extends AbstractRpcProcessor<ExistsReq> {
+public class ExistsProcessor implements RpcProcessor<ExistsReq, Boolean> {
     private KleinCache cache;
 
     public ExistsProcessor(final KleinCache cache) {
@@ -36,8 +32,8 @@ public class ExistsProcessor extends AbstractRpcProcessor<ExistsReq> {
     }
 
     @Override
-    public void handleRequest(final ExistsReq request, final RpcContext context) {
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(cache.exist(request.getKey()))));
+    public Boolean handleRequest(final ExistsReq request) {
+        return cache.exist(request.getKey());
     }
 
     @Override

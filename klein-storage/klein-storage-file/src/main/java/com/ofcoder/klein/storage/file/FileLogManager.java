@@ -16,6 +16,16 @@
  */
 package com.ofcoder.klein.storage.file;
 
+import com.ofcoder.klein.common.util.StreamUtil;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
+import com.ofcoder.klein.storage.facade.exception.StorageException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,20 +38,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
-
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-import com.ofcoder.klein.storage.facade.exception.StorageException;
 
 /**
  * Jvm LogManager.
@@ -55,6 +54,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
     private static String selfPath;
     private static String metaPath;
 
+    private Serializer serializer;
     private ConcurrentMap<Long, Instance<P>> runningInstances;
     private ConcurrentMap<Long, Instance<P>> confirmedInstances;
     private ConcurrentMap<Long, ReentrantReadWriteLock> locks = new ConcurrentHashMap<>();
@@ -65,6 +65,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
+        serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
 
         selfPath = op.getDataPath();
         File selfFile = new File(selfPath);
@@ -135,7 +136,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         FileInputStream lastIn = null;
         try {
             lastIn = new FileInputStream(file);
-            this.metadata = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            this.metadata = (MetaData) serializer.deserialize(IOUtils.toByteArray(lastIn));
             return this.metadata;
         } catch (IOException e) {
             throw new StorageException("loadMetaData, " + e.getMessage(), e);
@@ -148,7 +149,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         FileOutputStream mateOut = null;
         try {
             mateOut = new FileOutputStream(metaPath);
-            IOUtils.write(Hessian2Util.serialize(this.metadata), mateOut);
+            IOUtils.write(serializer.serialize(this.metadata), mateOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -175,8 +176,8 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         try {
             lastOut = new FileOutputStream(lastFile);
             snapOut = new FileOutputStream(snapFile);
-            IOUtils.write(Hessian2Util.serialize(snap), snapOut);
-            IOUtils.write(Hessian2Util.serialize(snapFile.getPath()), lastOut);
+            IOUtils.write(serializer.serialize(snap), snapOut);
+            IOUtils.write(serializer.serialize(snapFile.getPath()), lastOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -206,9 +207,9 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         FileInputStream snapIn = null;
         try {
             lastIn = new FileInputStream(file);
-            String deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            String deserialize = (String) serializer.deserialize(IOUtils.toByteArray(lastIn));
             snapIn = new FileInputStream(deserialize);
-            lastSnap = Hessian2Util.deserialize(IOUtils.toByteArray(snapIn));
+            lastSnap = (Snap) serializer.deserialize(IOUtils.toByteArray(snapIn));
             return lastSnap;
         } catch (IOException e) {
             throw new StorageException("get last snap, " + e.getMessage(), e);

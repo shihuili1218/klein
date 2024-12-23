@@ -22,8 +22,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
-            <artifactId>klein-serializer-hessian2</artifactId>
+            <artifactId>klein-serializer-facade</artifactId>
+            <groupId>com.ofcoder.klein.serializer.facade</groupId>
         </dependency>
     </dependencies>
 </project>

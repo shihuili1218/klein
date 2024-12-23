@@ -31,7 +31,6 @@ import com.ofcoder.klein.common.exception.ShutdownException;
 import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.common.util.ThreadExecutor;
-import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.NoopCommand;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
@@ -47,8 +46,9 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.NodeState;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
+import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.RpcClient;
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -91,10 +91,12 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, Instance<Command>> seenInstances = new ConcurrentHashMap<>();
     private final Set<Long> runningInstance = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private LogManager<Proposal> logManager;
+    private Serializer md5Serializer;
 
     public ProposerImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        this.md5Serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -206,7 +208,7 @@ public class ProposerImpl implements Proposer {
 
         // choose valid proposal, and calculate checksum.
         List<Command> originalProposals = ctxt.getDataWithCallback().stream().map(ProposalWithDone::getProposal).collect(Collectors.toList());
-        String originalChecksum = ChecksumUtil.md5(Hessian2Util.serialize(originalProposals));
+        String originalChecksum = ChecksumUtil.md5(md5Serializer.serialize(originalProposals));
         ctxt.setDataChange(seenInstances.containsKey(ctxt.getInstanceId())
                 && CollectionUtils.isNotEmpty(seenInstances.get(ctxt.getInstanceId()).getGrantedValue())
                 && !StringUtils.equals(seenInstances.get(ctxt.getInstanceId()).getChecksum(), originalChecksum));
@@ -231,7 +233,7 @@ public class ProposerImpl implements Proposer {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new AbstractInvokeCallback<AcceptRes>() {
+            client.sendRequestAsync(it, req, new InvokeCallback<AcceptRes>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
@@ -390,7 +392,7 @@ public class ProposerImpl implements Proposer {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new AbstractInvokeCallback<PrepareRes>() {
+            client.sendRequestAsync(it, req, new InvokeCallback<PrepareRes>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());

@@ -108,7 +108,7 @@
             <dependency>
                 <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
                 <artifactId>klein-serializer-hessian2</artifactId>
-                <version>0.0.8</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.ofcoder.klein.spi</groupId>

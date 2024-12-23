@@ -16,31 +16,26 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
 
 /**
  * SnapSync Request Processor.
  *
  * @author 释慧利
  */
-public class SnapSyncProcessor extends AbstractRpcProcessor<SnapSyncReq> {
+public class SnapSyncProcessor implements RpcProcessor<SnapSyncReq, SnapSyncRes> {
 
     public SnapSyncProcessor(final PaxosNode self) {
         // do nothing.
     }
 
     @Override
-    public void handleRequest(final SnapSyncReq request, final RpcContext context) {
-        SnapSyncRes snapSyncRes = RuntimeAccessor.getLearner().handleSnapSyncRequest(request);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(snapSyncRes)));
+    public SnapSyncRes handleRequest(final SnapSyncReq request) {
+        return RuntimeAccessor.getLearner().handleSnapSyncRequest(request);
     }
 
     @Override

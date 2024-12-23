@@ -16,29 +16,24 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.paxos.UniversalProposeProxy;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.ProposeProxy;
+import com.ofcoder.klein.consensus.paxos.UniversalProposeProxy;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import java.io.Serializable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Redirect Request Processor.
  *
  * @author 释慧利
  */
-public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
+public class RedirectProcessor implements RpcProcessor<RedirectReq, RedirectRes> {
     private static final Logger LOG = LoggerFactory.getLogger(RedirectProcessor.class);
 
     private ConsensusProp prop;
@@ -55,21 +50,18 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     }
 
     @Override
-    public void handleRequest(final RedirectReq request, final RpcContext context) {
+    public RedirectRes handleRequest(final RedirectReq request) {
         LOG.info("receive redirect msg, redirect: {}", RedirectReq.fmtRedirect(request.getRedirect()));
         switch (request.getRedirect()) {
             case RedirectReq.TRANSACTION_REQUEST:
                 Result<Serializable> proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
                 LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
-                context.response(ByteBuffer.wrap(Hessian2Util.serialize(RedirectRes.Builder
-                        .aRedirectResp()
-                        .proposeResult(proposeResult)
-                        .build()
-                )));
-                break;
+                return RedirectRes.Builder
+                    .aRedirectResp()
+                    .proposeResult(proposeResult)
+                    .build();
             default:
-                break;
+                return null;
         }
     }
-
 }

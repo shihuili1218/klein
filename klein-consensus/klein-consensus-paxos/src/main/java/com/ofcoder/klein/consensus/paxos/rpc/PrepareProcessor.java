@@ -16,26 +16,21 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Prepare Request Processor.
  *
  * @author 释慧利
  */
-public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
+public class PrepareProcessor implements RpcProcessor<PrepareReq, PrepareRes> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
 
     public PrepareProcessor(final PaxosNode self) {
@@ -48,15 +43,14 @@ public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     }
 
     @Override
-    public void handleRequest(final PrepareReq request, final RpcContext context) {
+    public PrepareRes handleRequest(final PrepareReq request) {
 
         if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: prepare, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
-            return;
+            return null;
         }
-        PrepareRes prepareRes = RuntimeAccessor.getAcceptor().handlePrepareRequest(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(prepareRes)));
-    }
 
+        return RuntimeAccessor.getAcceptor().handlePrepareRequest(request, false);
+    }
 }

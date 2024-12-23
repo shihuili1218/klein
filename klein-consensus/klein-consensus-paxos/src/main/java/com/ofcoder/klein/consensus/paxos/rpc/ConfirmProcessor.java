@@ -16,26 +16,20 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ConfirmReq;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Confirm Request Processor.
  *
  * @author 释慧利
  */
-public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
+public class ConfirmProcessor implements RpcProcessor<ConfirmReq, byte[]> {
     private static final Logger LOG = LoggerFactory.getLogger(ConfirmProcessor.class);
 
     public ConfirmProcessor(final PaxosNode self) {
@@ -48,14 +42,14 @@ public class ConfirmProcessor extends AbstractRpcProcessor<ConfirmReq> {
     }
 
     @Override
-    public void handleRequest(final ConfirmReq request, final RpcContext context) {
+    public byte[] handleRequest(final ConfirmReq request) {
         if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: confirm, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
                     request.getNodeId());
-            return;
+            return null;
         }
         RuntimeAccessor.getLearner().handleConfirmRequest(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(new HashMap<>())));
+        return new byte[0];
     }
 
 }
