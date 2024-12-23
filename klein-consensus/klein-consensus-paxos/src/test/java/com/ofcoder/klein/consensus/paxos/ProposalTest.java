@@ -9,7 +9,7 @@ public class ProposalTest extends TestCase {
         Proposal proposal = new Proposal();
         assertNull(proposal.getGroup());
 
-        proposal = new Proposal("group1", Hessian2Util.serialize("data1"));
+        proposal = new Proposal("group1", Hessian2Util.serialize("data1"), false);
         assertEquals("group1", proposal.getGroup());
 
         proposal.setGroup("group2");
