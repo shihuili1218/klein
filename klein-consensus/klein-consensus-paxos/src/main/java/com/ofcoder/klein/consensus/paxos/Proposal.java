@@ -28,18 +28,28 @@ import java.util.Objects;
 public class Proposal implements Command {
     private String group;
     private byte[] data;
+    private Boolean ifSystemOp;
 
     public Proposal() {
     }
 
-    public Proposal(final String group, final byte[] data) {
+    public Proposal(final String group, final byte[] data, final Boolean ifSystemOp) {
         this.group = group;
         this.data = data;
+        this.ifSystemOp = ifSystemOp;
     }
 
     @Override
     public boolean ifNoop() {
         return false;
+    }
+
+    public boolean getIfSyetemOp() {
+        return ifSystemOp;
+    }
+
+    public void setIfSystemOp(final Boolean ifSystemOp) {
+        this.ifSystemOp = ifSystemOp;
     }
 
     @Override
@@ -53,11 +63,11 @@ public class Proposal implements Command {
 
     @Override
     public byte[] getData() {
-        return data;
+        return data.clone();
     }
 
     public void setData(final byte[] data) {
-        this.data = data;
+        this.data = data.clone();
     }
 
     @Override
@@ -69,7 +79,7 @@ public class Proposal implements Command {
             return false;
         }
         Proposal proposal = (Proposal) o;
-        return Objects.equals(group, proposal.group) && Objects.deepEquals(data, proposal.data);
+        return Objects.equals(group, proposal.group) && Arrays.equals(data, proposal.data);
     }
 
     @Override

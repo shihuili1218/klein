@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.MemberConfiguration;
 import com.ofcoder.klein.consensus.facade.Result;
@@ -24,6 +23,7 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
+import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
@@ -45,15 +45,15 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Paxos Consensus.
@@ -76,11 +76,11 @@ public class PaxosConsensus implements Consensus {
         // reload self information from storage.
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
         this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
-                .curInstanceId(0)
-                .curProposalNo(0)
-                .lastCheckpoint(0)
-                .self(prop.getSelf())
-                .build());
+            .curInstanceId(0)
+            .curProposalNo(0)
+            .lastCheckpoint(0)
+            .self(prop.getSelf())
+            .build());
         LOG.info("self info: {}", self);
 
         initEngine();
@@ -125,8 +125,16 @@ public class PaxosConsensus implements Consensus {
 
     @Override
     public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        Proposal proposal = new Proposal(group, Hessian2Util.serialize(data));
-        return proposeProxy.propose(proposal, apply);
+        try {
+            byte[] serializedData = Hessian2Util.serialize(data);
+            Proposal proposal = new Proposal(group, serializedData, data instanceof SystemOp);
+            return proposeProxy.propose(proposal, apply);
+        } catch (Exception e) {
+            LOG.error("Failed to serialize proposal data", e);
+            Result.Builder<D> builder = Result.Builder.aResult();
+            builder.state(Result.State.FAILURE);
+            return builder.build();
+        }
     }
 
     @Override
@@ -230,9 +238,15 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setNewConfig(newConfig);
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
-            Result<Serializable> second = propose(MemberManagerSM.GROUP, Hessian2Util.serialize(secondPhase), false);
-            LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
-            return second.getState() == Result.State.SUCCESS;
+            try {
+                byte[] serializedData = Hessian2Util.serialize(secondPhase);
+                Result<Serializable> second = propose(MemberManagerSM.GROUP, serializedData, false);
+                LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+                return second.getState() == Result.State.SUCCESS;
+            } catch (Exception e) {
+                LOG.error("Failed to serialize second phase data", e);
+                return false;
+            }
         } else {
             return false;
         }

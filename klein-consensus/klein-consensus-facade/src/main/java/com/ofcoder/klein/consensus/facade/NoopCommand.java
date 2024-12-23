@@ -24,7 +24,7 @@ public enum NoopCommand implements Command {
 
     @Override
     public boolean ifNoop() {
-        return false;
+        return true;
     }
 
     @Override
@@ -34,6 +34,6 @@ public enum NoopCommand implements Command {
 
     @Override
     public byte[] getData() {
-        return null;
+        return new byte[0];
     }
 }

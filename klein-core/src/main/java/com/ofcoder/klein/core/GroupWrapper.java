@@ -76,7 +76,7 @@ public class GroupWrapper {
      * @return whether success
      */
     private <D extends Serializable> Result<D> propose(final byte[] data, final boolean apply) {
-        return this.consensus.propose(group, Hessian2Util.serialize(data), apply);
+        return this.consensus.propose(group, data, apply);
     }
 
     /**

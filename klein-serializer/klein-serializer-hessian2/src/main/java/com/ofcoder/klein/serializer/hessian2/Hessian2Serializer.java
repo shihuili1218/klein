@@ -50,14 +50,14 @@ public class Hessian2Serializer<T extends Serializable> implements Serializer<T>
 
     @Override
     public T deserialize(final byte[] bytes) {
-        T obj = null;
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
             Hessian2Input input = new Hessian2Input(is);
-            obj = (T) input.readObject();
+            T obj = (T) input.readObject();
             input.close();
+            return obj;
         } catch (IOException e) {
             LOGGER.error("Hessian decode error:{}", e.getMessage(), e);
+            throw new SerializationException("Failed to deserialize object", e);
         }
-        return obj;
     }
 }

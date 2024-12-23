@@ -208,7 +208,7 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            Proposal proposal = new Proposal(MasterSM.GROUP, Hessian2Util.serialize(req));
+            Proposal proposal = new Proposal(MasterSM.GROUP, Hessian2Util.serialize(req), true);
 
             RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
                 if (result && !changed) {
