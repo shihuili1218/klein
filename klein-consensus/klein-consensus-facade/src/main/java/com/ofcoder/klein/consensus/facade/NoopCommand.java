@@ -26,11 +26,6 @@ public enum NoopCommand implements Command {
     NOOP;
 
     @Override
-    public boolean ifNoop() {
-        return true;
-    }
-
-    @Override
     public String getGroup() {
         return "NOOP";
     }

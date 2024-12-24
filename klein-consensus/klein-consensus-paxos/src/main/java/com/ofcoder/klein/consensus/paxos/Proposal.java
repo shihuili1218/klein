@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos;
 import com.ofcoder.klein.consensus.facade.Command;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Proposal.
@@ -37,11 +38,6 @@ public class Proposal implements Command {
         this.group = group;
         this.data = data;
         this.ifSystemOp = ifSystemOp;
-    }
-
-    @Override
-    public boolean ifNoop() {
-        return false;
     }
 
     public boolean getIfSystemOp() {
@@ -87,5 +83,14 @@ public class Proposal implements Command {
     @Override
     public int hashCode() {
         return Objects.hash(group, Arrays.hashCode(data), ifSystemOp);
+    }
+
+    @Override
+    public String toString() {
+        return "Proposal{" +
+            "group='" + group + '\'' +
+            ", data=" + Optional.ofNullable(data).map(value -> value.length).orElse(0) +
+            ", ifSystemOp=" + ifSystemOp +
+            '}';
     }
 }

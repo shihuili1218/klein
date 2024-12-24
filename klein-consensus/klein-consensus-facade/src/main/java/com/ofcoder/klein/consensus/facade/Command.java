@@ -22,13 +22,6 @@ import java.io.Serializable;
  * consensus content.
  */
 public interface Command extends Serializable {
-    /**
-     * if noop command.
-     *
-     * @return noop command
-     */
-    boolean ifNoop();
-
     String getGroup();
 
     /**
