@@ -17,6 +17,8 @@
 package com.ofcoder.klein.storage.facade;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * snapshot information.
@@ -25,12 +27,12 @@ import java.io.Serializable;
  */
 public class Snap implements Serializable {
     private long checkpoint;
-    private Object snap;
+    private byte[] snap;
 
     public Snap() {
     }
 
-    public Snap(final long checkpoint, final Object snap) {
+    public Snap(final long checkpoint, final byte[] snap) {
         this.checkpoint = checkpoint;
         this.snap = snap;
     }
@@ -59,8 +61,8 @@ public class Snap implements Serializable {
      *
      * @return snapshot
      */
-    public Object getSnap() {
-        return snap;
+    public byte[] getSnap() {
+        return snap.clone();
     }
 
     /**
@@ -68,7 +70,24 @@ public class Snap implements Serializable {
      *
      * @param snap snapshot
      */
-    public void setSnap(final Object snap) {
-        this.snap = snap;
+    public void setSnap(final byte[] snap) {
+        this.snap = snap.clone();
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        Snap snap1 = (Snap) o;
+        return checkpoint == snap1.checkpoint && Objects.deepEquals(snap, snap1.snap);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(checkpoint, Arrays.hashCode(snap));
     }
 }

@@ -16,10 +16,9 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.io.Serializable;
-
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.spi.SPI;
+import java.io.Serializable;
 
 /**
  * Consensus.
@@ -49,7 +48,7 @@ public interface Consensus extends Cluster {
      * @param <E>   request type
      * @return whether success
      */
-    <E extends Serializable, D extends Serializable> Result<D> propose(String group, E data, boolean apply);
+    <E extends Serializable, D extends Serializable> Result<D> propose(String group, byte[] data, boolean apply);
 
     /**
      * Obtain the consensus reached instanceId.

@@ -18,13 +18,11 @@ package com.ofcoder.klein.consensus.facade;
 
 import java.io.Serializable;
 
-import com.ofcoder.klein.storage.facade.LogManager;
-
 /**
  * Node.
  *
  * @author 释慧利
  */
-public abstract class Node implements Serializable, LogManager.MetaData {
+public abstract class Node implements Serializable, LogMetaData {
 
 }

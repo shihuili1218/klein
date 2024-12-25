@@ -1,31 +1,30 @@
 package com.ofcoder.klein.storage.file;
 
+import com.google.common.collect.Lists;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import java.util.Random;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
-import com.ofcoder.klein.spi.ExtensionLoader;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-
 public class FileLogManagerTest {
-    LogManager join;
+    LogManager logManager;
 
     @Before
     public void setUp() {
-        join = ExtensionLoader.getExtensionLoader(LogManager.class).register("file", new StorageProp());
+        logManager = ExtensionLoader.getExtensionLoader(LogManager.class).register("file", new StorageProp());
     }
 
     @After
     public void shutdown() {
-        join.shutdown();
+        logManager.shutdown();
     }
 
     @Test(expected = LockException.class)
@@ -35,12 +34,12 @@ public class FileLogManagerTest {
         instance.setInstanceId(1);
         instance.setState(Instance.State.PREPARED);
         instance.setGrantedValue(Lists.newArrayList("Zzz"));
-        join.updateInstance(instance);
+        logManager.updateInstance(instance);
     }
 
     @Test()
     public void testGetInstance() {
-        Instance nil = join.getInstance(1);
+        Instance nil = logManager.getInstance(1);
         Assert.assertNull(nil);
 
         Instance<String> instance = new Instance<>();
@@ -49,11 +48,11 @@ public class FileLogManagerTest {
         instance.setState(Instance.State.PREPARED);
         instance.setGrantedValue(Lists.newArrayList("Zzz"));
 
-        join.getLock(instance.getInstanceId()).writeLock().lock();
-        join.updateInstance(instance);
-        join.getLock(instance.getInstanceId()).writeLock().unlock();
+        logManager.getLock(instance.getInstanceId()).writeLock().lock();
+        logManager.updateInstance(instance);
+        logManager.getLock(instance.getInstanceId()).writeLock().unlock();
 
-        Instance actual = join.getInstance(1);
+        Instance actual = logManager.getInstance(1);
 
 
         Assert.assertNotNull(actual);
@@ -78,14 +77,14 @@ public class FileLogManagerTest {
         instance2.setState(Instance.State.CONFIRMED);
         instance2.setGrantedValue(Lists.newArrayList("Zzz"));
 
-        join.getLock(instance1.getInstanceId()).writeLock().lock();
-        join.updateInstance(instance1);
-        join.getLock(instance1.getInstanceId()).writeLock().unlock();
-        join.getLock(instance2.getInstanceId()).writeLock().lock();
-        join.updateInstance(instance2);
-        join.getLock(instance2.getInstanceId()).writeLock().unlock();
+        logManager.getLock(instance1.getInstanceId()).writeLock().lock();
+        logManager.updateInstance(instance1);
+        logManager.getLock(instance1.getInstanceId()).writeLock().unlock();
+        logManager.getLock(instance2.getInstanceId()).writeLock().lock();
+        logManager.updateInstance(instance2);
+        logManager.getLock(instance2.getInstanceId()).writeLock().unlock();
 
-        List instanceNoConfirm = join.getInstanceNoConfirm();
+        List instanceNoConfirm = logManager.getInstanceNoConfirm();
         Assert.assertNotNull(instanceNoConfirm);
         Assert.assertEquals(1, instanceNoConfirm.size());
         Instance<String> actual = (Instance<String>) instanceNoConfirm.get(0);
@@ -97,7 +96,20 @@ public class FileLogManagerTest {
     }
 
     @Test
-    public void testLoadMetaData(){
+    public void testSaveSnapAndGetLastSnap() {
+        Snap snap = new Snap(new Random().nextLong(), new byte[] {0x1, 0x13, 0x12, 0x3, 0x3});
+        Snap snap2 = new Snap(new Random().nextLong(), new byte[] {0x1, 0x13, 0x12, 0x3, 0x2});
+        String group = "Test";
+        logManager.saveSnap(group, snap);
+        Snap lastSnap = logManager.getLastSnap(group);
 
+        Assert.assertEquals(snap, lastSnap);
+
+        logManager.saveSnap(group, snap2);
+        lastSnap = logManager.getLastSnap(group);
+
+        Assert.assertEquals(snap2, lastSnap);
+        Assert.assertNotEquals(snap, lastSnap);
     }
+
 }

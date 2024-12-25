@@ -14,30 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.file;
+package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.storage.facade.LogManager;
+import java.io.Serializable;
 
 /**
+ * Meta data.
+ *
  * @author 释慧利
  */
-public class MetaDataDTO implements LogManager.MetaData {
-    private int id;
-    private String name;
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
+public interface LogMetaData extends Serializable {
 }

@@ -23,7 +23,6 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.nwr.Nwr;
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
-import com.ofcoder.klein.consensus.facade.sm.SystemOp;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.ChangeMemberOp;
 import com.ofcoder.klein.consensus.paxos.core.sm.MasterSM;
@@ -51,6 +50,7 @@ import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,12 +77,16 @@ public class PaxosConsensus implements Consensus {
 
         // reload self information from storage.
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
-            .curInstanceId(0)
-            .curProposalNo(0)
-            .lastCheckpoint(0)
-            .self(prop.getSelf())
-            .build());
+
+        this.self = Optional.ofNullable(logManager.loadMetaData())
+            .map(proposalValueSerializer::deserialize)
+            .map(logMetaData -> (PaxosNode) logManager)
+            .orElseGet(() -> PaxosNode.Builder.aPaxosNode()
+                .curInstanceId(0)
+                .curProposalNo(0)
+                .lastCheckpoint(0)
+                .self(prop.getSelf())
+                .build());
         LOG.info("self info: {}", self);
 
         initEngine();
@@ -126,10 +130,25 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
+    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final byte[] data, final boolean apply) {
+        return propose(group, data, apply, false);
+    }
+
+    /**
+     * propose proposal.
+     *
+     * @param group group name
+     * @param data  Client data, type is Serializable
+     *              e.g. The input value of the state machine
+     * @param apply Whether you need to wait until the state machine is applied
+     *              If true, wait until the state machine is applied before returning
+     * @param <D>   result type
+     * @param isSystemOp   is SystemOp
+     * @return whether success
+     */
+    public <D extends Serializable> Result<D> propose(final String group, final byte[] data, final boolean apply, final boolean isSystemOp) {
         try {
-            byte[] serializedData = proposalValueSerializer.serialize(data);
-            Proposal proposal = new Proposal(group, serializedData, data instanceof SystemOp);
+            Proposal proposal = new Proposal(group, data, isSystemOp);
             return proposeProxy.propose(proposal, apply);
         } catch (Exception e) {
             LOG.error("Failed to serialize proposal data", e);
@@ -231,7 +250,7 @@ public class PaxosConsensus implements Consensus {
         firstPhase.setNewConfig(newConfig);
         firstPhase.setPhase(ChangeMemberOp.FIRST_PHASE);
 
-        Result<Serializable> first = propose(MemberManagerSM.GROUP, firstPhase, false);
+        Result<Serializable> first = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(firstPhase), false, true);
         LOG.info("change member first phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
 
         if (first.getState() == Result.State.SUCCESS) {
@@ -241,7 +260,7 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
             try {
-                Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
+                Result<Serializable> second = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(secondPhase), false, true);
                 LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
                 return second.getState() == Result.State.SUCCESS;
             } catch (Exception e) {

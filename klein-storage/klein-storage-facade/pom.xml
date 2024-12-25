@@ -20,10 +20,4 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <dependencies>
-        <dependency>
-            <artifactId>klein-serializer-facade</artifactId>
-            <groupId>com.ofcoder.klein.serializer.facade</groupId>
-        </dependency>
-    </dependencies>
 </project>

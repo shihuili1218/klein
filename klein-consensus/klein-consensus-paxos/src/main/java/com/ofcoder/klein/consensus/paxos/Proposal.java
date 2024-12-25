@@ -87,10 +87,10 @@ public class Proposal implements Command {
 
     @Override
     public String toString() {
-        return "Proposal{" +
-            "group='" + group + '\'' +
-            ", data=" + Optional.ofNullable(data).map(value -> value.length).orElse(0) +
-            ", ifSystemOp=" + ifSystemOp +
-            '}';
+        return "Proposal{"
+            + "group='" + group + '\''
+            + ", data=" + Optional.ofNullable(data).map(value -> value.length).orElse(0)
+            + ", ifSystemOp=" + ifSystemOp
+            + '}';
     }
 }

@@ -25,11 +25,6 @@
             <groupId>com.ofcoder.klein.storage.api</groupId>
             <artifactId>klein-storage-facade</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
-            <artifactId>klein-serializer-hessian2</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
 </project>
