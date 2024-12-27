@@ -8,9 +8,8 @@ import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.rpc.grpc.ext.HelloProcessor;
-import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import org.junit.After;
 import org.junit.Before;
@@ -31,7 +30,7 @@ public class GrpcClientTest {
     @Before
     public void setup() {
         RpcProp prop = new RpcProp();
-        rpcServer = ExtensionLoader.getExtensionLoader(RpcServer.class).register("grpc",prop);
+        rpcServer = ExtensionLoader.getExtensionLoader(RpcServer.class).register("grpc", prop);
         rpcClient = ExtensionLoader.getExtensionLoader(RpcClient.class).register("grpc", prop);
         rpcServer.registerProcessor(processor);
     }
@@ -45,13 +44,13 @@ public class GrpcClientTest {
     @Test
     public void testSendRequest() throws InterruptedException {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service("".getClass().getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize("I'm Klein"))).build();
+            .service("".getClass().getSimpleName())
+            .method(RpcProcessor.KLEIN)
+            .data("I'm Klein".getBytes(StandardCharsets.UTF_8)).build();
 
 
         CountDownLatch latch = new CountDownLatch(2);
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback<String>() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
@@ -59,15 +58,15 @@ public class GrpcClientTest {
             }
 
             @Override
-            public void complete(String result) {
-                LOG.info("receive server message: {}", result);
+            public void complete(byte[] result) {
+                LOG.info("receive server message: {}", new String(result, StandardCharsets.UTF_8));
                 latch.countDown();
             }
         }, 5000);
 
         Thread.sleep(500);
 
-        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback<String>() {
+        rpcClient.sendRequestAsync(new Endpoint("1", "127.0.0.1", 1218, false), param, new InvokeCallback() {
             @Override
             public void error(Throwable err) {
                 LOG.error(err.getMessage(), err);
@@ -75,8 +74,8 @@ public class GrpcClientTest {
             }
 
             @Override
-            public void complete(String result) {
-                LOG.info("receive server message: {}", result);
+            public void complete(byte[] result) {
+                LOG.info("receive server message: {}", new String(result, StandardCharsets.UTF_8));
                 latch.countDown();
             }
         }, 5000);

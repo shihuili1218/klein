@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.SPI;
 
 /**
@@ -38,10 +37,4 @@ public interface RpcServer {
      * Bean shutdown.
      */
     void shutdown();
-
-    /**
-     * rpc serializer.
-     * @return serializer
-     */
-    Serializer getSerializer();
 }

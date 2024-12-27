@@ -14,32 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.jepsen.server.rpc;
+package com.ofcoder.klein.consensus.facade;
 
-import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
-import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.InvokeCallback;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
- * cache exists request processor.
+ * Invoke callback.
  *
- * @author 释慧利
+ * @author far.liu
  */
-public class ExistsProcessor extends AbstractRpcProcessor<ExistsReq> {
-    private KleinCache cache;
+public abstract class AbstractInvokeCallback<RES> implements InvokeCallback {
+    private Serializer serializer;
 
-    public ExistsProcessor(final KleinCache cache) {
-        this.cache = cache;
+    public AbstractInvokeCallback() {
+        serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
-    @Override
-    public void handleRequest(final ExistsReq request, final RpcContext rpcContext) {
-        boolean exist = cache.exist(request.getKey());
-        response(exist, rpcContext);
-    }
+    /**
+     * invoke completed.
+     *
+     * @param result invoke result
+     */
+    public abstract void complete(RES result);
 
     @Override
-    public String service() {
-        return ExistsReq.class.getSimpleName();
+    public void complete(final byte[] result) {
+        RES deserialize = (RES) serializer.deserialize(result);
+        complete(deserialize);
     }
 }

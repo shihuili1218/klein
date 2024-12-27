@@ -137,13 +137,13 @@ public class PaxosConsensus implements Consensus {
     /**
      * propose proposal.
      *
-     * @param group group name
-     * @param data  Client data, type is Serializable
-     *              e.g. The input value of the state machine
-     * @param apply Whether you need to wait until the state machine is applied
-     *              If true, wait until the state machine is applied before returning
-     * @param <D>   result type
-     * @param isSystemOp   is SystemOp
+     * @param group      group name
+     * @param data       Client data, type is Serializable
+     *                   e.g. The input value of the state machine
+     * @param apply      Whether you need to wait until the state machine is applied
+     *                   If true, wait until the state machine is applied before returning
+     * @param <D>        result type
+     * @param isSystemOp is SystemOp
      * @return whether success
      */
     public <D extends Serializable> Result<D> propose(final String group, final byte[] data, final boolean apply, final boolean isSystemOp) {
@@ -185,7 +185,8 @@ public class PaxosConsensus implements Consensus {
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                byte[] response = this.client.sendRequestSync(endpoint, proposalValueSerializer.serialize(req), this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+                ElasticRes res = (ElasticRes) proposalValueSerializer.deserialize(response);
                 if (res.isResult()) {
                     return;
                 }
@@ -203,7 +204,7 @@ public class PaxosConsensus implements Consensus {
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                ElasticRes res = (ElasticRes) proposalValueSerializer.deserialize(client.sendRequestSync(endpoint, proposalValueSerializer.serialize(req)));
                 if (res.isResult()) {
                     return;
                 }

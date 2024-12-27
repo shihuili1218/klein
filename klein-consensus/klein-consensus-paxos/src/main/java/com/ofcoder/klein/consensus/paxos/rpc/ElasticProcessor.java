@@ -17,12 +17,13 @@
 package com.ofcoder.klein.consensus.paxos.rpc;
 
 import com.google.common.collect.Lists;
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class ElasticProcessor implements RpcProcessor<ElasticReq, ElasticRes> {
+public class ElasticProcessor extends AbstractRpcProcessor<ElasticReq> {
     private static final Logger LOG = LoggerFactory.getLogger(ElasticProcessor.class);
     private final PaxosNode self;
     private final Cluster cluster;
@@ -47,7 +48,8 @@ public class ElasticProcessor implements RpcProcessor<ElasticReq, ElasticRes> {
     }
 
     @Override
-    public ElasticRes handleRequest(final ElasticReq request) {
+    public void handleRequest(final ElasticReq request, final RpcContext context) {
+
         switch (request.getOp()) {
             case ElasticReq.LAUNCH:
                 if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getEndpoint().getId())) {
@@ -68,6 +70,8 @@ public class ElasticProcessor implements RpcProcessor<ElasticReq, ElasticRes> {
 
         ElasticRes res = new ElasticRes();
         res.setResult(true);
-        return res;
+
+        response(res, context);
     }
+
 }

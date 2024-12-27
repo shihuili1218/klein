@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.nio.ByteBuffer;
-
 /**
  * Rpc Context.
  *
@@ -29,7 +27,7 @@ public interface RpcContext {
      *
      * @param msg response data
      */
-    void response(ByteBuffer msg);
+    void response(byte[] msg);
 
     /**
      * get caller info.

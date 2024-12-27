@@ -16,12 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PrepareRes;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class PrepareProcessor implements RpcProcessor<PrepareReq, PrepareRes> {
+public class PrepareProcessor extends AbstractRpcProcessor<PrepareReq> {
     private static final Logger LOG = LoggerFactory.getLogger(PrepareProcessor.class);
 
     public PrepareProcessor(final PaxosNode self) {
@@ -43,14 +44,15 @@ public class PrepareProcessor implements RpcProcessor<PrepareReq, PrepareRes> {
     }
 
     @Override
-    public PrepareRes handleRequest(final PrepareReq request) {
+    public void handleRequest(final PrepareReq request, final RpcContext context) {
 
         if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: prepare, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
-                    request.getNodeId());
-            return null;
+                request.getNodeId());
+            return;
         }
-
-        return RuntimeAccessor.getAcceptor().handlePrepareRequest(request, false);
+        PrepareRes prepareRes = RuntimeAccessor.getAcceptor().handlePrepareRequest(request, false);
+        response(prepareRes, context);
     }
+
 }

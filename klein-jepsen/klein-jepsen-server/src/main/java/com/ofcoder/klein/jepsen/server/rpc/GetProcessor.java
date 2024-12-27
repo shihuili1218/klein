@@ -17,8 +17,9 @@
 package com.ofcoder.klein.jepsen.server.rpc;
 
 import com.ofcoder.klein.common.exception.KleinException;
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class GetProcessor implements RpcProcessor<GetReq, Resp> {
+public class GetProcessor extends AbstractRpcProcessor<GetReq> {
     private static final Logger LOG = LoggerFactory.getLogger(GetProcessor.class);
 
     private KleinCache cache;
@@ -38,16 +39,16 @@ public class GetProcessor implements RpcProcessor<GetReq, Resp> {
     }
 
     @Override
-    public Resp handleRequest(final GetReq request) {
+    public void handleRequest(final GetReq request, final RpcContext rpcContext) {
         try {
             LOG.info("get operator, begin, seq: {}", request.getSeq());
             Serializable javaBean = cache.get(request.getKey());
             LOG.info("get operator, end, seq: {}, result: {}", request.getSeq(), javaBean);
-            return new Resp(true, javaBean);
+            response(new Resp(true, javaBean), rpcContext);
         } catch (KleinException e) {
             LOG.error(e.getMessage());
             LOG.info("get operator, end, seq: {}, result: err", request.getSeq());
-            return new Resp(false, null);
+            response(new Resp(false, null), rpcContext);
         }
 
     }

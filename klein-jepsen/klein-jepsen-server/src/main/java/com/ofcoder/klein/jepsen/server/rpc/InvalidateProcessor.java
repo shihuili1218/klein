@@ -16,15 +16,16 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * cache invalidate request processor.
  *
  * @author 释慧利
  */
-public class InvalidateProcessor implements RpcProcessor<InvalidateReq, Boolean> {
+public class InvalidateProcessor extends AbstractRpcProcessor<InvalidateReq> {
 
     private KleinCache cache;
 
@@ -33,9 +34,9 @@ public class InvalidateProcessor implements RpcProcessor<InvalidateReq, Boolean>
     }
 
     @Override
-    public Boolean handleRequest(final InvalidateReq request) {
+    public void handleRequest(final InvalidateReq request, final RpcContext rpcContext) {
         cache.invalidate(request.getKey());
-        return true;
+        response(true, rpcContext);
     }
 
     @Override

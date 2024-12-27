@@ -14,31 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.rpc.facade;
+package com.ofcoder.klein.consensus.facade;
+
+import com.ofcoder.klein.rpc.facade.RpcContext;
+import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
- * message processor.
+ * rpc processor.
  *
  * @author 释慧利
  */
-public interface RpcProcessor {
+public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
+    private Serializer serializer;
 
-    String KLEIN = "klein";
-
-    /**
-     * get service name.
-     *
-     * @return service name
-     */
-    String service();
-
-    /**
-     * get method name.
-     *
-     * @return service name
-     */
-    default String method() {
-        return KLEIN;
+    public AbstractRpcProcessor() {
+        serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     /**
@@ -47,6 +39,16 @@ public interface RpcProcessor {
      * @param request request param
      * @param context rpc context
      */
-    void handleRequest(byte[] request, RpcContext context);
+    public abstract void handleRequest(R request, RpcContext context);
 
+    @Override
+    public void handleRequest(final byte[] request, final RpcContext context) {
+        R deserialize = (R) serializer.deserialize(request);
+        handleRequest(deserialize, context);
+    }
+
+    protected void response(final Object msg, final RpcContext context) {
+        byte[] serialize = serializer.serialize(msg);
+        context.response(serialize);
+    }
 }

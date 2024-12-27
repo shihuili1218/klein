@@ -16,9 +16,10 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.cache.KleinCache;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +28,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class PutProcessor implements RpcProcessor<PutReq, String> {
+public class PutProcessor extends AbstractRpcProcessor<PutReq> {
     private static final Logger LOG = LoggerFactory.getLogger(PutProcessor.class);
     private KleinCache cache;
 
@@ -36,16 +37,16 @@ public class PutProcessor implements RpcProcessor<PutReq, String> {
     }
 
     @Override
-    public String handleRequest(final PutReq request) {
+    public void handleRequest(final PutReq request, final RpcContext rpcContext) {
         try {
             LOG.info("put operator, begin, seq: {}", request.getSeq());
             Result.State put = cache.put(request.getKey(), request.getData(), false, request.getTtl(), request.getUnit());
             LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
-            return put.name();
+            response(put.name(), rpcContext);
         } catch (Exception e) {
             LOG.error(e.getMessage());
             LOG.info("put operator, err, seq: {}, result: err", request.getSeq());
-            return Result.State.UNKNOWN.name();
+            response(Result.State.UNKNOWN.name(), rpcContext);
         }
     }
 

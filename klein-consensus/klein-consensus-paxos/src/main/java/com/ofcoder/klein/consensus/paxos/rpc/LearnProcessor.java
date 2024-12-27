@@ -16,11 +16,12 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class LearnProcessor implements RpcProcessor<LearnReq, LearnRes> {
+public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
     private static final Logger LOG = LoggerFactory.getLogger(LearnProcessor.class);
 
     public LearnProcessor(final PaxosNode self) {
@@ -42,8 +43,9 @@ public class LearnProcessor implements RpcProcessor<LearnReq, LearnRes> {
     }
 
     @Override
-    public LearnRes handleRequest(final LearnReq request) {
-        return RuntimeAccessor.getLearner().handleLearnRequest(request);
+    public void handleRequest(final LearnReq request, final RpcContext context) {
+        LearnRes res = RuntimeAccessor.getLearner().handleLearnRequest(request);
+        response(res, context);
     }
 
 }

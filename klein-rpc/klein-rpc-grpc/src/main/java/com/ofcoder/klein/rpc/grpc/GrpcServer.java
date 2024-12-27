@@ -18,11 +18,10 @@ package com.ofcoder.klein.rpc.grpc;
 
 import com.google.protobuf.DynamicMessage;
 import com.ofcoder.klein.common.exception.StartupException;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
 import com.ofcoder.klein.rpc.facade.RpcServer;
 import com.ofcoder.klein.rpc.facade.config.RpcProp;
-import com.ofcoder.klein.serializer.Serializer;
-import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import io.grpc.MethodDescriptor;
 import io.grpc.Server;
@@ -33,7 +32,7 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.ServerCalls;
 import io.grpc.util.MutableHandlerRegistry;
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.net.SocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,17 +45,15 @@ import org.slf4j.LoggerFactory;
 public class GrpcServer implements RpcServer {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcServer.class);
     private final Server server;
-    private final Serializer rpcSerializer;
     private final MutableHandlerRegistry handlerRegistry = new MutableHandlerRegistry();
 
     public GrpcServer(final RpcProp op) {
         server = ServerBuilder.forPort(op.getPort())
-                .fallbackHandlerRegistry(handlerRegistry)
-                .directExecutor()
-                .maxInboundMessageSize(op.getMaxInboundMsgSize())
-                .build();
+            .fallbackHandlerRegistry(handlerRegistry)
+            .directExecutor()
+            .maxInboundMessageSize(op.getMaxInboundMsgSize())
+            .build();
 
-        rpcSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         try {
             server.start();
         } catch (IOException e) {
@@ -67,40 +64,42 @@ public class GrpcServer implements RpcServer {
     @Override
     public void registerProcessor(final RpcProcessor processor) {
         final MethodDescriptor<DynamicMessage, DynamicMessage> method = MessageHelper.createMarshallerMethodDescriptor(
-                processor.service(),
-                processor.method(),
-                MethodDescriptor.MethodType.UNARY,
-                MessageHelper.buildMessage(),
-                MessageHelper.buildMessage(ByteBuffer.wrap(new byte[0])));
+            processor.service(),
+            processor.method(),
+            MethodDescriptor.MethodType.UNARY,
+            MessageHelper.buildMessage(),
+            MessageHelper.buildMessage(new byte[0]));
 
         final ServerCallHandler<DynamicMessage, DynamicMessage> handler =
-                ServerCalls.asyncUnaryCall((request, responseObserver) -> {
-                    ByteBuffer msg = MessageHelper.getDataFromDynamicMessage(request);
-                    Object deserialize = rpcSerializer.deserialize(msg.array());
-
-                    Object response = processor.handleRequest(deserialize);
-                    if (response != null) {
-                        DynamicMessage res = MessageHelper.buildMessage(ByteBuffer.wrap(rpcSerializer.serialize(response)));
+            ServerCalls.asyncUnaryCall((request, responseObserver) -> {
+                final SocketAddress remoteAddress = RemoteAddressInterceptor.getRemoteAddress();
+                byte[] msg = MessageHelper.getDataFromDynamicMessage(request);
+                processor.handleRequest(msg, new RpcContext() {
+                    @Override
+                    public void response(final byte[] msg) {
+                        final DynamicMessage res = MessageHelper.buildMessage(msg);
                         responseObserver.onNext(res);
                         responseObserver.onCompleted();
                     }
 
+                    @Override
+                    public String getRemoteAddress() {
+                        // Rely on GRPC's capabilities, not magic (netty channel)
+                        return remoteAddress != null ? remoteAddress.toString() : null;
+                    }
                 });
 
+            });
+
         final ServerServiceDefinition serviceDef = ServerServiceDefinition
-                .builder(processor.service())
-                .addMethod(method, handler)
-                .build();
+            .builder(processor.service())
+            .addMethod(method, handler)
+            .build();
         this.handlerRegistry.addService(ServerInterceptors.intercept(serviceDef, new RemoteAddressInterceptor()));
     }
 
     @Override
     public void shutdown() {
         ServerHelper.shutdownAndAwaitTermination(server, 1000);
-    }
-
-    @Override
-    public Serializer getSerializer() {
-        return rpcSerializer;
     }
 }

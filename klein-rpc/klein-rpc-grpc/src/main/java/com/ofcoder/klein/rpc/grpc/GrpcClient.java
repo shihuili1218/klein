@@ -26,8 +26,6 @@ import com.ofcoder.klein.rpc.facade.config.RpcProp;
 import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.facade.exception.InvokeTimeoutException;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
-import com.ofcoder.klein.serializer.Serializer;
-import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -37,7 +35,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.grpc.stub.ClientCalls;
 import io.grpc.stub.StreamObserver;
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -57,16 +54,9 @@ public class GrpcClient implements RpcClient {
     private static final Logger LOG = LoggerFactory.getLogger(GrpcClient.class);
     private final ConcurrentMap<Endpoint, ManagedChannel> channels = new ConcurrentHashMap<>();
     private final RpcProp prop;
-    private final Serializer rpcSerializer;
 
     public GrpcClient(final RpcProp op) {
         this.prop = op;
-        rpcSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
-    }
-
-    @Override
-    public Serializer getSerializer() {
-        return rpcSerializer;
     }
 
     @Override
@@ -86,10 +76,10 @@ public class GrpcClient implements RpcClient {
 
     private ManagedChannel newChannel(final Endpoint endpoint) {
         final ManagedChannel ch = ManagedChannelBuilder.forAddress(endpoint.getIp(), endpoint.getPort())
-                .usePlaintext()
-                .directExecutor()
-                .maxInboundMessageSize(prop.getMaxInboundMsgSize())
-                .build();
+            .usePlaintext()
+            .directExecutor()
+            .maxInboundMessageSize(prop.getMaxInboundMsgSize())
+            .build();
         ch.notifyWhenStateChanged(ConnectivityState.IDLE, () -> onStateChanged(endpoint, ch));
         return ch;
     }
@@ -139,24 +129,23 @@ public class GrpcClient implements RpcClient {
     }
 
     @Override
-    public <R> R sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
-        final CompletableFuture<ByteBuffer> future = new CompletableFuture<>();
+    public byte[] sendRequestSync(final Endpoint target, final InvokeParam request, final long timeoutMs) {
+        final CompletableFuture<byte[]> future = new CompletableFuture<>();
 
-        invokeAsync(target, request, new InvokeCallback<ByteBuffer>() {
+        invokeAsync(target, request, new InvokeCallback() {
             @Override
             public void error(final Throwable err) {
                 future.completeExceptionally(err);
             }
 
             @Override
-            public void complete(final ByteBuffer result) {
+            public void complete(final byte[] result) {
                 future.complete(result);
             }
         }, timeoutMs);
 
         try {
-            ByteBuffer result = future.get(timeoutMs, TimeUnit.MILLISECONDS);
-            return (R) getSerializer().deserialize(result.array());
+            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (final TimeoutException e) {
             future.cancel(true);
             throw new InvokeTimeoutException(e.getMessage(), e);
@@ -201,7 +190,7 @@ public class GrpcClient implements RpcClient {
         final Channel ch = getCheckedChannel(endpoint);
         if (ch == null) {
             ThreadExecutor.execute(() ->
-                    callback.error(new ConnectionException(String.format("connection not available, %s", endpoint))));
+                callback.error(new ConnectionException(String.format("connection not available, %s", endpoint))));
             return;
         }
 
@@ -209,18 +198,18 @@ public class GrpcClient implements RpcClient {
         final DynamicMessage response = MessageHelper.buildMessage();
         final CallOptions callOpts = CallOptions.DEFAULT.withDeadlineAfter(timeoutMs, TimeUnit.MILLISECONDS);
         final MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = MessageHelper.createMarshallerMethodDescriptor(invokeParam.getService(),
-                invokeParam.getMethod(),
-                MethodDescriptor.MethodType.UNARY,
-                request,
-                response);
+            invokeParam.getMethod(),
+            MethodDescriptor.MethodType.UNARY,
+            request,
+            response);
 
         ClientCalls.asyncUnaryCall(ch.newCall(methodDescriptor, callOpts), request, new StreamObserver<DynamicMessage>() {
 
             @Override
             public void onNext(final DynamicMessage value) {
-                ByteBuffer respData = MessageHelper.getDataFromDynamicMessage(value);
+                byte[] respData = MessageHelper.getDataFromDynamicMessage(value);
                 ThreadExecutor.execute(() -> {
-                    callback.complete(getSerializer().deserialize(respData.array()));
+                    callback.complete(respData);
                 });
             }
 

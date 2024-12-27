@@ -16,14 +16,6 @@
  */
 package com.ofcoder.klein.rpc.grpc;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DescriptorProtos;
@@ -32,6 +24,11 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.ofcoder.klein.rpc.facade.exception.RpcException;
 import io.grpc.MethodDescriptor;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Message Helper.
@@ -52,9 +49,9 @@ public class MessageHelper {
         DescriptorProtos.DescriptorProto.Builder jsonMarshaller = DescriptorProtos.DescriptorProto.newBuilder();
         jsonMarshaller.setName(GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME);
         jsonMarshaller.addFieldBuilder()
-                .setName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME)
-                .setNumber(1)
-                .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_BYTES);
+            .setName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME)
+            .setNumber(1)
+            .setType(DescriptorProtos.FieldDescriptorProto.Type.TYPE_BYTES);
 
         // build File Descriptor Proto
         DescriptorProtos.FileDescriptorProto.Builder fileDescriptorProtoBuilder = DescriptorProtos.FileDescriptorProto.newBuilder();
@@ -63,7 +60,7 @@ public class MessageHelper {
         DescriptorProtos.FileDescriptorProto fileDescriptorProto = fileDescriptorProtoBuilder.build();
         try {
             Descriptors.FileDescriptor fileDescriptor = Descriptors.FileDescriptor
-                    .buildFrom(fileDescriptorProto, new Descriptors.FileDescriptor[0]);
+                .buildFrom(fileDescriptorProto, new Descriptors.FileDescriptor[0]);
             return fileDescriptor.findMessageTypeByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME);
         } catch (Descriptors.DescriptorValidationException e) {
             LOG.error("dynamic build JsonMarshaller descriptor is fail: {}", e.getMessage());
@@ -77,10 +74,10 @@ public class MessageHelper {
      * @param request request data
      * @return DynamicMessage
      */
-    public static DynamicMessage buildMessage(final ByteBuffer request) {
+    public static DynamicMessage buildMessage(final byte[] request) {
         Descriptors.Descriptor jsonDescriptor = buildMarshallerDescriptor();
         DynamicMessage.Builder jsonDynamicMessage = DynamicMessage.newBuilder(jsonDescriptor);
-        jsonDynamicMessage.setField(jsonDescriptor.findFieldByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME), request.array());
+        jsonDynamicMessage.setField(jsonDescriptor.findFieldByName(GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME), request);
         return jsonDynamicMessage.build();
     }
 
@@ -101,7 +98,7 @@ public class MessageHelper {
      * @param message message
      * @return data
      */
-    public static ByteBuffer getDataFromDynamicMessage(final DynamicMessage message) {
+    public static byte[] getDataFromDynamicMessage(final DynamicMessage message) {
         for (Map.Entry<Descriptors.FieldDescriptor, Object> entry : message.getAllFields().entrySet()) {
             Descriptors.FieldDescriptor key = entry.getKey();
             Object value = entry.getValue();
@@ -109,10 +106,10 @@ public class MessageHelper {
             String fullName = key.getFullName();
             String jsonMessageFullName = GrpcConstants.JSON_DESCRIPTOR_PROTO_NAME + "." + GrpcConstants.JSON_DESCRIPTOR_PROTO_FIELD_NAME;
             if (jsonMessageFullName.equals(fullName)) {
-                return ByteBuffer.wrap(((ByteString) value).toByteArray());
+                return ((ByteString) value).toByteArray();
             }
         }
-        return ByteBuffer.wrap(new byte[0]);
+        return new byte[0];
     }
 
     /**
@@ -133,11 +130,11 @@ public class MessageHelper {
         MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor = METHOD_DESCRIPTOR_CACHE.get(serviceName + methodName);
         if (methodDescriptor == null) {
             methodDescriptor = MethodDescriptor.<DynamicMessage, DynamicMessage>newBuilder()
-                    .setType(methodType)
-                    .setFullMethodName(MethodDescriptor.generateFullMethodName(serviceName, methodName))
-                    .setRequestMarshaller(new DynamicMessageMarshaller(request.getDescriptorForType()))
-                    .setResponseMarshaller(new DynamicMessageMarshaller(response.getDescriptorForType()))
-                    .build();
+                .setType(methodType)
+                .setFullMethodName(MethodDescriptor.generateFullMethodName(serviceName, methodName))
+                .setRequestMarshaller(new DynamicMessageMarshaller(request.getDescriptorForType()))
+                .setResponseMarshaller(new DynamicMessageMarshaller(response.getDescriptorForType()))
+                .build();
             METHOD_DESCRIPTOR_CACHE.put(serviceName + methodName, methodDescriptor);
 
         }
@@ -156,8 +153,8 @@ public class MessageHelper {
         public DynamicMessage parse(final InputStream inputStream) {
             try {
                 return DynamicMessage.newBuilder(messageDescriptor)
-                        .mergeFrom(inputStream, ExtensionRegistryLite.getEmptyRegistry())
-                        .build();
+                    .mergeFrom(inputStream, ExtensionRegistryLite.getEmptyRegistry())
+                    .build();
             } catch (IOException e) {
                 throw new RuntimeException("Unable to merge from the supplied input stream", e);
             }

@@ -19,6 +19,7 @@ package com.ofcoder.klein.consensus.paxos.core;
 import com.ofcoder.klein.common.util.ThreadExecutor;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.common.util.timer.RepeatedTimer;
+import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
 import com.ofcoder.klein.consensus.facade.NoopCommand;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.quorum.Quorum;
@@ -38,7 +39,6 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.PreElectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
-import com.ofcoder.klein.rpc.facade.InvokeCallback;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
@@ -73,12 +73,12 @@ public class MasterImpl implements Master {
     private RpcClient client;
     private ConsensusProp prop;
     private final AtomicBoolean electing = new AtomicBoolean(false);
-    private final Serializer proposalValueSerializer;
+    private final Serializer serializer;
 
     public MasterImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
-        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -171,13 +171,13 @@ public class MasterImpl implements Master {
     @Override
     public void searchMaster() {
         PreElectReq req = PreElectReq.Builder.aPreElectReq()
-                .memberConfigurationVersion(memberConfig.getVersion())
-                .nodeId(self.getSelf().getId())
-                .proposalNo(self.getCurProposalNo())
-                .build();
+            .memberConfigurationVersion(memberConfig.getVersion())
+            .nodeId(self.getSelf().getId())
+            .proposalNo(self.getCurProposalNo())
+            .build();
         for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
             try {
-                PreElectRes res = client.sendRequestSync(it, req);
+                PreElectRes res = (PreElectRes) serializer.deserialize(client.sendRequestSync(it, serializer.serialize(req)));
                 LOG.debug("looking for master, node-{}: {}", it.getId(), res);
                 if (res != null && res.getMaster() != null) {
 //                restartWaitHb();
@@ -209,7 +209,7 @@ public class MasterImpl implements Master {
             req.setNodeId(self.getSelf().getId());
 
             CountDownLatch latch = new CountDownLatch(1);
-            Proposal proposal = new Proposal(MasterSM.GROUP, proposalValueSerializer.serialize(req), true);
+            Proposal proposal = new Proposal(MasterSM.GROUP, serializer.serialize(req), true);
 
             RuntimeAccessor.getProposer().propose(proposal, (result, changed) -> {
                 if (result && !changed) {
@@ -235,10 +235,10 @@ public class MasterImpl implements Master {
 
         PaxosMemberConfiguration memberConfiguration = memberConfig.createRef();
         NewMasterReq req = NewMasterReq.Builder.aNewMasterReq()
-                .nodeId(self.getSelf().getId())
-                .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion())
-                .build();
+            .nodeId(self.getSelf().getId())
+            .proposalNo(self.getCurProposalNo())
+            .memberConfigurationVersion(memberConfiguration.getVersion())
+            .build();
         Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
         AtomicBoolean next = new AtomicBoolean(false);
 
@@ -248,20 +248,20 @@ public class MasterImpl implements Master {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
-                client.sendRequestAsync(it, req, new InvokeCallback<NewMasterRes>() {
-                    @Override
-                    public void error(final Throwable err) {
-                        quorum.refuse(it);
-                        if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
-                            latch.countDown();
-                        }
+            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<NewMasterRes>() {
+                @Override
+                public void error(final Throwable err) {
+                    quorum.refuse(it);
+                    if (quorum.isGranted() == Quorum.GrantResult.REFUSE && next.compareAndSet(false, true)) {
+                        latch.countDown();
                     }
+                }
 
-                    @Override
-                    public void complete(final NewMasterRes result) {
-                        handleNewMasterRes(it, result, quorum, next, latch);
-                    }
-                }));
+                @Override
+                public void complete(final NewMasterRes result) {
+                    handleNewMasterRes(it, result, quorum, next, latch);
+                }
+            }));
     }
 
     private void handleNewMasterRes(final Endpoint it, final NewMasterRes result, final Quorum quorum, final AtomicBoolean next, final CountDownLatch latch) {
@@ -302,18 +302,18 @@ public class MasterImpl implements Master {
 
         final Quorum quorum = QuorumFactory.createWriteQuorum(memberConfiguration);
         final Ping req = Ping.Builder.aPing()
+            .nodeId(self.getSelf().getId())
+            .proposalNo(self.getCurProposalNo())
+            .memberConfigurationVersion(memberConfiguration.getVersion())
+            .nodeState(NodeState.Builder.aNodeState()
                 .nodeId(self.getSelf().getId())
-                .proposalNo(self.getCurProposalNo())
-                .memberConfigurationVersion(memberConfiguration.getVersion())
-                .nodeState(NodeState.Builder.aNodeState()
-                        .nodeId(self.getSelf().getId())
-                        .maxInstanceId(curInstanceId)
-                        .lastCheckpoint(lastCheckpoint)
-                        .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
-                        .build())
-                .timestampMs(TrueTime.currentTimeMillis())
-                .probe(probe)
-                .build();
+                .maxInstanceId(curInstanceId)
+                .lastCheckpoint(lastCheckpoint)
+                .lastAppliedInstanceId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
+                .build())
+            .timestampMs(TrueTime.currentTimeMillis())
+            .probe(probe)
+            .build();
 
         final CompletableFuture<SingleQuorum.GrantResult> complete = new CompletableFuture<>();
         // for self
@@ -326,7 +326,7 @@ public class MasterImpl implements Master {
 
         // for other members
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, req, new InvokeCallback<Pong>() {
+            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());
@@ -379,7 +379,7 @@ public class MasterImpl implements Master {
             return true;
         } else {
             LOG.debug("receive heartbeat from node-{}, result: false. local.master: {}, req.version: {}", request.getNodeId(),
-                    memberConfig, request.getMemberConfigurationVersion());
+                memberConfig, request.getMemberConfigurationVersion());
             return false;
         }
     }
@@ -392,18 +392,18 @@ public class MasterImpl implements Master {
                 restartWaitHb();
             }
             return NewMasterRes.Builder.aNewMasterRes()
-                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
-                    .curInstanceId(self.getCurInstanceId())
-                    .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
-                    .granted(true)
-                    .build();
+                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                .curInstanceId(self.getCurInstanceId())
+                .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
+                .granted(true)
+                .build();
         } else {
             return NewMasterRes.Builder.aNewMasterRes()
-                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
-                    .curInstanceId(self.getCurInstanceId())
-                    .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
-                    .granted(false)
-                    .build();
+                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                .curInstanceId(self.getCurInstanceId())
+                .lastAppliedId(RuntimeAccessor.getLearner().getLastAppliedInstanceId())
+                .granted(false)
+                .build();
         }
     }
 

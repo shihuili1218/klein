@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -23,7 +24,7 @@ import com.ofcoder.klein.consensus.paxos.ProposeProxy;
 import com.ofcoder.klein.consensus.paxos.UniversalProposeProxy;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author 释慧利
  */
-public class RedirectProcessor implements RpcProcessor<RedirectReq, RedirectRes> {
+public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
     private static final Logger LOG = LoggerFactory.getLogger(RedirectProcessor.class);
 
     private ConsensusProp prop;
@@ -50,18 +51,22 @@ public class RedirectProcessor implements RpcProcessor<RedirectReq, RedirectRes>
     }
 
     @Override
-    public RedirectRes handleRequest(final RedirectReq request) {
+    public void handleRequest(final RedirectReq request, final RpcContext context) {
         LOG.info("receive redirect msg, redirect: {}", RedirectReq.fmtRedirect(request.getRedirect()));
         switch (request.getRedirect()) {
             case RedirectReq.TRANSACTION_REQUEST:
                 Result<Serializable> proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
                 LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
-                return RedirectRes.Builder
+                RedirectRes res = RedirectRes.Builder
                     .aRedirectResp()
                     .proposeResult(proposeResult)
                     .build();
+
+                response(res, context);
+                break;
             default:
-                return null;
+                break;
         }
     }
+
 }

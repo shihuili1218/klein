@@ -21,7 +21,7 @@ package com.ofcoder.klein.rpc.facade;
  *
  * @author 释慧利
  */
-public interface InvokeCallback<T> {
+public interface InvokeCallback {
     /**
      * occur error.
      *
@@ -34,5 +34,5 @@ public interface InvokeCallback<T> {
      *
      * @param result response
      */
-    void complete(T result);
+    void complete(byte[] result);
 }

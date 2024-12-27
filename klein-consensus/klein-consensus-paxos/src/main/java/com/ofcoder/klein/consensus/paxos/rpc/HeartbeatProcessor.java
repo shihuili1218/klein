@@ -16,18 +16,19 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Ping;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Pong;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * Heartbeat Processor.
  *
  * @author 释慧利
  */
-public class HeartbeatProcessor implements RpcProcessor<Ping, Pong> {
+public class HeartbeatProcessor extends AbstractRpcProcessor<Ping> {
     private PaxosNode self;
 
     public HeartbeatProcessor(final PaxosNode self) {
@@ -35,11 +36,10 @@ public class HeartbeatProcessor implements RpcProcessor<Ping, Pong> {
     }
 
     @Override
-    public Pong handleRequest(final Ping request) {
+    public void handleRequest(final Ping request, final RpcContext context) {
         if (RuntimeAccessor.getMaster().onReceiveHeartbeat(request, false)) {
-            return new Pong();
+            response(new Pong(), context);
         }
-        return null;
     }
 
     @Override

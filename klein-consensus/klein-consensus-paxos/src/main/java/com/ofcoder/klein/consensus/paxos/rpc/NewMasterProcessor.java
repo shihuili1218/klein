@@ -16,26 +16,28 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
+import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.NewMasterRes;
-import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.RpcContext;
 
 /**
  * NewMaster Request Processor.
  *
  * @author 释慧利
  */
-public class NewMasterProcessor implements RpcProcessor<NewMasterReq, NewMasterRes> {
+public class NewMasterProcessor extends AbstractRpcProcessor<NewMasterReq> {
 
     public NewMasterProcessor(final PaxosNode self) {
         // do nothing.
     }
 
     @Override
-    public NewMasterRes handleRequest(final NewMasterReq request) {
-        return RuntimeAccessor.getMaster().onReceiveNewMaster(request, false);
+    public void handleRequest(final NewMasterReq request, final RpcContext context) {
+        NewMasterRes newMasterRes = RuntimeAccessor.getMaster().onReceiveNewMaster(request, false);
+        response(newMasterRes, context);
     }
 
     @Override
