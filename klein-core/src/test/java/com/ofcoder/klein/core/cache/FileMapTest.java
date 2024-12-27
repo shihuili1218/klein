@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.io.IOUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -33,7 +32,7 @@ import org.mapdb.DataOutput2;
 import org.mapdb.Serializer;
 
 import com.google.common.collect.Maps;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import junit.framework.TestCase;
 
 /**

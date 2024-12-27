@@ -16,14 +16,9 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-
+import com.ofcoder.klein.spi.SPI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.spi.SPI;
 
 /**
  * grpc client for send request.
@@ -75,7 +70,7 @@ public interface RpcClient {
      * @param request  invoke data and service info
      * @param callback invoke callback
      */
-    default void sendRequestAsync(Endpoint target, Serializable request, InvokeCallback callback) {
+    default void sendRequestAsync(Endpoint target, byte[] request, InvokeCallback callback) {
         sendRequestAsync(target, request, callback, requestTimeout());
     }
 
@@ -87,11 +82,11 @@ public interface RpcClient {
      * @param callback  invoke callback
      * @param timeoutMs invoke timeout
      */
-    default void sendRequestAsync(Endpoint target, Serializable request, InvokeCallback callback, long timeoutMs) {
+    default void sendRequestAsync(Endpoint target, byte[] request, InvokeCallback callback, long timeoutMs) {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(request.getClass().getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
+            .service(request.getClass().getSimpleName())
+            .method(RpcProcessor.KLEIN)
+            .data(request).build();
         sendRequestAsync(target, param, callback, timeoutMs);
     }
 
@@ -111,10 +106,9 @@ public interface RpcClient {
      * @param target    target
      * @param request   invoke data and service info
      * @param timeoutMs invoke timeout
-     * @param <R>       result type
      * @return invoke result
      */
-    <R> R sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs);
+    byte[] sendRequestSync(Endpoint target, InvokeParam request, long timeoutMs);
 
     /**
      * send request for sync.
@@ -122,14 +116,13 @@ public interface RpcClient {
      * @param target    target
      * @param request   invoke data and service info
      * @param timeoutMs invoke timeout
-     * @param <R>       result type
      * @return invoke result
      */
-    default <R> R sendRequestSync(Endpoint target, Serializable request, long timeoutMs) {
+    default byte[] sendRequestSync(Endpoint target, byte[] request, long timeoutMs) {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
-                .service(request.getClass().getSimpleName())
-                .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(request))).build();
+            .service(request.getClass().getSimpleName())
+            .method(RpcProcessor.KLEIN)
+            .data(request).build();
         return sendRequestSync(target, param, timeoutMs);
     }
 
@@ -138,10 +131,9 @@ public interface RpcClient {
      *
      * @param target  target
      * @param request invoke data and service info
-     * @param <R>     result type
      * @return invoke result
      */
-    default <R> R sendRequestSync(Endpoint target, Serializable request) {
+    default byte[] sendRequestSync(Endpoint target, byte[] request) {
         return sendRequestSync(target, request, requestTimeout());
     }
 

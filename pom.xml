@@ -22,6 +22,7 @@
         <module>klein-common</module>
         <module>klein-example</module>
         <module>klein-jepsen</module>
+        <module>klein-serializer</module>
     </modules>
 
     <licenses>
@@ -97,6 +98,16 @@
             <dependency>
                 <groupId>com.ofcoder.klein.storage.api</groupId>
                 <artifactId>klein-storage-facade</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ofcoder.klein.serializer.facade</groupId>
+                <artifactId>klein-serializer-facade</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+                <artifactId>klein-serializer-hessian2</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

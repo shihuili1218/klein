@@ -16,9 +16,10 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.util.Objects;
-
 import com.ofcoder.klein.consensus.facade.Command;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Proposal.
@@ -27,14 +28,24 @@ import com.ofcoder.klein.consensus.facade.Command;
  */
 public class Proposal implements Command {
     private String group;
-    private Object data;
+    private byte[] data;
+    private Boolean ifSystemOp;
 
     public Proposal() {
     }
 
-    public Proposal(final String group, final Object data) {
+    public Proposal(final String group, final byte[] data, final Boolean ifSystemOp) {
         this.group = group;
         this.data = data;
+        this.ifSystemOp = ifSystemOp;
+    }
+
+    public boolean getIfSystemOp() {
+        return ifSystemOp;
+    }
+
+    public void setIfSystemOp(final Boolean ifSystemOp) {
+        this.ifSystemOp = ifSystemOp;
     }
 
     @Override
@@ -47,12 +58,12 @@ public class Proposal implements Command {
     }
 
     @Override
-    public Object getData() {
-        return data;
+    public byte[] getData() {
+        return data.clone();
     }
 
-    public void setData(final Object data) {
-        this.data = data;
+    public void setData(final byte[] data) {
+        this.data = data.clone();
     }
 
     @Override
@@ -64,20 +75,22 @@ public class Proposal implements Command {
             return false;
         }
         Proposal proposal = (Proposal) o;
-        return Objects.equals(getGroup(), proposal.getGroup()) && Objects.equals(getData(), proposal.getData());
+        return Objects.equals(group, proposal.group)
+            && Arrays.equals(data, proposal.data)
+            && Objects.equals(ifSystemOp, proposal.ifSystemOp);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getGroup(), getData());
+        return Objects.hash(group, Arrays.hashCode(data), ifSystemOp);
     }
 
     @Override
     public String toString() {
         return "Proposal{"
-                + "group='" + group + '\''
-                + ", data=" + data
-                + '}';
+            + "group='" + group + '\''
+            + ", data=" + Optional.ofNullable(data).map(value -> value.length).orElse(0)
+            + ", ifSystemOp=" + ifSystemOp
+            + '}';
     }
-
 }

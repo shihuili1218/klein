@@ -30,19 +30,19 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.function.Predicate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DataAligner {
     private static final Logger LOG = LoggerFactory.getLogger(DataAligner.class);
@@ -53,12 +53,13 @@ public class DataAligner {
     private RpcClient client;
     private final BlockingQueue<Task> learnQueue;
     private boolean shutdown = false;
+    private Serializer serializer;
 
     public DataAligner(final PaxosNode self) {
         this.self = self;
         this.learnQueue = new PriorityBlockingQueue<>(1024, Comparator.comparingLong(value -> value.priority));
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
-
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         ExecutorService alignerExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create("data-aligner", true));
         alignerExecutor.execute(() -> {
             while (!shutdown) {
@@ -122,7 +123,7 @@ public class DataAligner {
 
         LOG.info("start learn instanceId[{}] from node-{}", instanceId, target.getId());
         LearnReq req = LearnReq.Builder.aLearnReq().instanceId(instanceId).nodeId(self.getSelf().getId()).build();
-        client.sendRequestAsync(target, req, new AbstractInvokeCallback<LearnRes>() {
+        client.sendRequestAsync(target, serializer.serialize(req), new AbstractInvokeCallback<LearnRes>() {
             @Override
             public void error(final Throwable err) {
                 LOG.error("learned instance[{}] from node-{}, {}", instanceId, target.getId(), err.getMessage());
@@ -138,11 +139,11 @@ public class DataAligner {
                 } else if (result.isResult() == Sync.SINGLE) {
                     LOG.info("learned instance[{}] from node-{}, sync.type: SINGLE", instanceId, target.getId());
                     Instance<Proposal> update = Instance.Builder.<Proposal>anInstance()
-                            .instanceId(instanceId)
-                            .proposalNo(result.getInstance().getProposalNo())
-                            .grantedValue(result.getInstance().getGrantedValue())
-                            .state(result.getInstance().getState())
-                            .build();
+                        .instanceId(instanceId)
+                        .proposalNo(result.getInstance().getProposalNo())
+                        .grantedValue(result.getInstance().getGrantedValue())
+                        .state(result.getInstance().getState())
+                        .build();
 
                     try {
                         logManager.getLock(instanceId).writeLock().lock();
@@ -168,12 +169,12 @@ public class DataAligner {
         long checkpoint = -1;
         try {
             SnapSyncReq req = SnapSyncReq.Builder.aSnapSyncReq()
-                    .nodeId(self.getSelf().getId())
-                    .proposalNo(self.getCurProposalNo())
-                    .memberConfigurationVersion(memberConfig.getVersion())
-                    .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
-                    .build();
-            SnapSyncRes res = client.sendRequestSync(target, req, 1000);
+                .nodeId(self.getSelf().getId())
+                .proposalNo(self.getCurProposalNo())
+                .memberConfigurationVersion(memberConfig.getVersion())
+                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+                .build();
+            SnapSyncRes res = (SnapSyncRes) serializer.deserialize(client.sendRequestSync(target, serializer.serialize(req), 1000));
 
             RuntimeAccessor.getLearner().loadSnapSync(res.getImages());
             checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();

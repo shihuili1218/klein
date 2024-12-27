@@ -16,13 +16,7 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.Lists;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.facade.Cluster;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
@@ -30,6 +24,8 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Elastic Processor.
@@ -74,8 +70,8 @@ public class ElasticProcessor extends AbstractRpcProcessor<ElasticReq> {
 
         ElasticRes res = new ElasticRes();
         res.setResult(true);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
 
+        response(res, context);
     }
 
 }

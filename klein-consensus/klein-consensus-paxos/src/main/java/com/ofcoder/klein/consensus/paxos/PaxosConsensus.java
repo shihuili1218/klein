@@ -44,15 +44,16 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Serializable;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Paxos Consensus.
@@ -66,15 +67,21 @@ public class PaxosConsensus implements Consensus {
     private final ConsensusProp prop;
     private final RpcClient client;
     private final ProposeProxy proposeProxy;
+    private final Serializer proposalValueSerializer;
 
     public PaxosConsensus(final ConsensusProp prop) {
         this.prop = prop;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         ExtensionLoader.getExtensionLoader(Nwr.class).register(this.prop.getNwr());
 
         // reload self information from storage.
         LogManager<Proposal> logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        this.self = (PaxosNode) logManager.loadMetaData(PaxosNode.Builder.aPaxosNode()
+
+        this.self = Optional.ofNullable(logManager.loadMetaData())
+            .map(proposalValueSerializer::deserialize)
+            .map(logMetaData -> (PaxosNode) logManager)
+            .orElseGet(() -> PaxosNode.Builder.aPaxosNode()
                 .curInstanceId(0)
                 .curProposalNo(0)
                 .lastCheckpoint(0)
@@ -123,9 +130,32 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        Proposal proposal = new Proposal(group, data);
-        return proposeProxy.propose(proposal, apply);
+    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final byte[] data, final boolean apply) {
+        return propose(group, data, apply, false);
+    }
+
+    /**
+     * propose proposal.
+     *
+     * @param group      group name
+     * @param data       Client data, type is Serializable
+     *                   e.g. The input value of the state machine
+     * @param apply      Whether you need to wait until the state machine is applied
+     *                   If true, wait until the state machine is applied before returning
+     * @param <D>        result type
+     * @param isSystemOp is SystemOp
+     * @return whether success
+     */
+    public <D extends Serializable> Result<D> propose(final String group, final byte[] data, final boolean apply, final boolean isSystemOp) {
+        try {
+            Proposal proposal = new Proposal(group, data, isSystemOp);
+            return proposeProxy.propose(proposal, apply);
+        } catch (Exception e) {
+            LOG.error("Failed to serialize proposal data", e);
+            Result.Builder<D> builder = Result.Builder.aResult();
+            builder.state(Result.State.FAILURE);
+            return builder.build();
+        }
     }
 
     @Override
@@ -155,7 +185,8 @@ public class PaxosConsensus implements Consensus {
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                byte[] response = this.client.sendRequestSync(endpoint, proposalValueSerializer.serialize(req), this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+                ElasticRes res = (ElasticRes) proposalValueSerializer.deserialize(response);
                 if (res.isResult()) {
                     return;
                 }
@@ -173,7 +204,7 @@ public class PaxosConsensus implements Consensus {
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                ElasticRes res = (ElasticRes) proposalValueSerializer.deserialize(client.sendRequestSync(endpoint, proposalValueSerializer.serialize(req)));
                 if (res.isResult()) {
                     return;
                 }
@@ -220,7 +251,7 @@ public class PaxosConsensus implements Consensus {
         firstPhase.setNewConfig(newConfig);
         firstPhase.setPhase(ChangeMemberOp.FIRST_PHASE);
 
-        Result<Serializable> first = propose(MemberManagerSM.GROUP, firstPhase, false);
+        Result<Serializable> first = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(firstPhase), false, true);
         LOG.info("change member first phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
 
         if (first.getState() == Result.State.SUCCESS) {
@@ -229,9 +260,15 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setNewConfig(newConfig);
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
-            Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
-            LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
-            return second.getState() == Result.State.SUCCESS;
+            try {
+                Result<Serializable> second = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(secondPhase), false, true);
+                LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+                return second.getState() == Result.State.SUCCESS;
+            } catch (Exception e) {
+                LOG.error("Failed to serialize second phase data. Phase: {}, NodeId: {}, NewConfig: {}",
+                    secondPhase.getPhase(), secondPhase.getNodeId(), secondPhase.getNewConfig(), e);
+                return false;
+            }
         } else {
             return false;
         }

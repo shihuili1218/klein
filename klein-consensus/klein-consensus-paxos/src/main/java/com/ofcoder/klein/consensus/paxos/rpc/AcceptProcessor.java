@@ -16,12 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
@@ -29,6 +23,8 @@ import com.ofcoder.klein.consensus.paxos.core.sm.MemberRegistry;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.AcceptRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Accept Processor.
@@ -52,12 +48,12 @@ public class AcceptProcessor extends AbstractRpcProcessor<AcceptReq> {
 
         if (!MemberRegistry.getInstance().getMemberConfiguration().isValid(request.getNodeId())) {
             LOG.error("msg type: accept, from nodeId[{}] not in my membership(or i'm null membership), skip this message. ",
-                    request.getNodeId());
+                request.getNodeId());
             return;
         }
         AcceptRes res = RuntimeAccessor.getAcceptor().handleAcceptRequest(request, false);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
 
+        response(res, context);
     }
 
 }

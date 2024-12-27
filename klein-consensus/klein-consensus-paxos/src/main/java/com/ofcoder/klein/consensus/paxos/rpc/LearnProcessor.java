@@ -16,18 +16,14 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.LearnRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Learn Request Processor.
@@ -49,7 +45,7 @@ public class LearnProcessor extends AbstractRpcProcessor<LearnReq> {
     @Override
     public void handleRequest(final LearnReq request, final RpcContext context) {
         LearnRes res = RuntimeAccessor.getLearner().handleLearnRequest(request);
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(res)));
+        response(res, context);
     }
 
 }

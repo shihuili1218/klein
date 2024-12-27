@@ -16,12 +16,9 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-
-import java.nio.ByteBuffer;
 
 /**
  * cache invalidate request processor.
@@ -37,9 +34,9 @@ public class InvalidateProcessor extends AbstractRpcProcessor<InvalidateReq> {
     }
 
     @Override
-    public void handleRequest(final InvalidateReq request, final RpcContext context) {
+    public void handleRequest(final InvalidateReq request, final RpcContext rpcContext) {
         cache.invalidate(request.getKey());
-        context.response(ByteBuffer.wrap(Hessian2Util.serialize(true)));
+        response(true, rpcContext);
     }
 
     @Override

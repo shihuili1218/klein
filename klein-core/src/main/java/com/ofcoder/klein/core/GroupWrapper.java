@@ -16,11 +16,11 @@
  */
 package com.ofcoder.klein.core;
 
-import java.io.Serializable;
-
 import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import java.io.Serializable;
 
 /**
  * Wrapper group and sm.
@@ -61,7 +61,7 @@ public class GroupWrapper {
      * @return whether success
      */
     public <E extends Serializable, D extends Serializable> Result<D> propose(final E data, final boolean apply) {
-        return this.consensus.propose(group, data, apply);
+        return this.consensus.propose(group, Hessian2Util.serialize(data), apply);
     }
 
     /**

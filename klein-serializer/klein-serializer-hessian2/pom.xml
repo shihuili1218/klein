@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ofcoder.klein.serializer</groupId>
+        <artifactId>klein-serializer</artifactId>
+        <version>0.0.8</version>
+    </parent>
+
+    <artifactId>klein-serializer-hessian2</artifactId>
+    <groupId>com.ofcoder.klein.serializer.hessian2</groupId>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.caucho</groupId>
+            <artifactId>hessian</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.ofcoder.klein.serializer.facade</groupId>
+            <artifactId>klein-serializer-facade</artifactId>
+        </dependency>
+    </dependencies>
+</project>

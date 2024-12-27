@@ -14,30 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ofcoder.klein.storage.file;
-
-import com.ofcoder.klein.storage.facade.LogManager;
+package com.ofcoder.klein.consensus.facade;
 
 /**
- * @author 释慧利
+ * noop command.
+ * A no-operation command implementation that represents a null operation in the consensus system.
+ * This command is typically used as a placeholder in the consensus protocol when there are no actual
+ * commands to process, helping maintain the consensus mechanism's continuity.
  */
-public class MetaDataDTO implements LogManager.MetaData {
-    private int id;
-    private String name;
+public enum NoopCommand implements Command {
+    NOOP;
 
-    public int getId() {
-        return id;
+    @Override
+    public String getGroup() {
+        return "NOOP";
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    @Override
+    public byte[] getData() {
+        return new byte[0];
     }
 }

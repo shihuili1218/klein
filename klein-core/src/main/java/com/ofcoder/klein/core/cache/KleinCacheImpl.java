@@ -17,6 +17,7 @@
 package com.ofcoder.klein.core.cache;
 
 import com.ofcoder.klein.common.exception.KleinException;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
@@ -80,7 +81,7 @@ public class KleinCacheImpl implements KleinCache {
         if (ttl > 0) {
             message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
         }
-        Result result = consensus.propose(message, apply);
+        Result result = consensus.propose(Hessian2Util.serialize(message), apply);
         return result.getState();
     }
 

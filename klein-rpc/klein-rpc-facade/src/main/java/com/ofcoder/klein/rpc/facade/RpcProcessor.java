@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.nio.ByteBuffer;
-
 /**
  * message processor.
  *
@@ -49,6 +47,6 @@ public interface RpcProcessor {
      * @param request request param
      * @param context rpc context
      */
-    void handleRequest(ByteBuffer request, RpcContext context);
+    void handleRequest(byte[] request, RpcContext context);
 
 }

@@ -16,11 +16,10 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.nio.ByteBuffer;
-
 import com.ofcoder.klein.rpc.facade.RpcContext;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
  * rpc processor.
@@ -28,6 +27,11 @@ import com.ofcoder.klein.common.serialization.Hessian2Util;
  * @author 释慧利
  */
 public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
+    private Serializer serializer;
+
+    public AbstractRpcProcessor() {
+        serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
+    }
 
     /**
      * handle request.
@@ -38,8 +42,13 @@ public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
     public abstract void handleRequest(R request, RpcContext context);
 
     @Override
-    public void handleRequest(final ByteBuffer request, final RpcContext context) {
-        R deserialize = Hessian2Util.deserialize(request.array());
+    public void handleRequest(final byte[] request, final RpcContext context) {
+        R deserialize = (R) serializer.deserialize(request);
         handleRequest(deserialize, context);
+    }
+
+    protected void response(final Object msg, final RpcContext context) {
+        byte[] serialize = serializer.serialize(msg);
+        context.response(serialize);
     }
 }

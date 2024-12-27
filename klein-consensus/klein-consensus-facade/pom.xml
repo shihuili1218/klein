@@ -28,6 +28,10 @@
             <groupId>com.ofcoder.klein.storage.api</groupId>
             <artifactId>klein-storage-facade</artifactId>
         </dependency>
+        <dependency>
+            <artifactId>klein-serializer-facade</artifactId>
+            <groupId>com.ofcoder.klein.serializer.facade</groupId>
+        </dependency>
     </dependencies>
 
 </project>

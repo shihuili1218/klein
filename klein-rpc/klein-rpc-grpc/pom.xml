@@ -39,8 +39,10 @@
                 <version>${protobuf.plugin.version}</version>
                 <configuration>
                     <pluginId>klein-rpc</pluginId>
-                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${io.grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+                    <protocArtifact>com.google.protobuf:protoc:${protobuf.version}:exe:${os.detected.classifier}
+                    </protocArtifact>
+                    <pluginArtifact>io.grpc:protoc-gen-grpc-java:${io.grpc.version}:exe:${os.detected.classifier}
+                    </pluginArtifact>
                     <protoSourceRoot>${project.basedir}/src/main/resources</protoSourceRoot>
                     <outputDirectory>${project.basedir}/src/main/java</outputDirectory>
                     <clearOutputDirectory>false</clearOutputDirectory>
@@ -64,7 +66,6 @@
             <groupId>com.ofcoder.klein.rpc.facade</groupId>
             <artifactId>klein-rpc-facade</artifactId>
         </dependency>
-
 
         <dependency>
             <groupId>com.google.protobuf</groupId>

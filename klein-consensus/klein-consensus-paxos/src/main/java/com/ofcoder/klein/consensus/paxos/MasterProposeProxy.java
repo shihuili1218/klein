@@ -21,17 +21,16 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
+import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
+import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
-
-import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
 /**
  * Forward the Proposal request to the Master.
@@ -44,12 +43,14 @@ public class MasterProposeProxy implements ProposeProxy {
     private final PaxosNode self;
     private final ConsensusProp prop;
     private final ProposeProxy directProxy;
+    private final Serializer proposalValueSerializer;
 
     public MasterProposeProxy(final ConsensusProp op, final PaxosNode self) {
         this.self = self;
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.directProxy = new UniversalProposeProxy(op);
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -69,14 +70,14 @@ public class MasterProposeProxy implements ProposeProxy {
         }
 
         RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                .nodeId(this.self.getSelf().getId())
-                .redirect(TRANSACTION_REQUEST)
-                .proposal(data)
-                .apply(apply)
-                .build();
+            .nodeId(this.self.getSelf().getId())
+            .redirect(TRANSACTION_REQUEST)
+            .proposal(data)
+            .apply(apply)
+            .build();
         try {
-            RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
-            return (Result<D>) res.getProposeResult();
+            byte[] response = this.client.sendRequestSync(master, proposalValueSerializer.serialize(req), this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+            return (Result<D>) ((RedirectRes) proposalValueSerializer.deserialize(response)).getProposeResult();
         } catch (Exception e) {
             if (e instanceof ConnectionException) {
                 return builder.state(Result.State.FAILURE).build();
