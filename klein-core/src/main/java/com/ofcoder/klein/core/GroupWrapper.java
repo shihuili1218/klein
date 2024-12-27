@@ -20,7 +20,6 @@ import com.ofcoder.klein.consensus.facade.Consensus;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.spi.ExtensionLoader;
-import java.io.Serializable;
 
 /**
  * Wrapper group and sm.
@@ -41,11 +40,9 @@ public class GroupWrapper {
      *
      * @param data Client data, type is Serializable
      *             e.g. The input value of the state machine
-     * @param <D>  result type
-     * @param <E>  request type
      * @return whether success
      */
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final E data) {
+    public Result propose(final byte[] data) {
         return propose(data, false);
     }
 
@@ -56,11 +53,9 @@ public class GroupWrapper {
      *              e.g. The input value of the state machine
      * @param apply Whether you need to wait until the state machine is applied
      *              If true, wait until the state machine is applied before returning
-     * @param <D>   result type
-     * @param <E>   request type
      * @return whether success
      */
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final E data, final boolean apply) {
+    public Result propose(final byte[] data, final boolean apply) {
         return this.consensus.propose(group, Hessian2Util.serialize(data), apply);
     }
 
@@ -69,11 +64,9 @@ public class GroupWrapper {
      *
      * @param data Client data, type is Serializable
      *             e.g. The input value of the state machine
-     * @param <D>  result type
-     * @param <E>  request type
      * @return whether success
      */
-    public <E extends Serializable, D extends Serializable> Result<D> read(final E data) {
+    public Result read(final byte[] data) {
         return propose(data, true);
     }
 }

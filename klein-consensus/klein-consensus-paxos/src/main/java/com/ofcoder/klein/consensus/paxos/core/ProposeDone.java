@@ -43,7 +43,7 @@ public interface ProposeDone {
      *               the key is enter the value of the state machine
      *               the value is state machine output
      */
-    default void applyDone(Map<Command, Object> result) {
+    default void applyDone(Map<Command, byte[]> result) {
         // for subclass
     }
 

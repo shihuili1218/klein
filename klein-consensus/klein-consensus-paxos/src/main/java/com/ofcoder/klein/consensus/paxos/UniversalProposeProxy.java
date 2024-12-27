@@ -16,7 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -45,10 +44,9 @@ public class UniversalProposeProxy implements ProposeProxy {
     }
 
     @Override
-    public <D extends Serializable> Result<D> propose(final Proposal proposal, final boolean apply) {
-
+    public Result propose(final Proposal proposal, final boolean apply) {
         CountDownLatch completed = new CountDownLatch(1);
-        Result.Builder<D> builder = Result.Builder.aResult();
+        Result.Builder builder = Result.Builder.aResult();
         if (LOG.isDebugEnabled()) {
             LOG.debug("Direct Propose, outsider: {}, write on master: {}", prop.getSelf().isOutsider(), prop.getPaxosProp().isEnableMaster());
         }
@@ -69,12 +67,11 @@ public class UniversalProposeProxy implements ProposeProxy {
             }
 
             @Override
-            @SuppressWarnings("unchecked")
-            public void applyDone(final Map<Command, Object> result) {
+            public void applyDone(final Map<Command, byte[]> result) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Direct Propose applyDone, result: {}", result);
                 }
-                builder.data((D) result.get(proposal));
+                builder.data(result.get(proposal));
                 completed.countDown();
             }
         }, false);
@@ -91,8 +88,9 @@ public class UniversalProposeProxy implements ProposeProxy {
     }
 
     @Override
-    public Result<Long> readIndex(final String group) {
+    public Long readIndex(final String group) {
         // only for enabled master
         return null;
     }
+
 }

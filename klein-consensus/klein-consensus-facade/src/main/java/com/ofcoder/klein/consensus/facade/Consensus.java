@@ -18,7 +18,6 @@ package com.ofcoder.klein.consensus.facade;
 
 import com.ofcoder.klein.consensus.facade.sm.SM;
 import com.ofcoder.klein.spi.SPI;
-import java.io.Serializable;
 
 /**
  * Consensus.
@@ -44,11 +43,9 @@ public interface Consensus extends Cluster {
      *              e.g. The input value of the state machine
      * @param apply Whether you need to wait until the state machine is applied
      *              If true, wait until the state machine is applied before returning
-     * @param <D>   result type
-     * @param <E>   request type
      * @return whether success
      */
-    <E extends Serializable, D extends Serializable> Result<D> propose(String group, byte[] data, boolean apply);
+    Result propose(String group, byte[] data, boolean apply);
 
     /**
      * Obtain the consensus reached instanceId.
@@ -57,7 +54,7 @@ public interface Consensus extends Cluster {
      * @param group group name
      * @return instance id
      */
-    Result<Long> readIndex(String group);
+    Long readIndex(String group);
 
     /**
      * preheating.

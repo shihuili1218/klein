@@ -34,4 +34,9 @@ public enum NoopCommand implements Command {
     public byte[] getData() {
         return new byte[0];
     }
+
+    @Override
+    public boolean getIfSystemOp() {
+        return true;
+    }
 }

@@ -16,6 +16,8 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,16 +32,19 @@ public class MemberManagerSM extends AbstractSM {
     public static final String GROUP = "member_manager";
     private static final Logger LOG = LoggerFactory.getLogger(MemberManagerSM.class);
     private final PaxosMemberConfiguration memberConfig;
+    private final Serializer serializer;
 
     public MemberManagerSM() {
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
-    public Object apply(final Object data) {
+    public byte[] apply(final byte[] data) {
         LOG.debug("MemberManagerSM apply, {}", data.getClass().getSimpleName());
-        if (data instanceof ChangeMemberOp) {
-            ChangeMemberOp op = (ChangeMemberOp) data;
+        Object deserialize = serializer.deserialize(data);
+        if (deserialize instanceof ChangeMemberOp) {
+            ChangeMemberOp op = (ChangeMemberOp) deserialize;
             if (op.getPhase() == ChangeMemberOp.FIRST_PHASE) {
                 memberConfig.seenNewConfig(op.getNewConfig());
             } else if (op.getPhase() == ChangeMemberOp.SECOND_PHASE) {
@@ -53,16 +58,17 @@ public class MemberManagerSM extends AbstractSM {
     }
 
     @Override
-    public Object makeImage() {
-        return MemberRegistry.getInstance().getMemberConfiguration().createRef();
+    public byte[] makeImage() {
+        return serializer.serialize(MemberRegistry.getInstance().getMemberConfiguration().createRef());
     }
 
     @Override
-    public void loadImage(final Object snap) {
+    public void loadImage(final byte[] snap) {
         LOG.info("LOAD SNAP: {}", snap);
-        if (!(snap instanceof PaxosMemberConfiguration)) {
+        Object deserialize = serializer.deserialize(snap);
+        if (!(deserialize instanceof PaxosMemberConfiguration)) {
             return;
         }
-        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) snap);
+        MemberRegistry.getInstance().loadSnap((PaxosMemberConfiguration) deserialize);
     }
 }

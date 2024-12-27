@@ -30,4 +30,6 @@ public interface Command extends Serializable {
      * @return data
      */
     byte[] getData();
+
+    boolean getIfSystemOp();
 }

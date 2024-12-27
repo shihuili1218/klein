@@ -27,7 +27,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  * @author 释慧利
  */
 public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public AbstractRpcProcessor() {
         serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
@@ -43,7 +43,7 @@ public abstract class AbstractRpcProcessor<R> implements RpcProcessor {
 
     @Override
     public void handleRequest(final byte[] request, final RpcContext context) {
-        R deserialize = (R) serializer.deserialize(request);
+        R deserialize = serializer.deserialize(request);
         handleRequest(deserialize, context);
     }
 

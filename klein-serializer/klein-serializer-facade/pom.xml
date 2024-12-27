@@ -11,6 +11,8 @@
 
     <artifactId>klein-serializer-facade</artifactId>
     <groupId>com.ofcoder.klein.serializer.facade</groupId>
+    <version>0.0.8</version>
+    <packaging>jar</packaging>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>

@@ -40,6 +40,7 @@ public class Proposal implements Command {
         this.ifSystemOp = ifSystemOp;
     }
 
+    @Override
     public boolean getIfSystemOp() {
         return ifSystemOp;
     }

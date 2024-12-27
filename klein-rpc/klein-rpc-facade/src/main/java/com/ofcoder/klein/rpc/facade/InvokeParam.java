@@ -16,6 +16,7 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -91,12 +92,12 @@ public class InvokeParam {
             return false;
         }
         InvokeParam that = (InvokeParam) o;
-        return Objects.equals(service, that.service) && Objects.equals(method, that.method) && Objects.equals(data, that.data);
+        return Objects.equals(service, that.service) && Objects.equals(method, that.method) && Arrays.equals(data, that.data);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(service, method, data);
+        return Objects.hash(service, method, Arrays.hashCode(data));
     }
 
     @Override
@@ -104,7 +105,7 @@ public class InvokeParam {
         return "InvokeParam{"
             + "service='" + service + '\''
             + ", method='" + method + '\''
-            + ", data=" + data
+            + ", data=" + data.length
             + '}';
     }
 
