@@ -26,7 +26,7 @@ import com.ofcoder.klein.spi.ExtensionLoader;
  * @author far.liu
  */
 public abstract class AbstractInvokeCallback<RES> implements InvokeCallback {
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public AbstractInvokeCallback() {
         serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
@@ -41,7 +41,7 @@ public abstract class AbstractInvokeCallback<RES> implements InvokeCallback {
 
     @Override
     public void complete(final byte[] result) {
-        RES deserialize = (RES) serializer.deserialize(result);
+        RES deserialize = serializer.deserialize(result);
         complete(deserialize);
     }
 }

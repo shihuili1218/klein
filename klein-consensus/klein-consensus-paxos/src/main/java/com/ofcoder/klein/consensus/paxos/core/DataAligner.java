@@ -53,7 +53,7 @@ public class DataAligner {
     private RpcClient client;
     private final BlockingQueue<Task> learnQueue;
     private boolean shutdown = false;
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public DataAligner(final PaxosNode self) {
         this.self = self;
@@ -174,7 +174,7 @@ public class DataAligner {
                 .memberConfigurationVersion(memberConfig.getVersion())
                 .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
                 .build();
-            SnapSyncRes res = (SnapSyncRes) serializer.deserialize(client.sendRequestSync(target, serializer.serialize(req), 1000));
+            SnapSyncRes res = serializer.deserialize(client.sendRequestSync(target, serializer.serialize(req), 1000));
 
             RuntimeAccessor.getLearner().loadSnapSync(res.getImages());
             checkpoint = res.getImages().values().stream().max(Comparator.comparingLong(Snap::getCheckpoint)).orElse(new Snap(checkpoint, null)).getCheckpoint();

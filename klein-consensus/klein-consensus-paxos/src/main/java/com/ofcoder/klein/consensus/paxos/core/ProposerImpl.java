@@ -91,7 +91,7 @@ public class ProposerImpl implements Proposer {
     private final ConcurrentMap<Long, Instance<Command>> seenInstances = new ConcurrentHashMap<>();
     private final Set<Long> runningInstance = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private LogManager<Proposal> logManager;
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public ProposerImpl(final PaxosNode self) {
         this.self = self;
@@ -232,8 +232,9 @@ public class ProposerImpl implements Proposer {
         handleAcceptResponse(ctxt, callback, res, self.getSelf());
 
         // for other members
+        byte[] content = serializer.serialize(req);
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<AcceptRes>() {
+            client.sendRequestAsync(it, content, new AbstractInvokeCallback<AcceptRes>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("send accept msg to node-{}, proposalNo: {}, instanceId: {}, occur exception, {}", it.getId(), grantedProposalNo, ctxt.getInstanceId(), err.getMessage());
@@ -391,8 +392,9 @@ public class ProposerImpl implements Proposer {
         handlePrepareResponse(proposalNo, ctxt, callback, prepareRes, self.getSelf());
 
         // for other members
+        byte[] content = serializer.serialize(req);
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<PrepareRes>() {
+            client.sendRequestAsync(it, content, new AbstractInvokeCallback<PrepareRes>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("send prepare msg to node-{}, proposalNo: {}, occur exception, {}", it.getId(), proposalNo, err.getMessage());
@@ -491,7 +493,7 @@ public class ProposerImpl implements Proposer {
             }
             this.tasks.add(event);
 
-            if (event.getProposal() instanceof Proposal && ((Proposal) event.getProposal()).getIfSystemOp()
+            if (event.getProposal().getIfSystemOp()
                 || (RuntimeAccessor.getMaster().getMaster().getElectState().allowPropose()
                 && (this.tasks.size() >= batchSize || endOfBatch))) {
                 handle();

@@ -25,7 +25,6 @@ import com.ofcoder.klein.consensus.paxos.UniversalProposeProxy;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.RpcContext;
-import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +54,7 @@ public class RedirectProcessor extends AbstractRpcProcessor<RedirectReq> {
         LOG.info("receive redirect msg, redirect: {}", RedirectReq.fmtRedirect(request.getRedirect()));
         switch (request.getRedirect()) {
             case RedirectReq.TRANSACTION_REQUEST:
-                Result<Serializable> proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
+                Result proposeResult = directProposeProxy.propose(request.getProposal(), request.isApply());
                 LOG.info("receive transfer request, apply: {}, result: {}", request.isApply(), proposeResult.getState());
                 RedirectRes res = RedirectRes.Builder
                     .aRedirectResp()

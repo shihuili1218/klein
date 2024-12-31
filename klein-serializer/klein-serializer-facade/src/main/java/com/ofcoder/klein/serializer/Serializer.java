@@ -22,23 +22,23 @@ import com.ofcoder.klein.spi.SPI;
 /**
  * Serializer.
  *
- * @param <T> the type parameter
  */
 @SPI
-public interface Serializer<T> {
+public interface Serializer {
     /**
      * Encode object to byte[].
      *
      * @param t   the t
      * @return the byte [ ]
      */
-    byte[] serialize(T t);
+    byte[] serialize(Object t);
 
     /**
      * Decode t from byte[].
      *
+     * @param <R> result type
      * @param bytes the bytes
      * @return the t
      */
-    T deserialize(byte[] bytes);
+    <R> R deserialize(byte[] bytes);
 }

@@ -16,16 +16,17 @@
  */
 package com.ofcoder.klein.core.lock;
 
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
 import com.ofcoder.klein.core.cache.CacheSM;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Lock State Machine.
@@ -34,9 +35,11 @@ public class LockSM extends AbstractSM {
     public static final String GROUP = "lock";
     private static final Logger LOG = LoggerFactory.getLogger(CacheSM.class);
     private final Map<String, LockInstance> locks = new HashMap<>();
+    private final Serializer serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
 
     @Override
-    public Object apply(final Object data) {
+    public byte[] apply(final byte[] original) {
+        Object data = serializer.deserialize(original);
         if (!(data instanceof LockMessage)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
             return null;
@@ -50,9 +53,9 @@ public class LockSM extends AbstractSM {
                 if (instance.lockState == LockInstance.UNLOCK_STATE || (instance.expire != LockMessage.TTL_PERPETUITY && instance.expire < TrueTime.currentTimeMillis())) {
                     instance.lockState = LockInstance.LOCKED_STATE;
                     instance.expire = message.getExpire();
-                    return true;
+                    return serializer.serialize(true);
                 } else {
-                    return false;
+                    return serializer.serialize(false);
                 }
             case LockMessage.UNLOCK:
                 instance.lockState = LockInstance.UNLOCK_STATE;
@@ -65,13 +68,14 @@ public class LockSM extends AbstractSM {
     }
 
     @Override
-    public Object makeImage() {
-        return locks;
+    public byte[] makeImage() {
+        return serializer.serialize(locks);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void loadImage(final Object snap) {
+    public void loadImage(final byte[] original) {
+        Object snap = serializer.deserialize(original);
         if (!(snap instanceof Map)) {
             return;
         }

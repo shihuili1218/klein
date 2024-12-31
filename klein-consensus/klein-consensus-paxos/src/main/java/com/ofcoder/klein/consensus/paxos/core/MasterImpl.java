@@ -175,9 +175,10 @@ public class MasterImpl implements Master {
             .nodeId(self.getSelf().getId())
             .proposalNo(self.getCurProposalNo())
             .build();
+        byte[] content = serializer.serialize(req);
         for (Endpoint it : memberConfig.getMembersWithout(self.getSelf().getId())) {
             try {
-                PreElectRes res = (PreElectRes) serializer.deserialize(client.sendRequestSync(it, serializer.serialize(req)));
+                PreElectRes res = serializer.deserialize(client.sendRequestSync(it, content));
                 LOG.debug("looking for master, node-{}: {}", it.getId(), res);
                 if (res != null && res.getMaster() != null) {
 //                restartWaitHb();
@@ -247,8 +248,9 @@ public class MasterImpl implements Master {
         handleNewMasterRes(self.getSelf(), masterRes, quorum, next, latch);
 
         // for other members
+        byte[] content = serializer.serialize(req);
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it ->
-            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<NewMasterRes>() {
+            client.sendRequestAsync(it, content, new AbstractInvokeCallback<NewMasterRes>() {
                 @Override
                 public void error(final Throwable err) {
                     quorum.refuse(it);
@@ -325,8 +327,9 @@ public class MasterImpl implements Master {
         }
 
         // for other members
+        byte[] content = serializer.serialize(req);
         memberConfiguration.getMembersWithout(self.getSelf().getId()).forEach(it -> {
-            client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<Pong>() {
+            client.sendRequestAsync(it, content, new AbstractInvokeCallback<Pong>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.debug("heartbeat, node: " + it.getId() + ", " + err.getMessage());

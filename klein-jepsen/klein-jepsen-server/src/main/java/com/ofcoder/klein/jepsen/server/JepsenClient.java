@@ -86,7 +86,7 @@ public class JepsenClient {
         try {
             LOG.info("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
             // see: com.ofcoder.klein.consensus.facade.Result.State
-            String result = (String) serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
+            String result = serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
             LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), result);
             if (!"SUCCESS".equals(result)) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", " + result);
@@ -119,7 +119,7 @@ public class JepsenClient {
 
         try {
             LOG.info("seq: {}, get: {} on node: {}", req.getSeq(), key, endpoint.getId());
-            Resp resp = (Resp) serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
+            Resp resp = serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
             LOG.info("seq: {}, get: {} on node: {}, result: {}", req.getSeq(), key, endpoint.getId(), resp);
             if (resp == null || !resp.isS()) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");

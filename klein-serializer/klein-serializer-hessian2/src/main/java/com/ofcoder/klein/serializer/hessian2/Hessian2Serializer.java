@@ -20,12 +20,12 @@ import com.caucho.hessian.io.Hessian2Input;
 import com.ofcoder.klein.common.exception.SerializationException;
 import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.Join;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.Serializable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Hessian Serializer.
@@ -33,11 +33,11 @@ import org.slf4j.LoggerFactory;
  * @author hang.li
  */
 @Join
-public class Hessian2Serializer<T extends Serializable> implements Serializer<T> {
+public class Hessian2Serializer implements Serializer {
     private static final Logger LOGGER = LoggerFactory.getLogger(Hessian2Serializer.class);
 
     @Override
-    public byte[] serialize(final T t) {
+    public byte[] serialize(final Object t) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              KleinHessian2Output ho = new KleinHessian2Output(baos)) {
             ho.writeObject(t);
@@ -49,12 +49,13 @@ public class Hessian2Serializer<T extends Serializable> implements Serializer<T>
     }
 
     @Override
-    public T deserialize(final byte[] bytes) {
+    @SuppressWarnings("unchecked")
+    public <R> R deserialize(final byte[] bytes) {
         try (ByteArrayInputStream is = new ByteArrayInputStream(bytes)) {
             Hessian2Input input = new Hessian2Input(is);
-            T obj = (T) input.readObject();
+            Object obj = input.readObject();
             input.close();
-            return obj;
+            return (R) obj;
         } catch (IOException e) {
             LOGGER.error("Hessian decode error:{}", e.getMessage(), e);
             throw new SerializationException("Failed to deserialize object", e);

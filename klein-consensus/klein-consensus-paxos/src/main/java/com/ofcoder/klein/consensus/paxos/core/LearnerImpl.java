@@ -73,7 +73,7 @@ public class LearnerImpl implements Learner {
     private final DataAligner dataAligner;
     private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
-    private Serializer serializer;
+    private final Serializer serializer;
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
@@ -247,8 +247,9 @@ public class LearnerImpl implements Learner {
         }
 
         // for other members
+        byte[] content = serializer.serialize(req);
         configuration.getMembersWithout(self.getSelf().getId())
-            .forEach(it -> client.sendRequestAsync(it, serializer.serialize(req), new AbstractInvokeCallback<Serializable>() {
+            .forEach(it -> client.sendRequestAsync(it, content, new AbstractInvokeCallback<Serializable>() {
                 @Override
                 public void error(final Throwable err) {
                     LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
@@ -375,7 +376,7 @@ public class LearnerImpl implements Learner {
                 }
 
                 @Override
-                public void applyDone(final Map<Command, Object> result) {
+                public void applyDone(final Map<Command, byte[]> result) {
                     apply(instanceId);
                 }
             }));
@@ -408,13 +409,13 @@ public class LearnerImpl implements Learner {
     private void _apply(final long instanceId) {
         List<SMApplier> smAppliers = new ArrayList<>(sms.values());
         List<ProposeDone> remove = applyCallback.remove(instanceId);
-        Map<Command, Object> applyResult = new HashMap<>();
+        Map<Command, byte[]> applyResult = new HashMap<>();
 
         smAppliers.stream().map(smApplier -> {
-            final CompletableFuture<Map<Command, Object>> complete = new CompletableFuture<>();
+            final CompletableFuture<Map<Command, byte[]>> complete = new CompletableFuture<>();
             smApplier.offer(SMApplier.Task.createApplyTask(instanceId, new SMApplier.TaskCallback() {
                 @Override
-                public void onApply(final Map<Command, Object> result) {
+                public void onApply(final Map<Command, byte[]> result) {
                     complete.complete(result);
                 }
             }));
@@ -424,7 +425,7 @@ public class LearnerImpl implements Learner {
                 return future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 LOG.error("apply sm error, instanceId: {}, {}", instanceId, e.getMessage());
-                return new HashMap<Command, Object>();
+                return new HashMap<Command, byte[]>();
             }
         }).collect(Collectors.toList()).forEach(applyResult::putAll);
 

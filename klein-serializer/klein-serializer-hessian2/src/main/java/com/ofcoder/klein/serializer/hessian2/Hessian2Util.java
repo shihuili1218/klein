@@ -47,6 +47,6 @@ public class Hessian2Util {
      */
     @SuppressWarnings("unchecked")
     public static <T> T deserialize(final byte[] serializeData) {
-        return (T) HESSIAN2.deserialize(serializeData);
+        return HESSIAN2.deserialize(serializeData);
     }
 }

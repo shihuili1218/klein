@@ -29,21 +29,21 @@ public interface SM {
      * @param data proposal's data
      * @return apply result
      */
-    Object apply(Object data);
+    byte[] apply(byte[] data);
 
     /**
      * make a snapshot.
      *
      * @return snapshot
      */
-    Object makeImage();
+    byte[] makeImage();
 
     /**
      * load snapshot.
      *
      * @param snap snapshot
      */
-    void loadImage(Object snap);
+    void loadImage(byte[] snap);
 
     /**
      * close sm.

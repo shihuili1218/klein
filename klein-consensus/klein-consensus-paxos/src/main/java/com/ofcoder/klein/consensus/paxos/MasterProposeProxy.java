@@ -21,16 +21,16 @@ import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.paxos.core.MasterState;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq;
-import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
-import java.io.Serializable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
 /**
  * Forward the Proposal request to the Master.
@@ -54,13 +54,13 @@ public class MasterProposeProxy implements ProposeProxy {
     }
 
     @Override
-    public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
+    public Result propose(final Proposal data, final boolean apply) {
         MasterState masterState = RuntimeAccessor.getMaster().getMaster();
         if (masterState.isSelf() || !prop.getPaxosProp().isEnableMaster()) {
             return this.directProxy.propose(data, apply);
         }
 
-        Result.Builder<D> builder = Result.Builder.aResult();
+        Result.Builder builder = Result.Builder.aResult();
 
         Endpoint master = masterState.getMaster();
         if (master == null) {
@@ -76,8 +76,10 @@ public class MasterProposeProxy implements ProposeProxy {
             .apply(apply)
             .build();
         try {
-            byte[] response = this.client.sendRequestSync(master, proposalValueSerializer.serialize(req), this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
-            return (Result<D>) ((RedirectRes) proposalValueSerializer.deserialize(response)).getProposeResult();
+            byte[] content = proposalValueSerializer.serialize(req);
+            byte[] response = this.client.sendRequestSync(master, content, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+            RedirectRes redirectRes = proposalValueSerializer.deserialize(response);
+            return redirectRes.getProposeResult();
         } catch (Exception e) {
             if (e instanceof ConnectionException) {
                 return builder.state(Result.State.FAILURE).build();
@@ -89,7 +91,7 @@ public class MasterProposeProxy implements ProposeProxy {
     }
 
     @Override
-    public Result<Long> readIndex(final String group) {
+    public Long readIndex(final String group) {
         return null;
     }
 }

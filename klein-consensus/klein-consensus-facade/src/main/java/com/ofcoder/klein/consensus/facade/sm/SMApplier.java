@@ -20,7 +20,6 @@ import com.ofcoder.klein.common.util.KleinThreadFactory;
 import com.ofcoder.klein.consensus.facade.Command;
 import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
 import com.ofcoder.klein.consensus.facade.config.SnapshotStrategy;
-import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
@@ -52,17 +51,15 @@ public class SMApplier {
     private Long lastAppliedId = 0L;
     private Long lastCheckpoint = 0L;
     private Long lastSnapTime = System.currentTimeMillis();
-    private Serializer serializer;
     private final List<SnapshotStrategy> snapshotStrategies;
 
+    @SuppressWarnings("unchecked")
     public SMApplier(final String group, final SM sm, final ConsensusProp op) {
         this.group = group;
         this.sm = sm;
         this.snapshotStrategies = op.getSnapshotStrategy();
         this.applyQueue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(value -> value.priority));
         this.logManager = ExtensionLoader.getExtensionLoader(LogManager.class).getJoin();
-        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
-
         ExecutorService applyExecutor = Executors.newFixedThreadPool(1, KleinThreadFactory.create(this.group + "-apply", true));
 
         applyExecutor.execute(() -> {
@@ -94,7 +91,7 @@ public class SMApplier {
         Snap lastSnap = logManager.getLastSnap(group);
 
         if (lastSnap == null || lastSnap.getCheckpoint() < lastAppliedId) {
-            lastSnap = new Snap(lastAppliedId, serializer.serialize(sm.makeImage()));
+            lastSnap = new Snap(lastAppliedId, sm.makeImage());
             this.lastCheckpoint = lastAppliedId;
             logManager.saveSnap(group, lastSnap);
             lastSnapTime = System.currentTimeMillis();
@@ -129,11 +126,12 @@ public class SMApplier {
         final long lastApplyId = this.lastAppliedId;
         final long instanceId = task.priority;
 
-        Map<Command, Object> applyResult = new HashMap<>();
+        Map<Command, byte[]> applyResult = new HashMap<>();
         if (instanceId > lastApplyId) {
             LOG.debug("doing apply instance[{}]", instanceId);
             Instance<Command> instance = logManager.getInstance(instanceId);
             List<Command> proposals = instance.getGrantedValue().stream()
+                // .filter(it -> it != Command.NOOP) by group
                 .filter(it -> group.equals(it.getGroup()))
                 .collect(Collectors.toList());
 
@@ -291,7 +289,7 @@ public class SMApplier {
          *
          * @param result apply result
          */
-        default void onApply(final Map<Command, Object> result) {
+        default void onApply(final Map<Command, byte[]> result) {
 
         }
 
