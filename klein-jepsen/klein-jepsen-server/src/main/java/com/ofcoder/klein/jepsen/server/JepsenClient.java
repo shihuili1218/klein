@@ -16,19 +16,9 @@
  */
 package com.ofcoder.klein.jepsen.server;
 
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ofcoder.klein.KleinProp;
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.common.util.ChecksumUtil;
 import com.ofcoder.klein.jepsen.server.rpc.GetReq;
 import com.ofcoder.klein.jepsen.server.rpc.PutReq;
@@ -36,7 +26,15 @@ import com.ofcoder.klein.jepsen.server.rpc.Resp;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.InvokeParam;
 import com.ofcoder.klein.rpc.facade.RpcProcessor;
+import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
 import com.ofcoder.klein.rpc.grpc.GrpcClient;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import java.io.UnsupportedEncodingException;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * jepsen‘s client.
@@ -51,6 +49,7 @@ public class JepsenClient {
             .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true);
     private final Endpoint endpoint;
     private final GrpcClient client;
+    private final Serializer serializer;
 
     public JepsenClient(final String node) {
         String id = StringUtils.remove(node, "n");
@@ -61,6 +60,8 @@ public class JepsenClient {
 
         client = new GrpcClient(kleinProp.getRpcProp());
         client.createConnection(endpoint);
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
+
     }
 
     /**
@@ -80,12 +81,12 @@ public class JepsenClient {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+                .data(serializer.serialize(req)).build();
 
         try {
             LOG.info("seq: {}, put: {} on node: {}", req.getSeq(), value, endpoint.getId());
             // see: com.ofcoder.klein.consensus.facade.Result.State
-            String result = client.sendRequestSync(endpoint, param, 3000);
+            String result = serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
             LOG.info("seq: {}, put: {} on node: {}, result: {}", req.getSeq(), value, endpoint.getId(), result);
             if (!"SUCCESS".equals(result)) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", put: " + value + " on node: " + endpoint.getId() + ", " + result);
@@ -114,11 +115,11 @@ public class JepsenClient {
         InvokeParam param = InvokeParam.Builder.anInvokeParam()
                 .service(req.getClass().getSimpleName())
                 .method(RpcProcessor.KLEIN)
-                .data(ByteBuffer.wrap(Hessian2Util.serialize(req))).build();
+                .data(serializer.serialize(req)).build();
 
         try {
             LOG.info("seq: {}, get: {} on node: {}", req.getSeq(), key, endpoint.getId());
-            Resp resp = client.sendRequestSync(endpoint, param, 3000);
+            Resp resp = serializer.deserialize(client.sendRequestSync(endpoint, serializer.serialize(param), 3000));
             LOG.info("seq: {}, get: {} on node: {}, result: {}", req.getSeq(), key, endpoint.getId(), resp);
             if (resp == null || !resp.isS()) {
                 throw new IllegalArgumentException("seq: " + req.getSeq() + ", get: " + key + " on node: " + endpoint.getId() + ", result is null");

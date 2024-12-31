@@ -16,24 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.core;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.ofcoder.klein.consensus.facade.AbstractInvokeCallback;
@@ -54,10 +36,27 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.SnapSyncRes;
 import com.ofcoder.klein.consensus.paxos.rpc.vo.Sync;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.storage.facade.Instance;
 import com.ofcoder.klein.storage.facade.LogManager;
 import com.ofcoder.klein.storage.facade.Snap;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * learner implement.
@@ -74,11 +73,13 @@ public class LearnerImpl implements Learner {
     private final DataAligner dataAligner;
     private final ConcurrentMap<Long, List<ProposeDone>> applyCallback = new ConcurrentHashMap<>();
     private ConsensusProp prop;
+    private final Serializer serializer;
 
     public LearnerImpl(final PaxosNode self) {
         this.self = self;
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
         this.dataAligner = new DataAligner(self);
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -98,15 +99,15 @@ public class LearnerImpl implements Learner {
     @Override
     public long getLastAppliedInstanceId() {
         return sms.values().stream()
-                .mapToLong(SMApplier::getLastAppliedId)
-                .max().orElse(-1L);
+            .mapToLong(SMApplier::getLastAppliedId)
+            .max().orElse(-1L);
     }
 
     @Override
     public long getLastCheckpoint() {
         return sms.values().stream()
-                .mapToLong(SMApplier::getLastCheckpoint)
-                .max().orElse(-1L);
+            .mapToLong(SMApplier::getLastCheckpoint)
+            .max().orElse(-1L);
     }
 
     private Map<String, Snap> generateSnap() {
@@ -165,7 +166,7 @@ public class LearnerImpl implements Learner {
             } else {
                 latch.countDown();
                 LOG.warn("load snap failure, group: {}, The state machine is not found."
-                        + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
+                    + " It may be that Klein is starting and the state machine has not been loaded. Or, the state machine is unloaded.", group);
             }
         });
 
@@ -193,8 +194,8 @@ public class LearnerImpl implements Learner {
                 break;
             }
             List<Command> replayData = instance.getGrantedValue().stream()
-                    .filter(it -> StringUtils.equals(group, it.getGroup()))
-                    .collect(Collectors.toList());
+                .filter(it -> StringUtils.equals(group, it.getGroup()))
+                .collect(Collectors.toList());
             if (CollectionUtils.isEmpty(replayData)) {
                 continue;
             }
@@ -231,11 +232,11 @@ public class LearnerImpl implements Learner {
         PaxosMemberConfiguration configuration = memberConfig.createRef();
 
         ConfirmReq req = ConfirmReq.Builder.aConfirmReq()
-                .nodeId(self.getSelf().getId())
-                .proposalNo(curProposalNo)
-                .instanceId(instanceId)
-                .checksum(checksum)
-                .build();
+            .nodeId(self.getSelf().getId())
+            .proposalNo(curProposalNo)
+            .instanceId(instanceId)
+            .checksum(checksum)
+            .build();
 
         // for self
         if (handleConfirmRequest(req)) {
@@ -246,19 +247,20 @@ public class LearnerImpl implements Learner {
         }
 
         // for other members
+        byte[] content = serializer.serialize(req);
         configuration.getMembersWithout(self.getSelf().getId())
-                .forEach(it -> client.sendRequestAsync(it, req, new AbstractInvokeCallback<Serializable>() {
-                    @Override
-                    public void error(final Throwable err) {
-                        LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
-                        // do nothing
-                    }
+            .forEach(it -> client.sendRequestAsync(it, content, new AbstractInvokeCallback<Serializable>() {
+                @Override
+                public void error(final Throwable err) {
+                    LOG.error("send confirm msg to node-{}, instance[{}], {}", it.getId(), instanceId, err.getMessage());
+                    // do nothing
+                }
 
-                    @Override
-                    public void complete(final Serializable result) {
-                        // do nothing
-                    }
-                }));
+                @Override
+                public void complete(final Serializable result) {
+                    // do nothing
+                }
+            }));
     }
 
     @Override
@@ -278,7 +280,7 @@ public class LearnerImpl implements Learner {
         }
 
         LOG.info("keepSameData, target[id: {}, cp: {}, maxAppliedInstanceId:{}], local[cp: {}, maxAppliedInstanceId:{}]",
-                target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
+            target.getId(), targetCheckpoint, targetApplied, localCheckpoint, localApplied);
         if (targetCheckpoint > localApplied || targetCheckpoint - localCheckpoint >= 100) {
             this.dataAligner.snap(target, result -> {
                 if (result) {
@@ -374,7 +376,7 @@ public class LearnerImpl implements Learner {
                 }
 
                 @Override
-                public void applyDone(final Map<Command, Object> result) {
+                public void applyDone(final Map<Command, byte[]> result) {
                     apply(instanceId);
                 }
             }));
@@ -407,13 +409,13 @@ public class LearnerImpl implements Learner {
     private void _apply(final long instanceId) {
         List<SMApplier> smAppliers = new ArrayList<>(sms.values());
         List<ProposeDone> remove = applyCallback.remove(instanceId);
-        Map<Command, Object> applyResult = new HashMap<>();
+        Map<Command, byte[]> applyResult = new HashMap<>();
 
         smAppliers.stream().map(smApplier -> {
-            final CompletableFuture<Map<Command, Object>> complete = new CompletableFuture<>();
+            final CompletableFuture<Map<Command, byte[]>> complete = new CompletableFuture<>();
             smApplier.offer(SMApplier.Task.createApplyTask(instanceId, new SMApplier.TaskCallback() {
                 @Override
-                public void onApply(final Map<Command, Object> result) {
+                public void onApply(final Map<Command, byte[]> result) {
                     complete.complete(result);
                 }
             }));
@@ -423,7 +425,7 @@ public class LearnerImpl implements Learner {
                 return future.get(prop.getRoundTimeout(), TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 LOG.error("apply sm error, instanceId: {}, {}", instanceId, e.getMessage());
-                return new HashMap<Command, Object>();
+                return new HashMap<Command, byte[]>();
             }
         }).collect(Collectors.toList()).forEach(applyResult::putAll);
 
@@ -452,7 +454,7 @@ public class LearnerImpl implements Learner {
 
         if (instance == null || instance.getState() != Instance.State.CONFIRMED) {
             LOG.debug("NO_SUPPORT, learnInstance[{}], cp: {}, cur: {}", request.getInstanceId(),
-                    RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
+                RuntimeAccessor.getLearner().getLastCheckpoint(), self.getCurInstanceId());
             MasterState masterState = RuntimeAccessor.getMaster().getMaster();
             if (masterState.getElectState().allowBoost()) {
                 LOG.debug("NO_SUPPORT, but i am master, try boost: {}", request.getInstanceId());
@@ -481,9 +483,9 @@ public class LearnerImpl implements Learner {
     public SnapSyncRes handleSnapSyncRequest(final SnapSyncReq req) {
         LOG.info("processing the pull snap message from node-{}", req.getNodeId());
         SnapSyncRes res = SnapSyncRes.Builder.aSnapSyncRes()
-                .images(new HashMap<>())
-                .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
-                .build();
+            .images(new HashMap<>())
+            .checkpoint(RuntimeAccessor.getLearner().getLastCheckpoint())
+            .build();
         if (getLastAppliedInstanceId() - getLastCheckpoint() >= 100) {
             Map<String, Snap> allSnaps = generateSnap();
             res.getImages().putAll(allSnaps);

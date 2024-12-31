@@ -16,16 +16,12 @@
  */
 package com.ofcoder.klein.jepsen.server.rpc;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.consensus.facade.Result;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
+import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.core.cache.KleinCache;
 import com.ofcoder.klein.rpc.facade.RpcContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * cache put request processor.
@@ -41,16 +37,16 @@ public class PutProcessor extends AbstractRpcProcessor<PutReq> {
     }
 
     @Override
-    public void handleRequest(final PutReq request, final RpcContext context) {
+    public void handleRequest(final PutReq request, final RpcContext rpcContext) {
         try {
             LOG.info("put operator, begin, seq: {}", request.getSeq());
             Result.State put = cache.put(request.getKey(), request.getData(), false, request.getTtl(), request.getUnit());
             LOG.info("put operator, end, seq: {}, result: {}", request.getSeq(), put);
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(put.name())));
+            response(put.name(), rpcContext);
         } catch (Exception e) {
             LOG.error(e.getMessage());
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(Result.State.UNKNOWN.name())));
             LOG.info("put operator, err, seq: {}, result: err", request.getSeq());
+            response(Result.State.UNKNOWN.name(), rpcContext);
         }
     }
 

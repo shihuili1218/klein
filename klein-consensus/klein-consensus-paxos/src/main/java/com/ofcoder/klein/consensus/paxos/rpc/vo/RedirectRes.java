@@ -27,13 +27,13 @@ import com.ofcoder.klein.consensus.facade.Result;
  */
 public class RedirectRes implements Serializable {
     private boolean changeResult;
-    private Result<Serializable> proposeResult;
+    private Result proposeResult;
 
     public boolean isChangeResult() {
         return changeResult;
     }
 
-    public Result<Serializable> getProposeResult() {
+    public Result getProposeResult() {
         return proposeResult;
     }
 
@@ -47,7 +47,7 @@ public class RedirectRes implements Serializable {
 
     public static final class Builder {
         private boolean changeResult;
-        private Result<Serializable> proposeResult;
+        private Result proposeResult;
 
         private Builder() {
         }
@@ -78,7 +78,7 @@ public class RedirectRes implements Serializable {
          * @param proposeResult proposeResult
          * @return Builder
          */
-        public Builder proposeResult(final Result<Serializable> proposeResult) {
+        public Builder proposeResult(final Result proposeResult) {
             this.proposeResult = proposeResult;
             return this;
         }

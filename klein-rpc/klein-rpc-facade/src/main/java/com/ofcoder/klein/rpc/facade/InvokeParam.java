@@ -16,7 +16,7 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -27,7 +27,7 @@ import java.util.Objects;
 public class InvokeParam {
     private String service;
     private String method;
-    private ByteBuffer data;
+    private byte[] data;
 
     /**
      * get service name.
@@ -70,7 +70,7 @@ public class InvokeParam {
      *
      * @return invoke data
      */
-    public ByteBuffer getData() {
+    public byte[] getData() {
         return data;
     }
 
@@ -79,7 +79,7 @@ public class InvokeParam {
      *
      * @param data invoke data
      */
-    public void setData(final ByteBuffer data) {
+    public void setData(final byte[] data) {
         this.data = data;
     }
 
@@ -92,27 +92,27 @@ public class InvokeParam {
             return false;
         }
         InvokeParam that = (InvokeParam) o;
-        return Objects.equals(service, that.service) && Objects.equals(method, that.method) && Objects.equals(data, that.data);
+        return Objects.equals(service, that.service) && Objects.equals(method, that.method) && Arrays.equals(data, that.data);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(service, method, data);
+        return Objects.hash(service, method, Arrays.hashCode(data));
     }
 
     @Override
     public String toString() {
         return "InvokeParam{"
-                + "service='" + service + '\''
-                + ", method='" + method + '\''
-                + ", data=" + data
-                + '}';
+            + "service='" + service + '\''
+            + ", method='" + method + '\''
+            + ", data=" + data.length
+            + '}';
     }
 
     public static final class Builder {
         private String service;
         private String method;
-        private ByteBuffer data;
+        private byte[] data;
 
         private Builder() {
         }
@@ -154,7 +154,7 @@ public class InvokeParam {
          * @param data data
          * @return Builder
          */
-        public Builder data(final ByteBuffer data) {
+        public Builder data(final byte[] data) {
             this.data = data;
             return this;
         }

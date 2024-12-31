@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -31,8 +32,8 @@ public class CacheSMTest {
         MockitoAnnotations.initMocks(this);
         cacheSM = new CacheSM(new CacheProp()) {
             @Override
-            public Object makeImage() {
-                return mockContainer;
+            public byte[] makeImage() {
+                return Hessian2Util.serialize(mockContainer);
             }
         };
 
@@ -53,7 +54,7 @@ public class CacheSMTest {
         message.setData("data");
         message.setExpire(1000L);
 
-        cacheSM.apply(message);
+        cacheSM.apply(Hessian2Util.serialize(message));
         verify(mockContainer).put(eq("key"), eq("data"), eq(1000L));
     }
 
@@ -66,7 +67,8 @@ public class CacheSMTest {
 
         when(mockContainer.get("key")).thenReturn("data");
 
-        assertEquals("data", cacheSM.apply(message));
+        byte[] original = cacheSM.apply(Hessian2Util.serialize(message));
+        assertEquals("data", Hessian2Util.deserialize(original));
     }
 
     @Test
@@ -76,7 +78,7 @@ public class CacheSMTest {
         message.setOp(CacheMessage.INVALIDATE);
         message.setKey("key");
 
-        cacheSM.apply(message);
+        cacheSM.apply(Hessian2Util.serialize(message));
         verify(mockContainer).remove("key");
     }
 
@@ -86,7 +88,7 @@ public class CacheSMTest {
         message.setCacheName("test");
         message.setOp(CacheMessage.INVALIDATEALL);
 
-        cacheSM.apply(message);
+        cacheSM.apply(Hessian2Util.serialize(message));
         verify(mockContainer).clear();
     }
 
@@ -101,7 +103,8 @@ public class CacheSMTest {
 
         when(mockContainer.putIfAbsent("key", "data", 1000L)).thenReturn(true);
 
-        assertEquals(true, cacheSM.apply(message));
+        byte[] original = cacheSM.apply(Hessian2Util.serialize(message));
+        assertEquals(true, Hessian2Util.deserialize(original));
     }
 
     @Test
@@ -113,13 +116,14 @@ public class CacheSMTest {
 
         when(mockContainer.containsKey("key")).thenReturn(true);
 
-        assertEquals(true, cacheSM.apply(message));
+        byte[] original = cacheSM.apply(Hessian2Util.serialize(message));
+        assertEquals(true, Hessian2Util.deserialize(original));
     }
 
 
     @Test
     public void testApplyWithUnknownMessage() {
-        assertNull(cacheSM.apply(new Object()));
+        assertNull(cacheSM.apply(Hessian2Util.serialize(new Object())));
         verify(mockContainer, never()).put(any(), any(), anyLong());
         verify(mockContainer, never()).get(any());
         verify(mockContainer, never()).remove(any());

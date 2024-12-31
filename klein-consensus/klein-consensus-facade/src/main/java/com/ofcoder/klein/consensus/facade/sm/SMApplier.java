@@ -16,6 +16,14 @@
  */
 package com.ofcoder.klein.consensus.facade.sm;
 
+import com.ofcoder.klein.common.util.KleinThreadFactory;
+import com.ofcoder.klein.consensus.facade.Command;
+import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
+import com.ofcoder.klein.consensus.facade.config.SnapshotStrategy;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -27,18 +35,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.util.KleinThreadFactory;
-import com.ofcoder.klein.consensus.facade.Command;
-import com.ofcoder.klein.consensus.facade.config.ConsensusProp;
-import com.ofcoder.klein.consensus.facade.config.SnapshotStrategy;
-import com.ofcoder.klein.spi.ExtensionLoader;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
 
 /**
  * SM Applier.
@@ -55,6 +53,7 @@ public class SMApplier {
     private Long lastSnapTime = System.currentTimeMillis();
     private final List<SnapshotStrategy> snapshotStrategies;
 
+    @SuppressWarnings("unchecked")
     public SMApplier(final String group, final SM sm, final ConsensusProp op) {
         this.group = group;
         this.sm = sm;
@@ -127,14 +126,14 @@ public class SMApplier {
         final long lastApplyId = this.lastAppliedId;
         final long instanceId = task.priority;
 
-        Map<Command, Object> applyResult = new HashMap<>();
+        Map<Command, byte[]> applyResult = new HashMap<>();
         if (instanceId > lastApplyId) {
             LOG.debug("doing apply instance[{}]", instanceId);
             Instance<Command> instance = logManager.getInstance(instanceId);
             List<Command> proposals = instance.getGrantedValue().stream()
-                    .filter(it -> it != Command.NOOP)
-                    .filter(it -> group.equals(it.getGroup()))
-                    .collect(Collectors.toList());
+                // .filter(it -> it != Command.NOOP) by group
+                .filter(it -> group.equals(it.getGroup()))
+                .collect(Collectors.toList());
 
             proposals.forEach(it -> applyResult.put(it, sm.apply(it.getData())));
             this.lastAppliedId = instanceId;
@@ -290,7 +289,7 @@ public class SMApplier {
          *
          * @param result apply result
          */
-        default void onApply(final Map<Command, Object> result) {
+        default void onApply(final Map<Command, byte[]> result) {
 
         }
 

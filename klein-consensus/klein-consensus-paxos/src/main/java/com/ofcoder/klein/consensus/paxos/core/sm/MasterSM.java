@@ -16,12 +16,13 @@
  */
 package com.ofcoder.klein.consensus.paxos.core.sm;
 
-import java.io.Serializable;
-
+import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ofcoder.klein.consensus.facade.sm.AbstractSM;
+import java.io.Serializable;
 
 /**
  * master sm.
@@ -32,16 +33,19 @@ public class MasterSM extends AbstractSM {
     public static final String GROUP = "master";
     private static final Logger LOG = LoggerFactory.getLogger(MasterSM.class);
     private final PaxosMemberConfiguration memberConfig;
+    private final Serializer serializer;
 
     public MasterSM() {
         this.memberConfig = MemberRegistry.getInstance().getMemberConfiguration();
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
-    public Object apply(final Object data) {
+    public byte[] apply(final byte[] data) {
         LOG.info("MasterSM apply, {}", data.getClass().getSimpleName());
-        if (data instanceof ElectionOp) {
-            electMaster((ElectionOp) data);
+        Object deserialize = serializer.deserialize(data);
+        if (deserialize instanceof ElectionOp) {
+            electMaster((ElectionOp) deserialize);
         } else {
             throw new IllegalArgumentException("Unknown data type: " + data.getClass().getSimpleName());
         }
@@ -53,17 +57,18 @@ public class MasterSM extends AbstractSM {
     }
 
     @Override
-    public Object makeImage() {
-        return new Image();
+    public byte[] makeImage() {
+        return new byte[0];
     }
 
     @Override
-    public void loadImage(final Object snap) {
+    public void loadImage(final byte[] snap) {
         // do nothing.
     }
 
     /**
      * Fake image.
      */
-    public static class Image implements Serializable { }
+    public static class Image implements Serializable {
+    }
 }

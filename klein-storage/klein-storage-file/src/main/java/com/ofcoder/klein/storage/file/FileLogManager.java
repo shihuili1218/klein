@@ -16,6 +16,20 @@
  */
 package com.ofcoder.klein.storage.file;
 
+import com.ofcoder.klein.common.util.StreamUtil;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
+import com.ofcoder.klein.spi.Join;
+import com.ofcoder.klein.storage.facade.Instance;
+import com.ofcoder.klein.storage.facade.LogManager;
+import com.ofcoder.klein.storage.facade.Snap;
+import com.ofcoder.klein.storage.facade.config.StorageProp;
+import com.ofcoder.klein.storage.facade.exception.LockException;
+import com.ofcoder.klein.storage.facade.exception.StorageException;
+import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,20 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
-
-import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
-import com.ofcoder.klein.common.util.StreamUtil;
-import com.ofcoder.klein.spi.Join;
-import com.ofcoder.klein.storage.facade.Instance;
-import com.ofcoder.klein.storage.facade.LogManager;
-import com.ofcoder.klein.storage.facade.Snap;
-import com.ofcoder.klein.storage.facade.config.StorageProp;
-import com.ofcoder.klein.storage.facade.exception.LockException;
-import com.ofcoder.klein.storage.facade.exception.StorageException;
 
 /**
  * Jvm LogManager.
@@ -60,8 +60,10 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
     private ConcurrentMap<Long, ReentrantReadWriteLock> locks = new ConcurrentHashMap<>();
 
     private MetaData metadata;
+    private final Serializer serializer;
 
     public FileLogManager(final StorageProp op) {
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
 
         runningInstances = new ConcurrentHashMap<>();
         confirmedInstances = new ConcurrentHashMap<>();
@@ -69,7 +71,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         selfPath = op.getDataPath();
         File selfFile = new File(selfPath);
         if (!selfFile.exists()) {
-            boolean mkdir = selfFile.mkdirs();
+            boolean ignored = selfFile.mkdirs();
             // do nothing for mkdir result
         }
 
@@ -132,15 +134,12 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
             this.metadata = defaultValue;
             return this.metadata;
         }
-        FileInputStream lastIn = null;
-        try {
-            lastIn = new FileInputStream(file);
-            this.metadata = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+
+        try (FileInputStream lastIn = new FileInputStream(file);) {
+            this.metadata = serializer.deserialize(IOUtils.toByteArray(lastIn));
             return this.metadata;
         } catch (IOException e) {
             throw new StorageException("loadMetaData, " + e.getMessage(), e);
-        } finally {
-            StreamUtil.close(lastIn);
         }
     }
 
@@ -148,7 +147,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         FileOutputStream mateOut = null;
         try {
             mateOut = new FileOutputStream(metaPath);
-            IOUtils.write(Hessian2Util.serialize(this.metadata), mateOut);
+            IOUtils.write(serializer.serialize(this.metadata), mateOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -158,6 +157,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
 
     @Override
     public void saveSnap(final String group, final Snap snap) {
+        LOG.debug("save snap, group: {}, checkpoint: {}", group, snap.getCheckpoint());
         String bastPath = selfPath + File.separator + group + File.separator;
         File snapFile = new File(bastPath + snap.getCheckpoint());
         if (snapFile.exists()) {
@@ -165,7 +165,7 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         }
         File baseDir = new File(bastPath);
         if (!baseDir.exists()) {
-            boolean mkdir = baseDir.mkdirs();
+            boolean ignored = baseDir.mkdirs();
         }
 
         File lastFile = new File(bastPath + "last");
@@ -175,8 +175,8 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         try {
             lastOut = new FileOutputStream(lastFile);
             snapOut = new FileOutputStream(snapFile);
-            IOUtils.write(Hessian2Util.serialize(snap), snapOut);
-            IOUtils.write(Hessian2Util.serialize(snapFile.getPath()), lastOut);
+            IOUtils.write(serializer.serialize(snap), snapOut);
+            IOUtils.write(serializer.serialize(snapFile.getPath()), lastOut);
         } catch (IOException e) {
             throw new StorageException("save snap, " + e.getMessage(), e);
         } finally {
@@ -206,9 +206,9 @@ public class FileLogManager<P extends Serializable> implements LogManager<P> {
         FileInputStream snapIn = null;
         try {
             lastIn = new FileInputStream(file);
-            String deserialize = Hessian2Util.deserialize(IOUtils.toByteArray(lastIn));
+            String deserialize = serializer.deserialize(IOUtils.toByteArray(lastIn));
             snapIn = new FileInputStream(deserialize);
-            lastSnap = Hessian2Util.deserialize(IOUtils.toByteArray(snapIn));
+            lastSnap = serializer.deserialize(IOUtils.toByteArray(snapIn));
             return lastSnap;
         } catch (IOException e) {
             throw new StorageException("get last snap, " + e.getMessage(), e);

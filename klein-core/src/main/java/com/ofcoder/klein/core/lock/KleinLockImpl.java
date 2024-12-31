@@ -16,12 +16,14 @@
  */
 package com.ofcoder.klein.core.lock;
 
-import java.util.concurrent.TimeUnit;
-
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.core.GroupWrapper;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * lock implement.
@@ -31,6 +33,7 @@ import com.ofcoder.klein.core.GroupWrapper;
 public class KleinLockImpl implements KleinLock {
     protected GroupWrapper consensus;
     private final String key;
+    private final Serializer serializer;
 
     /**
      * Return a new lock instance.
@@ -41,6 +44,7 @@ public class KleinLockImpl implements KleinLock {
         this.key = key;
         SMRegistry.register(LockSM.GROUP, new LockSM());
         this.consensus = new GroupWrapper(LockSM.GROUP);
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
@@ -50,8 +54,9 @@ public class KleinLockImpl implements KleinLock {
         message.setOp(LockMessage.LOCK);
         message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
 
-        Result result = consensus.propose(message, true);
-        return Result.State.SUCCESS.equals(result.getState()) && (Boolean) result.getData();
+        Result result = consensus.propose(serializer.serialize(message), true);
+        Boolean acquired = serializer.deserialize(result.getData());
+        return Result.State.SUCCESS.equals(result.getState()) && acquired;
     }
 
     @Override
@@ -61,8 +66,9 @@ public class KleinLockImpl implements KleinLock {
         message.setOp(LockMessage.LOCK);
         message.setExpire(LockMessage.TTL_PERPETUITY);
 
-        Result result = consensus.propose(message, true);
-        return Result.State.SUCCESS.equals(result.getState()) && (Boolean) result.getData();
+        Result result = consensus.propose(serializer.serialize(message), true);
+        Boolean acquired = serializer.deserialize(result.getData());
+        return Result.State.SUCCESS.equals(result.getState()) && acquired;
     }
 
     @Override
@@ -70,6 +76,6 @@ public class KleinLockImpl implements KleinLock {
         LockMessage message = new LockMessage();
         message.setKey(key);
         message.setOp(LockMessage.UNLOCK);
-        Result result = consensus.propose(message, false);
+        Result result = consensus.propose(serializer.serialize(message), false);
     }
 }

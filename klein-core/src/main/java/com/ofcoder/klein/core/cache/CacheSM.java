@@ -20,6 +20,8 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +39,10 @@ public class CacheSM extends AbstractSM {
     private final Map<String, CacheContainer> containers = new HashMap<>();
     private final CacheProp cacheProp;
     private final String temp;
+    private final Serializer serializer;
 
     public CacheSM(final CacheProp cacheProp) {
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         this.cacheProp = cacheProp;
         this.temp = this.cacheProp.getDataPath() + File.separator + cacheProp.getId() + File.separator + "temp";
         File file = new File(temp);
@@ -59,20 +63,23 @@ public class CacheSM extends AbstractSM {
     }
 
     @Override
-    public Object apply(final Object data) {
+    public byte[] apply(final byte[] original) {
+        Object data = serializer.deserialize(original);
+
         if (!(data instanceof CacheMessage)) {
             LOG.warn("apply data, UNKNOWN PARAMETER TYPE, data type is {}", data.getClass().getName());
             return null;
         }
         CacheMessage message = (CacheMessage) data;
         CacheContainer container = getCacheContainer(message.getCacheName());
+        Object result;
         switch (message.getOp()) {
             case CacheMessage.PUT:
                 container.put(message.getKey(), message.getData(), message.getExpire());
                 break;
             case CacheMessage.GET:
-                Object o = container.get(message.getKey());
-                return o;
+                result = container.get(message.getKey());
+                return serializer.serialize(result);
             case CacheMessage.INVALIDATE:
                 container.remove(message.getKey());
                 break;
@@ -80,9 +87,11 @@ public class CacheSM extends AbstractSM {
                 container.clear();
                 break;
             case CacheMessage.PUTIFPRESENT:
-                return container.putIfAbsent(message.getKey(), message.getData(), message.getExpire());
+                result = container.putIfAbsent(message.getKey(), message.getData(), message.getExpire());
+                return serializer.serialize(result);
             case CacheMessage.EXIST:
-                return container.containsKey(message.getKey());
+                result = container.containsKey(message.getKey());
+                return serializer.serialize(result);
             default:
                 LOG.warn("apply data, UNKNOWN OPERATION, operation type is {}", message.getOp());
                 break;
@@ -91,15 +100,16 @@ public class CacheSM extends AbstractSM {
     }
 
     @Override
-    public Object makeImage() {
+    public byte[] makeImage() {
         Map<String, CacheSnap> result = new HashMap<>();
         containers.forEach((cacheName, container) -> result.put(cacheName, container.makeImage()));
-        return result;
+        return serializer.serialize(result);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void loadImage(final Object snap) {
+    public void loadImage(final byte[] original) {
+        Object snap = serializer.deserialize(original);
         if (!(snap instanceof Map)) {
             return;
         }

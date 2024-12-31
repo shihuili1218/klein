@@ -16,9 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
@@ -40,11 +37,9 @@ public class PreElectProcessor extends AbstractRpcProcessor<PreElectReq> {
 
     @Override
     public void handleRequest(final PreElectReq request, final RpcContext context) {
-        context.response(
-                ByteBuffer.wrap(Hessian2Util.serialize(PreElectRes.Builder.aPreElectRes().master(
-                        RuntimeAccessor.getMaster().getMaster().getMaster()
-                ).build()))
-        );
+        response(PreElectRes.Builder.aPreElectRes().master(
+            RuntimeAccessor.getMaster().getMaster().getMaster()
+        ).build(), context);
     }
 
     @Override

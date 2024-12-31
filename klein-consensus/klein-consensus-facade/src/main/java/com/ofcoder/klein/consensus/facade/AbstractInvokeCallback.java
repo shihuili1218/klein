@@ -16,10 +16,9 @@
  */
 package com.ofcoder.klein.consensus.facade;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.rpc.facade.InvokeCallback;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 /**
  * Invoke callback.
@@ -27,6 +26,12 @@ import com.ofcoder.klein.rpc.facade.InvokeCallback;
  * @author far.liu
  */
 public abstract class AbstractInvokeCallback<RES> implements InvokeCallback {
+    private final Serializer serializer;
+
+    public AbstractInvokeCallback() {
+        serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
+    }
+
     /**
      * invoke completed.
      *
@@ -35,8 +40,8 @@ public abstract class AbstractInvokeCallback<RES> implements InvokeCallback {
     public abstract void complete(RES result);
 
     @Override
-    public void complete(final ByteBuffer result) {
-        RES deserialize = Hessian2Util.deserialize(result.array());
+    public void complete(final byte[] result) {
+        RES deserialize = serializer.deserialize(result);
         complete(deserialize);
     }
 }

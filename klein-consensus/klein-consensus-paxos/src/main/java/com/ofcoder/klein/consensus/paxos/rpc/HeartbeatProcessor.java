@@ -16,9 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos.rpc;
 
-import java.nio.ByteBuffer;
-
-import com.ofcoder.klein.common.serialization.Hessian2Util;
 import com.ofcoder.klein.consensus.facade.AbstractRpcProcessor;
 import com.ofcoder.klein.consensus.paxos.PaxosNode;
 import com.ofcoder.klein.consensus.paxos.core.RuntimeAccessor;
@@ -41,7 +38,7 @@ public class HeartbeatProcessor extends AbstractRpcProcessor<Ping> {
     @Override
     public void handleRequest(final Ping request, final RpcContext context) {
         if (RuntimeAccessor.getMaster().onReceiveHeartbeat(request, false)) {
-            context.response(ByteBuffer.wrap(Hessian2Util.serialize(new Pong())));
+            response(new Pong(), context);
         }
     }
 

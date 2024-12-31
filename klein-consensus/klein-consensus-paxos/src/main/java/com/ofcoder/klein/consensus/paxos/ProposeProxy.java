@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.consensus.paxos;
 
-import java.io.Serializable;
-
 import com.ofcoder.klein.consensus.facade.Result;
 
 /**
@@ -32,10 +30,9 @@ public interface ProposeProxy {
      * @param data  proposal
      * @param apply Whether you need to wait until the state machine is applied
      *              If true, wait until the state machine is applied before returning
-     * @param <D>   result type
      * @return propose result
      */
-    <D extends Serializable> Result<D> propose(Proposal data, boolean apply);
+    Result propose(Proposal data, boolean apply);
 
     /**
      * todo: read index.
@@ -43,6 +40,6 @@ public interface ProposeProxy {
      * @param group group name
      * @return instance id
      */
-    Result<Long> readIndex(String group);
+    Long readIndex(String group);
 
 }

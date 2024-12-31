@@ -16,8 +16,6 @@
  */
 package com.ofcoder.klein.rpc.facade;
 
-import java.nio.ByteBuffer;
-
 /**
  * Rpc Invoke Callback.
  *
@@ -36,5 +34,5 @@ public interface InvokeCallback {
      *
      * @param result response
      */
-    void complete(ByteBuffer result);
+    void complete(byte[] result);
 }

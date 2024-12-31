@@ -25,11 +25,10 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.exception.ConnectionException;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.Serializable;
 
 import static com.ofcoder.klein.consensus.paxos.rpc.vo.RedirectReq.TRANSACTION_REQUEST;
 
@@ -44,22 +43,24 @@ public class MasterProposeProxy implements ProposeProxy {
     private final PaxosNode self;
     private final ConsensusProp prop;
     private final ProposeProxy directProxy;
+    private final Serializer proposalValueSerializer;
 
     public MasterProposeProxy(final ConsensusProp op, final PaxosNode self) {
         this.self = self;
         this.prop = op;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
         this.directProxy = new UniversalProposeProxy(op);
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
     }
 
     @Override
-    public <D extends Serializable> Result<D> propose(final Proposal data, final boolean apply) {
+    public Result propose(final Proposal data, final boolean apply) {
         MasterState masterState = RuntimeAccessor.getMaster().getMaster();
         if (masterState.isSelf() || !prop.getPaxosProp().isEnableMaster()) {
             return this.directProxy.propose(data, apply);
         }
 
-        Result.Builder<D> builder = Result.Builder.aResult();
+        Result.Builder builder = Result.Builder.aResult();
 
         Endpoint master = masterState.getMaster();
         if (master == null) {
@@ -69,14 +70,16 @@ public class MasterProposeProxy implements ProposeProxy {
         }
 
         RedirectReq req = RedirectReq.Builder.aRedirectReq()
-                .nodeId(this.self.getSelf().getId())
-                .redirect(TRANSACTION_REQUEST)
-                .proposal(data)
-                .apply(apply)
-                .build();
+            .nodeId(this.self.getSelf().getId())
+            .redirect(TRANSACTION_REQUEST)
+            .proposal(data)
+            .apply(apply)
+            .build();
         try {
-            RedirectRes res = this.client.sendRequestSync(master, req, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
-            return (Result<D>) res.getProposeResult();
+            byte[] content = proposalValueSerializer.serialize(req);
+            byte[] response = this.client.sendRequestSync(master, content, this.prop.getRoundTimeout() * this.prop.getRetry() + client.requestTimeout());
+            RedirectRes redirectRes = proposalValueSerializer.deserialize(response);
+            return redirectRes.getProposeResult();
         } catch (Exception e) {
             if (e instanceof ConnectionException) {
                 return builder.state(Result.State.FAILURE).build();
@@ -88,7 +91,7 @@ public class MasterProposeProxy implements ProposeProxy {
     }
 
     @Override
-    public Result<Long> readIndex(final String group) {
+    public Long readIndex(final String group) {
         return null;
     }
 }

@@ -17,10 +17,13 @@
 package com.ofcoder.klein.core.cache;
 
 import com.ofcoder.klein.common.exception.KleinException;
+import com.ofcoder.klein.serializer.Serializer;
+import com.ofcoder.klein.serializer.hessian2.Hessian2Util;
 import com.ofcoder.klein.common.util.TrueTime;
 import com.ofcoder.klein.consensus.facade.Result;
 import com.ofcoder.klein.consensus.facade.sm.SMRegistry;
 import com.ofcoder.klein.core.GroupWrapper;
+import com.ofcoder.klein.spi.ExtensionLoader;
 
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 public class KleinCacheImpl implements KleinCache {
     protected GroupWrapper consensus;
     private final String cacheName;
+    private final Serializer serializer;
 
     /**
      * Return a new cache container.
@@ -41,6 +45,7 @@ public class KleinCacheImpl implements KleinCache {
      */
     public KleinCacheImpl(final String cacheName) {
         this.cacheName = cacheName;
+        this.serializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         SMRegistry.register(CacheSM.GROUP, new CacheSM(CacheProp.loadIfPresent()));
         this.consensus = new GroupWrapper(CacheSM.GROUP);
     }
@@ -51,11 +56,11 @@ public class KleinCacheImpl implements KleinCache {
         message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.EXIST);
-        Result<Boolean> result = consensus.read(message);
+        Result result = consensus.read(serializer.serialize(message));
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
         }
-        Boolean data = result.getData();
+        Boolean data = serializer.deserialize(result.getData());
         return data != null && data;
     }
 
@@ -66,7 +71,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUT);
-        Result result = consensus.propose(message);
+        Result result = consensus.propose(serializer.serialize(message));
         return Result.State.SUCCESS.equals(result.getState());
     }
 
@@ -80,7 +85,7 @@ public class KleinCacheImpl implements KleinCache {
         if (ttl > 0) {
             message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
         }
-        Result result = consensus.propose(message, apply);
+        Result result = consensus.propose(Hessian2Util.serialize(message), apply);
         return result.getState();
     }
 
@@ -93,7 +98,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setOp(CacheMessage.PUT);
 
         message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
-        Result result = consensus.propose(message);
+        Result result = consensus.propose(serializer.serialize(message));
         return Result.State.SUCCESS.equals(result.getState());
     }
 
@@ -104,11 +109,11 @@ public class KleinCacheImpl implements KleinCache {
         message.setData(data);
         message.setKey(key);
         message.setOp(CacheMessage.PUTIFPRESENT);
-        Result<D> result = consensus.propose(message, true);
+        Result result = consensus.propose(serializer.serialize(message), true);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm. key: " + key);
         }
-        return result.getData();
+        return serializer.deserialize(result.getData());
     }
 
     @Override
@@ -120,11 +125,11 @@ public class KleinCacheImpl implements KleinCache {
         message.setOp(CacheMessage.PUTIFPRESENT);
         message.setExpire(TrueTime.currentTimeMillis() + unit.toMillis(ttl));
 
-        Result<D> result = consensus.propose(message, true);
+        Result result = consensus.propose(serializer.serialize(message), true);
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException("The consensus negotiation result is UNKNOWN. In this case, the operation may or may not be completed. You need to retry or query to confirm");
         }
-        return result.getData();
+        return serializer.deserialize(result.getData());
     }
 
     @Override
@@ -133,12 +138,12 @@ public class KleinCacheImpl implements KleinCache {
         message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.GET);
-        Result<D> result = consensus.read(message);
+        Result result = consensus.read(serializer.serialize(message));
         if (!Result.State.SUCCESS.equals(result.getState())) {
             throw new KleinException(String.format("The consensus negotiation result is %s. In this case, the operation"
                     + " may or may not be completed. You need to retry or query to confirm", result.getState()));
         }
-        return result.getData();
+        return serializer.deserialize(result.getData());
     }
 
     @Override
@@ -147,7 +152,7 @@ public class KleinCacheImpl implements KleinCache {
         message.setCacheName(cacheName);
         message.setKey(key);
         message.setOp(CacheMessage.INVALIDATE);
-        Result result = consensus.propose(message);
+        Result result = consensus.propose(serializer.serialize(message));
     }
 
     @Override
@@ -155,7 +160,7 @@ public class KleinCacheImpl implements KleinCache {
         CacheMessage message = new CacheMessage();
         message.setCacheName(cacheName);
         message.setOp(CacheMessage.INVALIDATEALL);
-        Result result = consensus.propose(message);
+        Result result = consensus.propose(serializer.serialize(message));
     }
 
 }

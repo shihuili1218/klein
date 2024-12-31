@@ -44,13 +44,13 @@ import com.ofcoder.klein.consensus.paxos.rpc.vo.ElasticRes;
 import com.ofcoder.klein.rpc.facade.Endpoint;
 import com.ofcoder.klein.rpc.facade.RpcClient;
 import com.ofcoder.klein.rpc.facade.RpcEngine;
+import com.ofcoder.klein.serializer.Serializer;
 import com.ofcoder.klein.spi.ExtensionLoader;
 import com.ofcoder.klein.spi.Join;
 import com.ofcoder.klein.storage.facade.LogManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
@@ -66,10 +66,12 @@ public class PaxosConsensus implements Consensus {
     private final ConsensusProp prop;
     private final RpcClient client;
     private final ProposeProxy proposeProxy;
+    private final Serializer proposalValueSerializer;
 
     public PaxosConsensus(final ConsensusProp prop) {
         this.prop = prop;
         this.client = ExtensionLoader.getExtensionLoader(RpcClient.class).getJoin();
+        this.proposalValueSerializer = ExtensionLoader.getExtensionLoader(Serializer.class).register("hessian2");
         ExtensionLoader.getExtensionLoader(Nwr.class).register(this.prop.getNwr());
 
         // reload self information from storage.
@@ -123,13 +125,28 @@ public class PaxosConsensus implements Consensus {
     }
 
     @Override
-    public <E extends Serializable, D extends Serializable> Result<D> propose(final String group, final E data, final boolean apply) {
-        Proposal proposal = new Proposal(group, data);
+    public Result propose(final String group, final byte[] data, final boolean apply) {
+        return propose(group, data, apply, false);
+    }
+
+    /**
+     * propose proposal.
+     *
+     * @param group      group name
+     * @param data       Client data, type is Serializable
+     *                   e.g. The input value of the state machine
+     * @param apply      Whether you need to wait until the state machine is applied
+     *                   If true, wait until the state machine is applied before returning
+     * @param isSystemOp is SystemOp
+     * @return whether success
+     */
+    public Result propose(final String group, final byte[] data, final boolean apply, final boolean isSystemOp) {
+        Proposal proposal = new Proposal(group, data, isSystemOp);
         return proposeProxy.propose(proposal, apply);
     }
 
     @Override
-    public Result<Long> readIndex(final String group) {
+    public Long readIndex(final String group) {
         return proposeProxy.readIndex(group);
     }
 
@@ -155,7 +172,8 @@ public class PaxosConsensus implements Consensus {
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                byte[] response = this.client.sendRequestSync(endpoint, proposalValueSerializer.serialize(req));
+                ElasticRes res = proposalValueSerializer.deserialize(response);
                 if (res.isResult()) {
                     return;
                 }
@@ -170,10 +188,11 @@ public class PaxosConsensus implements Consensus {
         ElasticReq req = new ElasticReq();
         req.setEndpoint(self.getSelf());
         req.setOp(ElasticReq.SHUTDOWN);
+        byte[] content = proposalValueSerializer.serialize(req);
 
         for (Endpoint endpoint : MemberRegistry.getInstance().getMemberConfiguration().getAllMembers()) {
             try {
-                ElasticRes res = client.sendRequestSync(endpoint, req);
+                ElasticRes res = proposalValueSerializer.deserialize(client.sendRequestSync(endpoint, content));
                 if (res.isResult()) {
                     return;
                 }
@@ -220,7 +239,7 @@ public class PaxosConsensus implements Consensus {
         firstPhase.setNewConfig(newConfig);
         firstPhase.setPhase(ChangeMemberOp.FIRST_PHASE);
 
-        Result<Serializable> first = propose(MemberManagerSM.GROUP, firstPhase, false);
+        Result first = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(firstPhase), false, true);
         LOG.info("change member first phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
 
         if (first.getState() == Result.State.SUCCESS) {
@@ -229,9 +248,15 @@ public class PaxosConsensus implements Consensus {
             secondPhase.setNewConfig(newConfig);
             secondPhase.setPhase(ChangeMemberOp.SECOND_PHASE);
 
-            Result<Serializable> second = propose(MemberManagerSM.GROUP, secondPhase, false);
-            LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
-            return second.getState() == Result.State.SUCCESS;
+            try {
+                Result second = propose(MemberManagerSM.GROUP, proposalValueSerializer.serialize(secondPhase), false, true);
+                LOG.info("change member second phase, add: {}, remove: {}, result: {}", add, remove, first.getState());
+                return second.getState() == Result.State.SUCCESS;
+            } catch (Exception e) {
+                LOG.error("Failed to serialize second phase data. Phase: {}, NodeId: {}, NewConfig: {}",
+                        secondPhase.getPhase(), secondPhase.getNodeId(), secondPhase.getNewConfig(), e);
+                return false;
+            }
         } else {
             return false;
         }
